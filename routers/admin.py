@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 import models
 import schemas
-from auth import get_current_admin
+from auth import get_current_admin, hash_password
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -20,6 +20,70 @@ def get_users(
 ):
     users = db.query(models.User).filter(models.User.is_active == True).all()
     return users
+
+@router.post("/users", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED)
+def create_staff_user(
+    user_in: schemas.UserAdminCreate,
+    admin: models.User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    existing = db.query(models.User).filter(models.User.username == user_in.username).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="このログインIDは既に使用されています")
+
+    start_t = None
+    if user_in.default_start_time:
+        try:
+            start_t = datetime.strptime(user_in.default_start_time, "%H:%M").time()
+        except Exception:
+            start_t = time(9, 0)
+
+    end_t = None
+    if user_in.default_end_time:
+        try:
+            end_t = datetime.strptime(user_in.default_end_time, "%H:%M").time()
+        except Exception:
+            end_t = time(18, 0)
+
+    new_user = models.User(
+        username=user_in.username,
+        password_hash=hash_password(user_in.password),
+        full_name=user_in.full_name,
+        role="staff",
+        wage_type=user_in.wage_type,
+        hourly_wage=user_in.hourly_wage,
+        monthly_salary=0,
+        paid_leave_granted=10.0,
+        paid_leave_carried=0.0,
+        paid_leave_base_date=date.today(),
+        work_days=user_in.work_days,
+        default_start_time=start_t,
+        default_end_time=end_t,
+        default_break_minutes=user_in.default_break_minutes,
+        color=user_in.color or "#059669",
+        is_active=True
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
+
+@router.delete("/users/{user_id}")
+def delete_staff_user(
+    user_id: int,
+    admin: models.User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    if user_id == admin.id:
+        raise HTTPException(status_code=400, detail="管理者自身を削除することはできません")
+
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="ユーザーが見つかりません")
+
+    user.is_active = False
+    db.commit()
+    return {"message": "スタッフを削除（無効化）しました"}
 
 @router.put("/users/{user_id}/condition", response_model=schemas.UserResponse)
 def update_user_condition(

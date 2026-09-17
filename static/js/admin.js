@@ -681,6 +681,16 @@ function onConditionUserChange() {
     nameInput.value = user.full_name || '';
   }
 
+  // 削除ボタンの制御（管理者は削除不可）
+  const deleteBtn = document.getElementById('cond-delete-staff-btn');
+  if (deleteBtn) {
+    if (user.role === 'admin') {
+      deleteBtn.classList.add('hidden');
+    } else {
+      deleteBtn.classList.remove('hidden');
+    }
+  }
+
   // 曜日チェックボックス設定
   const workDays = (user.work_days || '0,1,2,4,5').split(',').map(s => s.trim());
   document.querySelectorAll('input[name="work_day"]').forEach(cb => {
@@ -692,6 +702,33 @@ function onConditionUserChange() {
   document.getElementById('cond-break-minutes').value = user.default_break_minutes !== undefined ? user.default_break_minutes : 60;
   document.getElementById('cond-hourly-wage').value = user.hourly_wage || 1500;
   document.getElementById('cond-color-picker').value = user.color || '#059669';
+}
+
+async function handleDeleteStaff() {
+  const select = document.getElementById('condition-user-select');
+  if (!select) return;
+  const userId = parseInt(select.value, 10);
+  const user = staffList.find(u => u.id === userId);
+  if (!user) return;
+
+  if (!confirm(`スタッフ「${user.full_name}」を削除（退職・非表示）しますか？\n※カレンダーや過去データとの整合性を保つため非表示になります。`)) {
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.detail || '削除に失敗しました');
+    }
+    showToast('スタッフを削除しました');
+    closeConditionModal();
+    setTimeout(() => {
+      window.location.reload();
+    }, 600);
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
 }
 
 function setPresetColor(color) {
@@ -794,6 +831,59 @@ async function handleAutoGenerateSubmit(e) {
     adminYear = year;
     adminMonth = month;
     loadAdminShifts();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+// 9. 新規スタッフ追加モーダル
+function openAddStaffModal() {
+  document.getElementById('add-staff-modal').classList.remove('hidden');
+}
+
+function closeAddStaffModal() {
+  document.getElementById('add-staff-modal').classList.add('hidden');
+}
+
+async function handleAddStaffSubmit(e) {
+  e.preventDefault();
+  const fullName = document.getElementById('new-full-name').value.trim();
+  const username = document.getElementById('new-username').value.trim();
+  const password = document.getElementById('new-password').value.trim();
+  const hourlyWage = parseInt(document.getElementById('new-hourly-wage').value, 10) || 1500;
+  const color = document.getElementById('new-color-picker').value;
+
+  const selectedDays = Array.from(document.querySelectorAll('input[name="new_work_day"]:checked'))
+    .map(cb => cb.value)
+    .join(',');
+
+  try {
+    const res = await fetch('/api/admin/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: username,
+        password: password,
+        full_name: fullName,
+        hourly_wage: hourlyWage,
+        color: color,
+        work_days: selectedDays,
+        default_start_time: '09:00',
+        default_end_time: '18:00',
+        default_break_minutes: 60
+      })
+    });
+
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.detail || 'スタッフの登録に失敗しました');
+    }
+
+    showToast(`新スタッフ「${fullName}」を登録しました`);
+    closeAddStaffModal();
+    setTimeout(() => {
+      window.location.reload();
+    }, 600);
   } catch (err) {
     showToast(err.message, 'error');
   }

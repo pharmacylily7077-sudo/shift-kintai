@@ -56,6 +56,19 @@ class UserConditionUpdate(BaseModel):
     color: Optional[str] = None
     hourly_wage: Optional[int] = None
 
+class UserAdminCreate(BaseModel):
+    username: str
+    password: str
+    full_name: str
+    role: str = "staff"
+    wage_type: str = "HOURLY"
+    hourly_wage: int = 1500
+    work_days: str = "0,1,2,3,4"
+    default_start_time: Optional[str] = "09:00"
+    default_end_time: Optional[str] = "18:00"
+    default_break_minutes: int = 60
+    color: str = "#059669"
+
 # --- シフト希望関連 ---
 class ShiftRequestCreate(BaseModel):
     date: date
