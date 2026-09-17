@@ -656,7 +656,10 @@ function printShiftTable() {
 // 7. 雇用条件設定モーダル
 function openConditionModal() {
   const select = document.getElementById('condition-user-select');
-  if (select && select.value) {
+  if (select) {
+    if (!select.value && select.options.length > 0) {
+      select.selectedIndex = 0;
+    }
     onConditionUserChange();
   }
   document.getElementById('condition-modal').classList.remove('hidden');
@@ -733,9 +736,15 @@ async function handleConditionSubmit(e) {
 
     showToast('社員情報・雇用条件を保存しました');
     closeConditionModal();
-    await loadStaffUsers();
-    loadAttendanceSummary();
-    loadAdminShifts();
+
+    const headerNameEl = document.getElementById('header-user-name');
+    if (headerNameEl && userId === 1) {
+      headerNameEl.textContent = fullName;
+    }
+
+    setTimeout(() => {
+      window.location.reload();
+    }, 600);
   } catch (err) {
     showToast(err.message, 'error');
   }

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pharmacy-kintai-v1';
+const CACHE_NAME = 'pharmacy-kintai-v2';
 const ASSETS_TO_CACHE = [
   '/static/css/style.css',
   '/static/icons/icon-192.png',
@@ -30,16 +30,16 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // POST等の更新系、またはAPI通信はキャッシュせず通常通信
-  if (event.request.method !== 'GET' || url.pathname.startsWith('/api/')) {
+  // POST等の更新系、API通信、およびJavaScriptファイルはキャッシュせず通常通信
+  if (event.request.method !== 'GET' || url.pathname.startsWith('/api/') || url.pathname.endsWith('.js')) {
     return;
   }
 
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // 成功したレスポンスをキャッシュに複製保存（静的アセット等）
-        if (response.status === 200 && url.pathname.startsWith('/static/')) {
+        // 成功したレスポンスをキャッシュに複製保存（CSSや画像アセット等）
+        if (response.status === 200 && url.pathname.startsWith('/static/') && !url.pathname.endsWith('.js')) {
           const responseClone = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, responseClone);

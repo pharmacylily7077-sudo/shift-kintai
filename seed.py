@@ -21,7 +21,7 @@ def seed_data():
         admin_user = models.User(
             username="admin",
             password_hash=hash_password("admin123"),
-            full_name="管理 太郎（薬局長）",
+            full_name="三宅 興之（薬局長）",
             role="admin",
             wage_type="MONTHLY",
             monthly_salary=450000,
