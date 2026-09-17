@@ -493,4 +493,70 @@ def test_weekly_schedule_and_shift_generation(client):
             # 月曜・木曜以外は enabled ではないので生成されない
             pytest.fail(f"Unexpected shift on weekday {d.weekday()} for date {s['date']}")
 
+def test_shift_manual_crud_and_reflection(client):
+    admin_login = client.post("/api/auth/login", json={"username": "testadmin", "password": "adminpass"})
+    admin_token = admin_login.json()["access_token"]
+    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+    admin_id = admin_login.json()["user_id"] if "user_id" in admin_login.json() else 1
+
+    staff_login = client.post("/api/auth/login", json={"username": "teststaff", "password": "staffpass"})
+    staff_token = staff_login.json()["access_token"]
+    staff_headers = {"Authorization": f"Bearer {staff_token}"}
+    staff_me = client.get("/api/me/dashboard", headers=staff_headers).json()["user"]
+    staff_id = staff_me["id"]
+
+    # 1. 管理者自身へのシフト手動登録（9:00 - 19:00）
+    res = client.post("/api/admin/shifts", json={
+        "user_id": admin_id,
+        "date": "2026-12-01",
+        "shift_type": "NORMAL",
+        "start_time": "09:00",
+        "end_time": "19:00",
+        "break_minutes": 60,
+        "note": "管理者手動登録"
+    }, headers=admin_headers)
+    assert res.status_code == 200
+
+    # 2. スタッフへのシフト手動登録（9:00 - 18:00）
+    res2 = client.post("/api/admin/shifts", json={
+        "user_id": staff_id,
+        "date": "2026-12-01",
+        "shift_type": "NORMAL",
+        "start_time": "09:00",
+        "end_time": "18:00",
+        "break_minutes": 60,
+        "note": "スタッフ手動登録"
+    }, headers=admin_headers)
+    assert res2.status_code == 200
+    shift_id = res2.json()["shift_id"]
+
+    # 3. 管理者シフト一覧での反映確認
+    list_res = client.get("/api/admin/shifts?year=2026&month=12", headers=admin_headers)
+    assert list_res.status_code == 200
+    shifts = list_res.json()
+    dec1_shifts = [s for s in shifts if s["date"] == "2026-12-01"]
+    assert len(dec1_shifts) == 2
+    admin_s = next(s for s in dec1_shifts if s["user_id"] == admin_id)
+    assert admin_s["start_time"] == "09:00"
+    assert admin_s["end_time"] == "19:00"
+
+    # 4. スタッフ画面 (/api/me/shifts) での自分のシフト反映確認
+    my_shifts_res = client.get("/api/me/shifts?year=2026&month=12", headers=staff_headers)
+    assert my_shifts_res.status_code == 200
+    my_shifts = my_shifts_res.json()
+    day1_info = next(item for item in my_shifts if item["date"] == "2026-12-01")
+    assert day1_info["shift"] is not None
+    assert day1_info["shift"]["start_time"] == "09:00"
+    assert day1_info["shift"]["end_time"] == "18:00"
+
+    # 5. シフト削除の確認
+    del_res = client.delete(f"/api/admin/shifts/{shift_id}", headers=admin_headers)
+    assert del_res.status_code == 200
+
+    # 削除後の確認
+    my_shifts_res2 = client.get("/api/me/shifts?year=2026&month=12", headers=staff_headers)
+    day1_info_after = next(item for item in my_shifts_res2.json() if item["date"] == "2026-12-01")
+    assert day1_info_after["shift"] is None
+
+
 

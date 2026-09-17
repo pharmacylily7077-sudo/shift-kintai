@@ -31,12 +31,11 @@ async function loadStaffUsers() {
       return;
     }
     staffList = await res.json();
-    const staffOnly = staffList.filter(u => u.role === 'staff');
 
     const select = document.getElementById('shift-user-select');
     if (select) {
-      select.innerHTML = staffOnly
-        .map(u => `<option value="${u.id}">${u.full_name} (${u.username})</option>`)
+      select.innerHTML = staffList
+        .map(u => `<option value="${u.id}">${u.full_name} (${u.role === 'admin' ? '管理者' : u.username})</option>`)
         .join('');
     }
 
@@ -53,8 +52,12 @@ async function loadStaffUsers() {
 
     const filterSelect = document.getElementById('admin-staff-filter');
     if (filterSelect) {
+      const currentFilter = filterSelect.value || 'ALL';
       filterSelect.innerHTML = '<option value="ALL">全スタッフ表示</option>' +
-        staffOnly.map(u => `<option value="${u.id}">${u.full_name}</option>`).join('');
+        staffList.map(u => `<option value="${u.id}">${u.full_name} (${u.role === 'admin' ? '管理者' : 'スタッフ'})</option>`).join('');
+      if (staffList.some(u => String(u.id) === currentFilter) || currentFilter === 'ALL') {
+        filterSelect.value = currentFilter;
+      }
     }
   } catch (err) {
     console.error(err);
@@ -381,9 +384,7 @@ function renderAdminCalendarGrid(shifts) {
     cell.className = `min-h-[125px] sm:min-h-[145px] p-1.5 sm:p-2 rounded-2xl border transition-all ${
       isToday 
         ? 'bg-indigo-50/50 border-indigo-300 ring-1 ring-indigo-200' 
-        : isCurrentMonthDay 
-          ? 'bg-white border-slate-200 hover:border-slate-300 shadow-2xs' 
-          : 'bg-slate-50/40 border-slate-100 opacity-40'
+        : 'bg-white border-slate-200 hover:border-slate-300 shadow-2xs'
     } group`;
     cell.onclick = (e) => {
       if (e.target.closest('button')) return;
