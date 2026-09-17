@@ -378,11 +378,13 @@ function renderAdminCalendarGrid(shifts) {
     if (dayOfWeek === 6) dayNumColor = 'text-blue-600 font-black';
 
     const cell = document.createElement('div');
-    cell.className = `admin-cal-cell min-h-[90px] sm:min-h-[115px] p-1.5 sm:p-2 rounded-xl border transition flex flex-col justify-between cursor-pointer group ${
-      isToday
-        ? 'bg-indigo-50/60 border-indigo-400 ring-2 ring-indigo-400/40 shadow-xs'
-        : 'bg-white border-slate-200 hover:border-indigo-400 hover:shadow-xs'
-    }`;
+    cell.className = `min-h-[125px] sm:min-h-[145px] p-1.5 sm:p-2 rounded-2xl border transition-all ${
+      isToday 
+        ? 'bg-indigo-50/50 border-indigo-300 ring-1 ring-indigo-200' 
+        : isCurrentMonthDay 
+          ? 'bg-white border-slate-200 hover:border-slate-300 shadow-2xs' 
+          : 'bg-slate-50/40 border-slate-100 opacity-40'
+    } group`;
     cell.onclick = (e) => {
       if (e.target.closest('button')) return;
       openAddShiftModal(dateStr);
@@ -410,21 +412,29 @@ function renderAdminCalendarGrid(shifts) {
         const staffColor = s.user_color || '#059669';
 
         let badgeStyle = `background-color: ${staffColor}15; border-left: 3.5px solid ${staffColor}; border-top: 1px solid ${staffColor}30; border-right: 1px solid ${staffColor}30; border-bottom: 1px solid ${staffColor}30;`;
-        let typeText = `${s.start_time || ''}-${s.end_time || ''}`;
+        let typeText = `${s.start_time || ''}〜${s.end_time || ''}`;
         
         if (s.shift_type === 'PAID_LEAVE') {
           badgeStyle = `background-color: #ecfdf5; border-left: 3.5px solid #059669; border: 1px solid #10b981;`;
-          typeText = '🌿有休';
+          typeText = '有給休暇';
         } else if (s.shift_type === 'HOLIDAY') {
           badgeStyle = `background-color: #f1f5f9; border-left: 3.5px solid #64748b;`;
           typeText = '公休';
         }
 
+        // 表示用通称名の抽出（例: 「三宅 興之（薬局長）」→「三宅」、「小林 彩乃（薬剤師）」→「小林彩乃」、「寺内（調剤事務）」→「寺内」）
+        let shortName = s.user_name || 'スタッフ';
+        if (shortName.includes('（')) shortName = shortName.split('（')[0].trim();
+        else if (shortName.includes('(')) shortName = shortName.split('(')[0].trim();
+        if (shortName.includes(' ') && shortName.length > 3) {
+          shortName = shortName.split(' ')[0];
+        }
+
         return `
-          <div style="${badgeStyle}" class="shift-badge-print mt-1 rounded px-1.5 py-0.5 text-[10px] sm:text-[11px] flex items-center justify-between group/item leading-tight shadow-2xs">
-            <span class="truncate flex items-center space-x-1">
-              <strong class="font-extrabold text-slate-900 text-[10px] sm:text-[11px]">${s.user_name}</strong>
-              <span class="font-normal text-slate-600 text-[9px] sm:text-[10px]">${typeText}</span>
+          <div style="${badgeStyle}" class="shift-badge-print mt-1 rounded-lg px-1.5 py-1 text-[10px] sm:text-[11px] flex items-center justify-between group/item leading-tight shadow-2xs">
+            <span class="flex items-center space-x-1 overflow-visible">
+              <strong class="font-extrabold text-slate-900 whitespace-nowrap">${shortName}</strong>
+              <span class="font-semibold text-slate-700 whitespace-nowrap text-[9px] sm:text-[10px]">${typeText}</span>
             </span>
             <button onclick="event.stopPropagation(); deleteShift(${s.id})" class="shift-delete-btn opacity-0 group-hover/item:opacity-100 text-rose-500 hover:text-rose-700 ml-1 flex-shrink-0 font-bold" title="削除">
               &times;
@@ -443,7 +453,7 @@ function renderAdminCalendarGrid(shifts) {
     cell.innerHTML = `
       <div>
         ${headerHtml}
-        <div class="space-y-0.5 max-h-[85px] sm:max-h-[95px] overflow-y-auto">
+        <div class="space-y-1 max-h-[110px] sm:max-h-[135px] overflow-y-auto">
           ${shiftItemsHtml}
         </div>
       </div>
@@ -457,7 +467,7 @@ function renderAdminCalendarGrid(shifts) {
   const remainingCells = (7 - (totalCells % 7)) % 7;
   for (let i = 0; i < remainingCells; i++) {
     const blank = document.createElement('div');
-    blank.className = 'min-h-[90px] sm:min-h-[120px] p-1.5 sm:p-2 rounded-xl bg-slate-50/40 border border-slate-100/60 opacity-30';
+    blank.className = 'min-h-[125px] sm:min-h-[145px] p-1.5 sm:p-2 rounded-2xl bg-slate-50/40 border border-slate-100/60 opacity-30';
     container.appendChild(blank);
   }
 
@@ -669,6 +679,119 @@ function closeConditionModal() {
   document.getElementById('condition-modal').classList.add('hidden');
 }
 
+const WEEKDAYS = [
+  { id: 0, name: '月', color: 'text-slate-800' },
+  { id: 1, name: '火', color: 'text-slate-800' },
+  { id: 2, name: '水', color: 'text-slate-800' },
+  { id: 3, name: '木', color: 'text-slate-800' },
+  { id: 4, name: '金', color: 'text-slate-800' },
+  { id: 5, name: '土', color: 'text-blue-600' },
+  { id: 6, name: '日', color: 'text-rose-600' }
+];
+
+function renderWeekdayTable(tbodyId, prefix, scheduleJson, fallbackWorkDays, fallbackStart, fallbackEnd, fallbackBreak) {
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  let scheduleMap = {};
+  if (scheduleJson) {
+    try {
+      scheduleMap = typeof scheduleJson === 'string' ? JSON.parse(scheduleJson) : scheduleJson;
+    } catch (e) {
+      scheduleMap = {};
+    }
+  }
+
+  const workDayList = (fallbackWorkDays || '0,1,2,4,5').split(',').map(s => s.trim());
+  const dStart = fallbackStart || '09:00';
+  const dEnd = fallbackEnd || '18:00';
+  const dBreak = fallbackBreak !== undefined ? fallbackBreak : 60;
+
+  WEEKDAYS.forEach(day => {
+    const dStr = String(day.id);
+    const daySetting = scheduleMap[dStr];
+
+    const isChecked = daySetting ? Boolean(daySetting.work) : workDayList.includes(dStr);
+    const sTime = daySetting ? (daySetting.start || dStart) : (day.id === 3 || day.id === 5 ? '09:00' : dStart);
+    const eTime = daySetting ? (daySetting.end || dEnd) : (day.id === 3 || day.id === 5 ? '13:00' : dEnd);
+    const bMin = daySetting ? (daySetting.break !== undefined ? daySetting.break : dBreak) : (day.id === 3 || day.id === 5 ? 0 : dBreak);
+
+    const tr = document.createElement('tr');
+    tr.className = isChecked ? 'hover:bg-purple-50/40' : 'bg-slate-50/60 opacity-60';
+    tr.innerHTML = `
+      <td class="py-2 px-3 text-center font-bold ${day.color}">${day.name}</td>
+      <td class="py-2 px-2 text-center">
+        <input type="checkbox" id="${prefix}-work-${day.id}" ${isChecked ? 'checked' : ''}
+          onchange="toggleWeekdayRow('${prefix}', ${day.id})"
+          class="w-4 h-4 text-purple-600 rounded border-slate-300 focus:ring-purple-500 cursor-pointer">
+      </td>
+      <td class="py-2 px-2">
+        <input type="time" id="${prefix}-start-${day.id}" value="${sTime}" ${isChecked ? '' : 'disabled'}
+          class="px-2 py-1 rounded-lg border border-slate-200 text-xs w-full focus:ring-1 focus:ring-purple-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-400">
+      </td>
+      <td class="py-2 px-2">
+        <input type="time" id="${prefix}-end-${day.id}" value="${eTime}" ${isChecked ? '' : 'disabled'}
+          class="px-2 py-1 rounded-lg border border-slate-200 text-xs w-full focus:ring-1 focus:ring-purple-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-400">
+      </td>
+      <td class="py-2 px-2">
+        <input type="number" id="${prefix}-break-${day.id}" value="${bMin}" min="0" step="5" ${isChecked ? '' : 'disabled'}
+          class="px-2 py-1 rounded-lg border border-slate-200 text-xs w-full focus:ring-1 focus:ring-purple-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-400">
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function toggleWeekdayRow(prefix, dayId) {
+  const cb = document.getElementById(`${prefix}-work-${dayId}`);
+  const sInput = document.getElementById(`${prefix}-start-${dayId}`);
+  const eInput = document.getElementById(`${prefix}-end-${dayId}`);
+  const bInput = document.getElementById(`${prefix}-break-${dayId}`);
+  const tr = cb.closest('tr');
+
+  if (cb.checked) {
+    tr.classList.remove('bg-slate-50/60', 'opacity-60');
+    tr.classList.add('hover:bg-purple-50/40');
+    sInput.disabled = false;
+    eInput.disabled = false;
+    bInput.disabled = false;
+  } else {
+    tr.classList.add('bg-slate-50/60', 'opacity-60');
+    tr.classList.remove('hover:bg-purple-50/40');
+    sInput.disabled = true;
+    eInput.disabled = true;
+    bInput.disabled = true;
+  }
+}
+
+function getWeeklyScheduleFromTable(prefix) {
+  const scheduleMap = {};
+  const checkedDays = [];
+
+  WEEKDAYS.forEach(day => {
+    const cb = document.getElementById(`${prefix}-work-${day.id}`);
+    const sInput = document.getElementById(`${prefix}-start-${day.id}`);
+    const eInput = document.getElementById(`${prefix}-end-${day.id}`);
+    const bInput = document.getElementById(`${prefix}-break-${day.id}`);
+
+    const isWork = cb ? cb.checked : false;
+    if (isWork) checkedDays.push(String(day.id));
+
+    scheduleMap[String(day.id)] = {
+      work: isWork,
+      start: sInput ? sInput.value : '09:00',
+      end: eInput ? eInput.value : '18:00',
+      break: bInput ? parseInt(bInput.value, 10) || 0 : 0
+    };
+  });
+
+  return {
+    scheduleJson: JSON.stringify(scheduleMap),
+    workDaysStr: checkedDays.join(',')
+  };
+}
+
 function onConditionUserChange() {
   const select = document.getElementById('condition-user-select');
   if (!select) return;
@@ -691,15 +814,17 @@ function onConditionUserChange() {
     }
   }
 
-  // 曜日チェックボックス設定
-  const workDays = (user.work_days || '0,1,2,4,5').split(',').map(s => s.trim());
-  document.querySelectorAll('input[name="work_day"]').forEach(cb => {
-    cb.checked = workDays.includes(cb.value);
-  });
+  // 曜日別勤務時間テーブルを描画
+  renderWeekdayTable(
+    'cond-weekday-tbody',
+    'cond',
+    user.weekly_schedule,
+    user.work_days,
+    user.default_start_time ? user.default_start_time.slice(0, 5) : '09:00',
+    user.default_end_time ? user.default_end_time.slice(0, 5) : '18:00',
+    user.default_break_minutes
+  );
 
-  document.getElementById('cond-start-time').value = user.default_start_time ? user.default_start_time.slice(0, 5) : '09:00';
-  document.getElementById('cond-end-time').value = user.default_end_time ? user.default_end_time.slice(0, 5) : '18:00';
-  document.getElementById('cond-break-minutes').value = user.default_break_minutes !== undefined ? user.default_break_minutes : 60;
   document.getElementById('cond-hourly-wage').value = user.hourly_wage || 1500;
   document.getElementById('cond-color-picker').value = user.color || '#059669';
 }
@@ -743,14 +868,7 @@ async function handleConditionSubmit(e) {
   const userId = parseInt(document.getElementById('condition-user-select').value, 10);
   const fullName = document.getElementById('cond-full-name').value.trim();
   
-  // 選択された曜日
-  const selectedDays = Array.from(document.querySelectorAll('input[name="work_day"]:checked'))
-    .map(cb => cb.value)
-    .join(',');
-
-  const startTime = document.getElementById('cond-start-time').value;
-  const endTime = document.getElementById('cond-end-time').value;
-  const breakMinutes = parseInt(document.getElementById('cond-break-minutes').value, 10);
+  const { scheduleJson, workDaysStr } = getWeeklyScheduleFromTable('cond');
   const hourlyWage = parseInt(document.getElementById('cond-hourly-wage').value, 10);
   const color = document.getElementById('cond-color-picker').value;
 
@@ -760,10 +878,8 @@ async function handleConditionSubmit(e) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         full_name: fullName,
-        work_days: selectedDays,
-        default_start_time: startTime,
-        default_end_time: endTime,
-        default_break_minutes: breakMinutes,
+        work_days: workDaysStr,
+        weekly_schedule: scheduleJson,
         hourly_wage: hourlyWage,
         color: color
       })
@@ -771,7 +887,7 @@ async function handleConditionSubmit(e) {
 
     if (!res.ok) throw new Error('雇用条件の保存に失敗しました');
 
-    showToast('社員情報・雇用条件を保存しました');
+    showToast('社員情報・曜日別条件を保存しました');
     closeConditionModal();
 
     const headerNameEl = document.getElementById('header-user-name');
@@ -838,6 +954,7 @@ async function handleAutoGenerateSubmit(e) {
 
 // 9. 新規スタッフ追加モーダル
 function openAddStaffModal() {
+  renderWeekdayTable('new-weekday-tbody', 'new', null, '0,1,2,4,5', '09:00', '18:00', 60);
   document.getElementById('add-staff-modal').classList.remove('hidden');
 }
 
@@ -853,9 +970,7 @@ async function handleAddStaffSubmit(e) {
   const hourlyWage = parseInt(document.getElementById('new-hourly-wage').value, 10) || 1500;
   const color = document.getElementById('new-color-picker').value;
 
-  const selectedDays = Array.from(document.querySelectorAll('input[name="new_work_day"]:checked'))
-    .map(cb => cb.value)
-    .join(',');
+  const { scheduleJson, workDaysStr } = getWeeklyScheduleFromTable('new');
 
   try {
     const res = await fetch('/api/admin/users', {
@@ -867,7 +982,8 @@ async function handleAddStaffSubmit(e) {
         full_name: fullName,
         hourly_wage: hourlyWage,
         color: color,
-        work_days: selectedDays,
+        work_days: workDaysStr,
+        weekly_schedule: scheduleJson,
         default_start_time: '09:00',
         default_end_time: '18:00',
         default_break_minutes: 60

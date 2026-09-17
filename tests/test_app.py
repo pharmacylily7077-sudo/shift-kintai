@@ -413,3 +413,84 @@ def test_pwa_and_print_assets(client):
     assert icon_res.status_code == 200
     assert icon_res.headers["content-type"] == "image/png"
 
+def test_weekly_schedule_and_shift_generation(client):
+    import json
+    # 管理者ログイン
+    admin_login = client.post("/api/auth/login", json={"username": "testadmin", "password": "adminpass"})
+    admin_headers = {"Authorization": f"Bearer {admin_login.json()['access_token']}"}
+
+    # 1. 曜日別スケジュールを持つ新規スタッフを登録
+    weekly_data = {
+        "0": {"work": True, "start": "09:00", "end": "19:00", "break": 60},  # 月: 9:00-19:00 (休60)
+        "1": {"work": False, "start": "09:00", "end": "18:00", "break": 60},
+        "2": {"work": False, "start": "09:00", "end": "18:00", "break": 60},
+        "3": {"work": True, "start": "09:00", "end": "13:00", "break": 0},   # 木: 9:00-13:00 (休0)
+        "4": {"work": False, "start": "09:00", "end": "18:00", "break": 60},
+        "5": {"work": False, "start": "09:00", "end": "18:00", "break": 60},
+        "6": {"work": False, "start": "09:00", "end": "18:00", "break": 60}  # 日: 休み
+    }
+    weekly_json = json.dumps(weekly_data)
+
+    create_res = client.post("/api/admin/users", json={
+        "username": "weekdaystaff",
+        "password": "password123",
+        "full_name": "曜日別スタッフ",
+        "role": "staff",
+        "wage_type": "HOURLY",
+        "hourly_wage": 1600,
+        "weekly_schedule": weekly_json
+    }, headers=admin_headers)
+    assert create_res.status_code == 201
+    created_user = create_res.json()
+    user_id = created_user["id"]
+    assert created_user["weekly_schedule"] == weekly_json
+
+    # 2. 雇用条件更新で weekly_schedule が正しく更新できることの検証
+    updated_weekly = {
+        "0": {"work": True, "start": "09:00", "end": "18:00", "break": 60},
+        "1": {"work": False, "start": "09:00", "end": "18:00", "break": 60},
+        "2": {"work": False, "start": "09:00", "end": "18:00", "break": 60},
+        "3": {"work": True, "start": "09:00", "end": "12:30", "break": 0},
+        "4": {"work": False, "start": "09:00", "end": "18:00", "break": 60},
+        "5": {"work": False, "start": "09:00", "end": "18:00", "break": 60},
+        "6": {"work": False, "start": "09:00", "end": "18:00", "break": 60}
+    }
+    update_res = client.put(f"/api/admin/users/{user_id}/condition", json={
+        "weekly_schedule": json.dumps(updated_weekly)
+    }, headers=admin_headers)
+    assert update_res.status_code == 200
+    assert update_res.json()["weekly_schedule"] == json.dumps(updated_weekly)
+
+    # 3. シフト自動生成を実行して、曜日ごとの時間設定が正しく反映されることの検証
+    target_year = 2026
+    target_month = 11
+
+    gen_res = client.post("/api/admin/shifts/auto-generate", json={
+        "year": target_year,
+        "month": target_month,
+        "overwrite": True
+    }, headers=admin_headers)
+    assert gen_res.status_code == 200
+
+    shifts_res = client.get(f"/api/admin/shifts?year={target_year}&month={target_month}", headers=admin_headers)
+    shifts = shifts_res.json()
+
+    user_shifts = [s for s in shifts if s["user_id"] == user_id]
+    assert len(user_shifts) > 0
+
+    # 生成された月曜日のシフトと木曜日のシフトをチェック
+    for s in user_shifts:
+        d = datetime.strptime(s["date"], "%Y-%m-%d").date()
+        if d.weekday() == 0:  # 月曜日
+            assert s["start_time"] == "09:00"
+            assert s["end_time"] == "18:00"
+            assert s["break_minutes"] == 60
+        elif d.weekday() == 3:  # 木曜日
+            assert s["start_time"] == "09:00"
+            assert s["end_time"] == "12:30"
+            assert s["break_minutes"] == 0
+        else:
+            # 月曜・木曜以外は enabled ではないので生成されない
+            pytest.fail(f"Unexpected shift on weekday {d.weekday()} for date {s['date']}")
+
+

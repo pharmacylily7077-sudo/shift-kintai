@@ -1,5 +1,6 @@
 import io
 import csv
+import json
 import calendar
 from datetime import datetime, date, time
 from typing import Optional, List
@@ -57,6 +58,7 @@ def create_staff_user(
         paid_leave_carried=0.0,
         paid_leave_base_date=date.today(),
         work_days=user_in.work_days,
+        weekly_schedule=user_in.weekly_schedule,
         default_start_time=start_t,
         default_end_time=end_t,
         default_break_minutes=user_in.default_break_minutes,
@@ -100,6 +102,8 @@ def update_user_condition(
         user.full_name = cond.full_name.strip()
     if cond.work_days is not None:
         user.work_days = cond.work_days
+    if cond.weekly_schedule is not None:
+        user.weekly_schedule = cond.weekly_schedule
     if cond.default_start_time is not None:
         if cond.default_start_time:
             try:
@@ -290,6 +294,14 @@ def auto_generate_monthly_shifts(
                 if w_str.isdigit():
                     work_day_list.append(int(w_str))
 
+        # 曜日別スケジュールの解析
+        schedule_map = {}
+        if user.weekly_schedule:
+            try:
+                schedule_map = json.loads(user.weekly_schedule)
+            except Exception:
+                schedule_map = {}
+
         for d_num in range(1, last_day_num + 1):
             cur_date = date(year, month, d_num)
             weekday = cur_date.weekday()
@@ -331,12 +343,35 @@ def auto_generate_monthly_shifts(
                         generated_count += 1
                     continue
 
-            # 希望休がない場合、基本勤務曜日かをチェック
-            if weekday in work_day_list:
-                s_time = user.default_start_time or time(9, 0)
-                e_time = user.default_end_time or time(18, 0)
-                b_min = user.default_break_minutes if user.default_break_minutes is not None else 60
+            # 希望休がない場合、出勤日判定と曜日別時間の取得
+            is_working_day = False
+            s_time = user.default_start_time or time(9, 0)
+            e_time = user.default_end_time or time(18, 0)
+            b_min = user.default_break_minutes if user.default_break_minutes is not None else 60
 
+            day_setting = schedule_map.get(str(weekday))
+            if day_setting is not None:
+                is_working_day = bool(day_setting.get("work", False) or day_setting.get("enabled", False))
+                if is_working_day:
+                    if day_setting.get("start"):
+                        try:
+                            s_time = datetime.strptime(day_setting["start"], "%H:%M").time()
+                        except Exception:
+                            s_time = user.default_start_time or time(9, 0)
+                    if day_setting.get("end"):
+                        try:
+                            e_time = datetime.strptime(day_setting["end"], "%H:%M").time()
+                        except Exception:
+                            e_time = user.default_end_time or time(18, 0)
+                    if day_setting.get("break") is not None:
+                        try:
+                            b_min = int(day_setting["break"])
+                        except Exception:
+                            b_min = 60
+            else:
+                is_working_day = (weekday in work_day_list)
+
+            if is_working_day:
                 if cur_shift:
                     cur_shift.shift_type = "NORMAL"
                     cur_shift.start_time = s_time
@@ -357,7 +392,7 @@ def auto_generate_monthly_shifts(
                     db.add(new_shift)
                     generated_count += 1
             else:
-                # 基本勤務曜日でない場合、上書き指定なら既存の通常シフトを削除してクリーンアップ
+                # 勤務日でない場合、上書き指定なら既存通常シフトを削除
                 if cur_shift and req.overwrite and cur_shift.shift_type == "NORMAL":
                     db.delete(cur_shift)
                     updated_count += 1

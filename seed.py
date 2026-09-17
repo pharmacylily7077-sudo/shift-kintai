@@ -1,8 +1,9 @@
+import json
 import calendar
 from datetime import datetime, date, time, timedelta
 from database import SessionLocal, engine, Base
-import models
 from auth import hash_password
+import models
 
 def seed_data():
     Base.metadata.create_all(bind=engine)
@@ -17,7 +18,17 @@ def seed_data():
 
         print("初期マスターデータを作成中...")
 
-        # 1. ユーザー作成
+        # 1. ユーザー作成（三宅様、小林彩乃様、寺内様の3名体制）
+        # 三宅 興之（薬局長）: 月火水金 09:00〜19:00, 木土 09:00〜13:00(半日)
+        miyake_schedule = json.dumps({
+            "0": {"work": True, "start": "09:00", "end": "19:00", "break": 60},
+            "1": {"work": True, "start": "09:00", "end": "19:00", "break": 60},
+            "2": {"work": True, "start": "09:00", "end": "19:00", "break": 60},
+            "3": {"work": True, "start": "09:00", "end": "13:00", "break": 0},
+            "4": {"work": True, "start": "09:00", "end": "19:00", "break": 60},
+            "5": {"work": True, "start": "09:00", "end": "13:00", "break": 0},
+            "6": {"work": False, "start": "09:00", "end": "18:00", "break": 0}
+        })
         admin_user = models.User(
             username="admin",
             password_hash=hash_password("admin123"),
@@ -29,18 +40,29 @@ def seed_data():
             paid_leave_granted=15.0,
             paid_leave_carried=5.0,
             paid_leave_base_date=date(2026, 4, 1),
-            work_days="0,1,2,3,4",
+            work_days="0,1,2,3,4,5",
+            weekly_schedule=miyake_schedule,
             default_start_time=time(9, 0),
-            default_end_time=time(18, 0),
+            default_end_time=time(19, 0),
             default_break_minutes=60,
             color="#7c3aed",
             is_active=True
         )
 
+        # 小林 彩乃（薬剤師）: 月火水金 09:00〜18:00, 土 09:00〜13:00
+        kobayashi_schedule = json.dumps({
+            "0": {"work": True, "start": "09:00", "end": "18:00", "break": 60},
+            "1": {"work": True, "start": "09:00", "end": "18:00", "break": 60},
+            "2": {"work": True, "start": "09:00", "end": "18:00", "break": 60},
+            "3": {"work": False, "start": "09:00", "end": "18:00", "break": 0},
+            "4": {"work": True, "start": "09:00", "end": "18:00", "break": 60},
+            "5": {"work": True, "start": "09:00", "end": "13:00", "break": 0},
+            "6": {"work": False, "start": "09:00", "end": "18:00", "break": 0}
+        })
         staff1 = models.User(
             username="staff01",
             password_hash=hash_password("staff123"),
-            full_name="佐藤 健（薬剤師）",
+            full_name="小林 彩乃（薬剤師）",
             role="staff",
             wage_type="HOURLY",
             hourly_wage=2400,
@@ -49,6 +71,7 @@ def seed_data():
             paid_leave_carried=2.0,
             paid_leave_base_date=date(2026, 4, 1),
             work_days="0,1,2,4,5",
+            weekly_schedule=kobayashi_schedule,
             default_start_time=time(9, 0),
             default_end_time=time(18, 0),
             default_break_minutes=60,
@@ -56,22 +79,33 @@ def seed_data():
             is_active=True
         )
 
+        # 寺内（調剤事務）: 月火木金 09:00〜18:00, 土 09:00〜13:00
+        terauchi_schedule = json.dumps({
+            "0": {"work": True, "start": "09:00", "end": "18:00", "break": 60},
+            "1": {"work": True, "start": "09:00", "end": "18:00", "break": 60},
+            "2": {"work": False, "start": "09:00", "end": "18:00", "break": 0},
+            "3": {"work": True, "start": "09:00", "end": "18:00", "break": 60},
+            "4": {"work": True, "start": "09:00", "end": "18:00", "break": 60},
+            "5": {"work": True, "start": "09:00", "end": "13:00", "break": 0},
+            "6": {"work": False, "start": "09:00", "end": "18:00", "break": 0}
+        })
         staff2 = models.User(
             username="staff02",
             password_hash=hash_password("staff123"),
-            full_name="田中 美咲（調剤事務・パート）",
+            full_name="寺内（調剤事務）",
             role="staff",
             wage_type="HOURLY",
-            hourly_wage=1200,
+            hourly_wage=1300,
             monthly_salary=0,
             paid_leave_granted=7.0,
             paid_leave_carried=1.0,
             paid_leave_base_date=date(2026, 4, 1),
-            work_days="1,3,5",
-            default_start_time=time(9, 30),
-            default_end_time=time(15, 30),
+            work_days="0,1,3,4,5",
+            weekly_schedule=terauchi_schedule,
+            default_start_time=time(9, 0),
+            default_end_time=time(18, 0),
             default_break_minutes=60,
-            color="#d97706",
+            color="#0284c7",
             is_active=True
         )
 
@@ -92,34 +126,53 @@ def seed_data():
             d = date(current_year, current_month, d_num)
             weekday = d.weekday()  # 0: Mon, ..., 6: Sun
 
-            # 日曜は公休
+            # 日曜は全館休局
             if weekday == 6:
                 continue
 
-            # staff01 (月・火・水・金・土 勤務)
+            # 1. 三宅様（薬局長）: 月火水金 9:00〜19:00, 木土 9:00〜13:00
+            m_start = time(9, 0)
+            m_end = time(13, 0) if weekday in [3, 5] else time(19, 0)
+            m_break = 0 if weekday in [3, 5] else 60
+            db.add(models.Shift(
+                user_id=admin_user.id,
+                date=d,
+                start_time=m_start,
+                end_time=m_end,
+                break_minutes=m_break,
+                shift_type="NORMAL",
+                note="薬局長シフト"
+            ))
+
+            # 2. 小林 彩乃（薬剤師）: 月火水金 9:00〜18:00, 土 9:00〜13:00, 木曜休み
             if weekday in [0, 1, 2, 4, 5]:
-                # 毎月15日は有給休暇のサンプル
+                k_start = time(9, 0)
+                k_end = time(13, 0) if weekday == 5 else time(18, 0)
+                k_break = 0 if weekday == 5 else 60
                 shift_type = "PAID_LEAVE" if d_num == 15 else "NORMAL"
                 db.add(models.Shift(
                     user_id=staff1.id,
                     date=d,
-                    start_time=time(9, 0),
-                    end_time=time(18, 0),
-                    break_minutes=60,
+                    start_time=k_start if shift_type == "NORMAL" else None,
+                    end_time=k_end if shift_type == "NORMAL" else None,
+                    break_minutes=k_break if shift_type == "NORMAL" else 0,
                     shift_type=shift_type,
-                    note="通常シフト" if shift_type == "NORMAL" else "計画有休"
+                    note="薬剤師シフト" if shift_type == "NORMAL" else "計画有休"
                 ))
 
-            # staff02 (火・木・土 勤務、パート)
-            if weekday in [1, 3, 5]:
+            # 3. 寺内（調剤事務）: 月火木金 9:00〜18:00, 土 9:00〜13:00, 水曜休み
+            if weekday in [0, 1, 3, 4, 5]:
+                t_start = time(9, 0)
+                t_end = time(13, 0) if weekday == 5 else time(18, 0)
+                t_break = 0 if weekday == 5 else 60
                 db.add(models.Shift(
                     user_id=staff2.id,
                     date=d,
-                    start_time=time(9, 30),
-                    end_time=time(15, 30),
-                    break_minutes=60,
+                    start_time=t_start,
+                    end_time=t_end,
+                    break_minutes=t_break,
                     shift_type="NORMAL",
-                    note="扶養内調整シフト"
+                    note="調剤事務シフト"
                 ))
 
         db.commit()
@@ -205,9 +258,9 @@ def seed_data():
         db.commit()
 
         print("初期マスターデータの作成が完了しました！")
-        print("管理者: admin / admin123")
-        print("スタッフ1: staff01 / staff123 (佐藤 健)")
-        print("スタッフ2: staff02 / staff123 (田中 美咲)")
+        print("管理者: admin / admin123 (三宅 興之)")
+        print("スタッフ1: staff01 / staff123 (小林 彩乃)")
+        print("スタッフ2: staff02 / staff123 (寺内)")
 
     except Exception as e:
         db.rollback()

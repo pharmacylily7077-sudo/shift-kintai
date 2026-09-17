@@ -20,6 +20,7 @@ class User(Base):
     is_active = Column(Boolean, default=True, nullable=False)
     # フェーズ2: 雇用条件（固定勤務ルール）& スタッフカラー
     work_days = Column(String(50), nullable=True, default="0,1,2,4,5")  # カンマ区切り曜日 (0=月..6=日)
+    weekly_schedule = Column(Text, nullable=True)  # 曜日ごとの個別時間・休憩設定 (JSON)
     default_start_time = Column(Time, nullable=True)
     default_end_time = Column(Time, nullable=True)
     default_break_minutes = Column(Integer, default=60, nullable=False)

@@ -31,6 +31,7 @@ class UserBase(BaseModel):
     paid_leave_base_date: Optional[date] = None
     is_active: bool
     work_days: Optional[str] = "0,1,2,4,5"
+    weekly_schedule: Optional[str] = None
     default_start_time: Optional[time] = None
     default_end_time: Optional[time] = None
     default_break_minutes: int = 60
@@ -50,6 +51,7 @@ class UserSettingsUpdate(BaseModel):
 class UserConditionUpdate(BaseModel):
     full_name: Optional[str] = None
     work_days: Optional[str] = None
+    weekly_schedule: Optional[str] = None
     default_start_time: Optional[str] = None  # "09:00"
     default_end_time: Optional[str] = None    # "18:00"
     default_break_minutes: Optional[int] = None
@@ -64,6 +66,7 @@ class UserAdminCreate(BaseModel):
     wage_type: str = "HOURLY"
     hourly_wage: int = 1500
     work_days: str = "0,1,2,3,4"
+    weekly_schedule: Optional[str] = None
     default_start_time: Optional[str] = "09:00"
     default_end_time: Optional[str] = "18:00"
     default_break_minutes: int = 60
