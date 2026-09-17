@@ -257,9 +257,8 @@ def auto_generate_monthly_shifts(
     _, last_day_num = calendar.monthrange(year, month)
     last_day = date(year, month, last_day_num)
 
-    # 有効な全スタッフ取得
+    # 有効な全スタッフ（および勤務設定のある管理者）を取得
     staff_users = db.query(models.User).filter(
-        models.User.role == "staff",
         models.User.is_active == True
     ).all()
 
