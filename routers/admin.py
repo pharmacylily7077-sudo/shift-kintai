@@ -32,6 +32,8 @@ def update_user_condition(
     if not user:
         raise HTTPException(status_code=404, detail="ユーザーが見つかりません")
 
+    if cond.full_name is not None and cond.full_name.strip():
+        user.full_name = cond.full_name.strip()
     if cond.work_days is not None:
         user.work_days = cond.work_days
     if cond.default_start_time is not None:

@@ -42,9 +42,13 @@ async function loadStaffUsers() {
 
     const condSelect = document.getElementById('condition-user-select');
     if (condSelect) {
-      condSelect.innerHTML = staffOnly
-        .map(u => `<option value="${u.id}">${u.full_name} (${u.username})</option>`)
+      const currentVal = condSelect.value;
+      condSelect.innerHTML = staffList
+        .map(u => `<option value="${u.id}">${u.full_name} (${u.role === 'admin' ? '管理者' : u.username})</option>`)
         .join('');
+      if (currentVal && staffList.some(u => String(u.id) === String(currentVal))) {
+        condSelect.value = currentVal;
+      }
     }
 
     const filterSelect = document.getElementById('admin-staff-filter');
@@ -669,6 +673,11 @@ function onConditionUserChange() {
   const user = staffList.find(u => u.id === userId);
   if (!user) return;
 
+  const nameInput = document.getElementById('cond-full-name');
+  if (nameInput) {
+    nameInput.value = user.full_name || '';
+  }
+
   // 曜日チェックボックス設定
   const workDays = (user.work_days || '0,1,2,4,5').split(',').map(s => s.trim());
   document.querySelectorAll('input[name="work_day"]').forEach(cb => {
@@ -692,6 +701,7 @@ function setPresetColor(color) {
 async function handleConditionSubmit(e) {
   e.preventDefault();
   const userId = parseInt(document.getElementById('condition-user-select').value, 10);
+  const fullName = document.getElementById('cond-full-name').value.trim();
   
   // 選択された曜日
   const selectedDays = Array.from(document.querySelectorAll('input[name="work_day"]:checked'))
@@ -709,6 +719,7 @@ async function handleConditionSubmit(e) {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        full_name: fullName,
         work_days: selectedDays,
         default_start_time: startTime,
         default_end_time: endTime,
@@ -720,9 +731,10 @@ async function handleConditionSubmit(e) {
 
     if (!res.ok) throw new Error('雇用条件の保存に失敗しました');
 
-    showToast('雇用条件を保存しました');
+    showToast('社員情報・雇用条件を保存しました');
     closeConditionModal();
     await loadStaffUsers();
+    loadAttendanceSummary();
     loadAdminShifts();
   } catch (err) {
     showToast(err.message, 'error');

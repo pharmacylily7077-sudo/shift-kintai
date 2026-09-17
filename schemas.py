@@ -48,6 +48,7 @@ class UserSettingsUpdate(BaseModel):
     paid_leave_base_date: Optional[date] = None
 
 class UserConditionUpdate(BaseModel):
+    full_name: Optional[str] = None
     work_days: Optional[str] = None
     default_start_time: Optional[str] = None  # "09:00"
     default_end_time: Optional[str] = None    # "18:00"
