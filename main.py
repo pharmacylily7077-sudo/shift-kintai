@@ -14,6 +14,13 @@ import jwt
 # テーブル自動生成
 Base.metadata.create_all(bind=engine)
 
+# 初期データ自動投入（未初期化時のみ）
+try:
+    import seed
+    seed.seed_data()
+except Exception:
+    pass
+
 app = FastAPI(
     title="薬局シフト勤怠・個人給与シミュレータ＆有休管理",
     description="セキュア・高速・堅牢な薬局向け勤怠・シフト・給与管理システム",
