@@ -1,0 +1,779 @@
+let adminYear = new Date().getFullYear();
+let adminMonth = new Date().getMonth() + 1;
+let staffList = [];
+
+document.addEventListener('DOMContentLoaded', async () => {
+  // 当月をCSV初期値に設定
+  const monthInput = document.getElementById('csv-target-month');
+  if (monthInput) {
+    monthInput.value = `${adminYear}-${String(adminMonth).padStart(2, '0')}`;
+  }
+
+  // 自動生成モーダルの年月初期値
+  const autoGenMonth = document.getElementById('auto-gen-month');
+  if (autoGenMonth) {
+    autoGenMonth.value = `${adminYear}-${String(adminMonth).padStart(2, '0')}`;
+  }
+
+  await loadStaffUsers();
+  loadAttendanceSummary();
+  loadShiftRequests();
+  loadCorrectionRequests();
+  loadAdminShifts();
+});
+
+// 1. スタッフ一覧取得（シフト登録・雇用条件モーダルのセレクトボックス）
+async function loadStaffUsers() {
+  try {
+    const res = await fetch('/api/admin/users');
+    if (res.status === 401 || res.status === 403) {
+      window.location.href = '/login';
+      return;
+    }
+    staffList = await res.json();
+    const staffOnly = staffList.filter(u => u.role === 'staff');
+
+    const select = document.getElementById('shift-user-select');
+    if (select) {
+      select.innerHTML = staffOnly
+        .map(u => `<option value="${u.id}">${u.full_name} (${u.username})</option>`)
+        .join('');
+    }
+
+    const condSelect = document.getElementById('condition-user-select');
+    if (condSelect) {
+      condSelect.innerHTML = staffOnly
+        .map(u => `<option value="${u.id}">${u.full_name} (${u.username})</option>`)
+        .join('');
+    }
+
+    const filterSelect = document.getElementById('admin-staff-filter');
+    if (filterSelect) {
+      filterSelect.innerHTML = '<option value="ALL">全スタッフ表示</option>' +
+        staffOnly.map(u => `<option value="${u.id}">${u.full_name}</option>`).join('');
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+// 2. リアルタイム出勤モニタリング
+async function loadAttendanceSummary() {
+  try {
+    const today = new Date();
+    const dateStr = `${today.getFullYear()}年${today.getMonth() + 1}月${today.getDate()}日`;
+    document.getElementById('today-monitor-date').textContent = `${dateStr} のリアルタイム稼働状況`;
+
+    const res = await fetch('/api/admin/attendance/summary');
+    if (!res.ok) throw new Error('勤怠サマリー取得失敗');
+
+    const data = await res.json();
+    const tbody = document.getElementById('attendance-summary-tbody');
+    tbody.innerHTML = '';
+
+    if (data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="py-6 text-center text-slate-400">登録されたスタッフがいません</td></tr>';
+      return;
+    }
+
+    data.forEach(item => {
+      const tr = document.createElement('tr');
+
+      // シフト表示
+      let shiftText = '<span class="text-slate-300">シフトなし</span>';
+      if (item.shift) {
+        if (item.shift.shift_type === 'NORMAL') {
+          shiftText = `<span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-medium">${item.shift.start_time || ''} - ${item.shift.end_time || ''}</span>`;
+        } else if (item.shift.shift_type === 'PAID_LEAVE') {
+          shiftText = `<span class="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">有給休暇</span>`;
+        } else {
+          shiftText = `<span class="bg-slate-100 text-slate-500 px-2 py-0.5 rounded">公休</span>`;
+        }
+      }
+
+      // 状況バッジ
+      const statusClassMap = {
+        '未出勤': 'bg-slate-100 text-slate-600',
+        '勤務中': 'bg-emerald-100 text-emerald-800 font-bold',
+        '休憩中': 'bg-amber-100 text-amber-800 font-bold',
+        '退勤済': 'bg-blue-50 text-blue-700',
+        '有給休暇': 'bg-emerald-100 text-emerald-800',
+        '公休': 'bg-slate-100 text-slate-500'
+      };
+      const statusBadge = `<span class="px-2.5 py-1 rounded-full text-[11px] ${statusClassMap[item.status_text] || 'bg-slate-100'}">${item.status_text}</span>`;
+
+      // 打刻
+      const cin = item.record && item.record.clock_in ? item.record.clock_in : '-';
+      const cout = item.record && item.record.clock_out ? item.record.clock_out : '-';
+      
+      let workH = '-';
+      if (item.record && item.record.total_work_minutes > 0) {
+        const h = Math.floor(item.record.total_work_minutes / 60);
+        const m = item.record.total_work_minutes % 60;
+        workH = `${h}時間${m}分`;
+      }
+
+      // アラート
+      let alertContent = '<span class="text-slate-300">-</span>';
+      if (item.is_alert) {
+        alertContent = `<span class="inline-flex items-center text-rose-600 font-bold bg-rose-50 px-2 py-1 rounded text-[11px]"><i data-lucide="alert-circle" class="w-3.5 h-3.5 mr-1"></i>${item.alert_message}</span>`;
+      }
+
+      tr.innerHTML = `
+        <td class="py-3 px-4 font-bold text-slate-800">${item.full_name}</td>
+        <td class="py-3 px-4">${shiftText}</td>
+        <td class="py-3 px-4">${statusBadge}</td>
+        <td class="py-3 px-4 font-mono">${cin}</td>
+        <td class="py-3 px-4 font-mono">${cout}</td>
+        <td class="py-3 px-4 font-semibold text-slate-700">${workH}</td>
+        <td class="py-3 px-4">${alertContent}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    lucide.createIcons({ root: tbody });
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+// 2.5 シフト希望（休み希望・有休希望）一覧・審査
+async function loadShiftRequests() {
+  try {
+    const res = await fetch('/api/admin/shift-requests');
+    if (!res.ok) throw new Error('シフト希望取得失敗');
+
+    const list = await res.json();
+    const tbody = document.getElementById('shift-requests-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    const pendingList = list.filter(r => r.status === 'PENDING');
+    const badge = document.getElementById('shift-requests-pending-badge');
+    if (badge) {
+      badge.textContent = `審査待ち: ${pendingList.length}件`;
+    }
+
+    if (list.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="py-6 text-center text-slate-400">現在、シフト希望（休み希望）はありません</td></tr>';
+      return;
+    }
+
+    list.forEach(item => {
+      const tr = document.createElement('tr');
+
+      let typeBadge = '';
+      if (item.request_type === 'OFF') {
+        typeBadge = '<span class="bg-rose-100 text-rose-800 font-bold px-2 py-0.5 rounded text-[11px]">🏖️ 希望休</span>';
+      } else {
+        typeBadge = '<span class="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded text-[11px]">🌿 有休希望</span>';
+      }
+
+      let statusBadge = '';
+      if (item.status === 'PENDING') {
+        statusBadge = '<span class="bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded text-[10px]">審査待ち</span>';
+      } else if (item.status === 'APPROVED') {
+        statusBadge = '<span class="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">承認済</span>';
+      } else {
+        statusBadge = '<span class="bg-slate-100 text-slate-500 font-bold px-2 py-0.5 rounded text-[10px]">却下</span>';
+      }
+
+      let actionButtons = '-';
+      if (item.status === 'PENDING') {
+        actionButtons = `
+          <div class="flex items-center justify-center space-x-2">
+            <button onclick="reviewShiftRequest(${item.id}, 'APPROVED')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-lg text-xs font-bold transition shadow-xs">
+              承認
+            </button>
+            <button onclick="reviewShiftRequest(${item.id}, 'REJECTED')" class="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-2.5 py-1 rounded-lg text-xs font-bold transition">
+              却下
+            </button>
+          </div>
+        `;
+      }
+
+      tr.innerHTML = `
+        <td class="py-3 px-4 font-bold text-slate-800">${item.user_name || 'スタッフ'}</td>
+        <td class="py-3 px-4 font-mono font-semibold">${item.date}</td>
+        <td class="py-3 px-4">${typeBadge}</td>
+        <td class="py-3 px-4 text-slate-600 max-w-xs truncate" title="${item.reason || '特になし'}">${item.reason || '特になし'}</td>
+        <td class="py-3 px-4 text-center">${statusBadge}</td>
+        <td class="py-3 px-4 text-center">${actionButtons}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+async function reviewShiftRequest(id, status) {
+  const comment = prompt(status === 'APPROVED' ? '承認コメント（任意）:' : '却下理由（任意）:');
+  if (comment === null) return;
+
+  try {
+    const res = await fetch(`/api/admin/shift-requests/${id}/review`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: status, admin_comment: comment })
+    });
+
+    if (!res.ok) throw new Error('審査処理に失敗しました');
+
+    showToast(`シフト希望を${status === 'APPROVED' ? '承認' : '却下'}しました`);
+    loadShiftRequests();
+    loadAdminShifts();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+// 3. 打刻修正申請一覧・審査
+async function loadCorrectionRequests() {
+  try {
+    const res = await fetch('/api/admin/correction-requests');
+    if (!res.ok) throw new Error('修正申請取得失敗');
+
+    const list = await res.json();
+    const tbody = document.getElementById('correction-requests-tbody');
+    tbody.innerHTML = '';
+
+    const pendingList = list.filter(r => r.status === 'PENDING');
+    document.getElementById('pending-count-badge').textContent = `保留中: ${pendingList.length}件`;
+
+    if (list.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="py-6 text-center text-slate-400">現在、修正申請はありません</td></tr>';
+      return;
+    }
+
+    list.forEach(item => {
+      const tr = document.createElement('tr');
+
+      const cinStr = item.requested_clock_in ? new Date(item.requested_clock_in).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : '-';
+      const coutStr = item.requested_clock_out ? new Date(item.requested_clock_out).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : '-';
+
+      let statusBadge = '';
+      if (item.status === 'PENDING') {
+        statusBadge = '<span class="bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded text-[10px]">審査待ち</span>';
+      } else if (item.status === 'APPROVED') {
+        statusBadge = '<span class="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">承認済</span>';
+      } else {
+        statusBadge = '<span class="bg-rose-100 text-rose-800 font-bold px-2 py-0.5 rounded text-[10px]">却下</span>';
+      }
+
+      let actionButtons = '-';
+      if (item.status === 'PENDING') {
+        actionButtons = `
+          <div class="flex items-center justify-center space-x-2">
+            <button onclick="reviewCorrection(${item.id}, 'APPROVED')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-lg text-xs font-bold transition shadow-xs">
+              承認
+            </button>
+            <button onclick="reviewCorrection(${item.id}, 'REJECTED')" class="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-2.5 py-1 rounded-lg text-xs font-bold transition">
+              却下
+            </button>
+          </div>
+        `;
+      }
+
+      tr.innerHTML = `
+        <td class="py-3 px-4 font-bold text-slate-800">${item.user_name || 'スタッフ'}</td>
+        <td class="py-3 px-4">${item.target_date}</td>
+        <td class="py-3 px-4 font-mono font-semibold text-slate-700">${cinStr} 〜 ${coutStr}</td>
+        <td class="py-3 px-4">${item.requested_break_minutes}分</td>
+        <td class="py-3 px-4 text-slate-600 max-w-xs truncate" title="${item.reason}">${item.reason}</td>
+        <td class="py-3 px-4 text-center">${statusBadge}</td>
+        <td class="py-3 px-4 text-center">${actionButtons}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+async function reviewCorrection(id, status) {
+  const comment = prompt(status === 'APPROVED' ? '承認時のコメント（任意）:' : '却下理由（任意）:');
+  if (comment === null) return;
+
+  try {
+    const res = await fetch(`/api/admin/correction-requests/${id}/review`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: status, admin_comment: comment })
+    });
+
+    if (!res.ok) throw new Error('審査処理に失敗しました');
+
+    showToast(`申請を${status === 'APPROVED' ? '承認' : '却下'}しました`);
+    loadCorrectionRequests();
+    loadAttendanceSummary();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+// 4. シフト管理
+async function loadAdminShifts() {
+  try {
+    document.getElementById('admin-calendar-title').textContent = `${adminYear}年${adminMonth}月`;
+    const res = await fetch(`/api/admin/shifts?year=${adminYear}&month=${adminMonth}`);
+    if (!res.ok) throw new Error('シフト取得失敗');
+
+    let shifts = await res.json();
+
+    // スタッフ絞り込みフィルター適用
+    const filterVal = document.getElementById('admin-staff-filter')?.value;
+    if (filterVal && filterVal !== 'ALL') {
+      const selectedUserId = parseInt(filterVal, 10);
+      shifts = shifts.filter(s => s.user_id === selectedUserId);
+    }
+
+    renderAdminCalendarGrid(shifts);
+    renderAdminCalendarList(shifts);
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+// 管理者用 7列月間グリッドカレンダー（メイン表示）
+function renderAdminCalendarGrid(shifts) {
+  const container = document.getElementById('admin-calendar-grid-cells');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const firstDay = new Date(adminYear, adminMonth - 1, 1);
+  const lastDay = new Date(adminYear, adminMonth, 0);
+  const totalDays = lastDay.getDate();
+  const startDayOfWeek = firstDay.getDay(); // 0=日, ..., 6=土
+
+  // 日付ごとのシフトにグループ化
+  const shiftsByDate = {};
+  shifts.forEach(s => {
+    if (!shiftsByDate[s.date]) shiftsByDate[s.date] = [];
+    shiftsByDate[s.date].push(s);
+  });
+
+  // 月初の前の余白セル
+  for (let i = 0; i < startDayOfWeek; i++) {
+    const blank = document.createElement('div');
+    blank.className = 'min-h-[90px] sm:min-h-[120px] p-1.5 sm:p-2 rounded-xl bg-slate-50/40 border border-slate-100/60 opacity-30';
+    container.appendChild(blank);
+  }
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  // 1日〜末日
+  for (let day = 1; day <= totalDays; day++) {
+    const dateObj = new Date(adminYear, adminMonth - 1, day);
+    const dateStr = `${adminYear}-${String(adminMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const dayOfWeek = dateObj.getDay();
+    const isToday = dateStr === todayStr;
+
+    let dayNumColor = 'text-slate-800';
+    if (dayOfWeek === 0) dayNumColor = 'text-rose-600 font-black';
+    if (dayOfWeek === 6) dayNumColor = 'text-blue-600 font-black';
+
+    const cell = document.createElement('div');
+    cell.className = `admin-cal-cell min-h-[90px] sm:min-h-[115px] p-1.5 sm:p-2 rounded-xl border transition flex flex-col justify-between cursor-pointer group ${
+      isToday
+        ? 'bg-indigo-50/60 border-indigo-400 ring-2 ring-indigo-400/40 shadow-xs'
+        : 'bg-white border-slate-200 hover:border-indigo-400 hover:shadow-xs'
+    }`;
+    cell.onclick = (e) => {
+      if (e.target.closest('button')) return;
+      openAddShiftModal(dateStr);
+    };
+
+    const headerHtml = `
+      <div class="flex items-center justify-between mb-1">
+        <span class="text-xs sm:text-sm font-black ${isToday ? 'bg-indigo-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]' : dayNumColor}">
+          ${day}
+        </span>
+        <div class="flex items-center space-x-1 no-print">
+          ${isToday ? '<span class="text-[9px] font-black text-indigo-700 bg-indigo-100 px-1 rounded hidden sm:inline">今日</span>' : ''}
+          <button onclick="event.stopPropagation(); openAddShiftModal('${dateStr}')" class="opacity-0 group-hover:opacity-100 text-indigo-600 hover:text-indigo-800 p-0.5 rounded hover:bg-indigo-50 transition" title="この日にシフト追加">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      </div>
+    `;
+
+    const dayShifts = shiftsByDate[dateStr] || [];
+    let shiftItemsHtml = '';
+
+    if (dayShifts.length > 0) {
+      shiftItemsHtml = dayShifts.map(s => {
+        const staffColor = s.user_color || '#059669';
+
+        let badgeStyle = `background-color: ${staffColor}15; border-left: 3.5px solid ${staffColor}; border-top: 1px solid ${staffColor}30; border-right: 1px solid ${staffColor}30; border-bottom: 1px solid ${staffColor}30;`;
+        let typeText = `${s.start_time || ''}-${s.end_time || ''}`;
+        
+        if (s.shift_type === 'PAID_LEAVE') {
+          badgeStyle = `background-color: #ecfdf5; border-left: 3.5px solid #059669; border: 1px solid #10b981;`;
+          typeText = '🌿有休';
+        } else if (s.shift_type === 'HOLIDAY') {
+          badgeStyle = `background-color: #f1f5f9; border-left: 3.5px solid #64748b;`;
+          typeText = '公休';
+        }
+
+        return `
+          <div style="${badgeStyle}" class="shift-badge-print mt-1 rounded px-1.5 py-0.5 text-[10px] sm:text-[11px] flex items-center justify-between group/item leading-tight shadow-2xs">
+            <span class="truncate flex items-center space-x-1">
+              <strong class="font-extrabold text-slate-900 text-[10px] sm:text-[11px]">${s.user_name}</strong>
+              <span class="font-normal text-slate-600 text-[9px] sm:text-[10px]">${typeText}</span>
+            </span>
+            <button onclick="event.stopPropagation(); deleteShift(${s.id})" class="shift-delete-btn opacity-0 group-hover/item:opacity-100 text-rose-500 hover:text-rose-700 ml-1 flex-shrink-0 font-bold" title="削除">
+              &times;
+            </button>
+          </div>
+        `;
+      }).join('');
+    } else {
+      shiftItemsHtml = `
+        <div class="mt-2 text-center text-[10px] text-slate-300 group-hover:text-slate-400 py-1 transition no-print">
+          + 追加
+        </div>
+      `;
+    }
+
+    cell.innerHTML = `
+      <div>
+        ${headerHtml}
+        <div class="space-y-0.5 max-h-[85px] sm:max-h-[95px] overflow-y-auto">
+          ${shiftItemsHtml}
+        </div>
+      </div>
+    `;
+
+    container.appendChild(cell);
+  }
+
+  // 末尾の余白セル
+  const totalCells = startDayOfWeek + totalDays;
+  const remainingCells = (7 - (totalCells % 7)) % 7;
+  for (let i = 0; i < remainingCells; i++) {
+    const blank = document.createElement('div');
+    blank.className = 'min-h-[90px] sm:min-h-[120px] p-1.5 sm:p-2 rounded-xl bg-slate-50/40 border border-slate-100/60 opacity-30';
+    container.appendChild(blank);
+  }
+
+  lucide.createIcons({ root: container });
+}
+
+// 管理者用 リスト表示（補助）
+function renderAdminCalendarList(shifts) {
+  const tbody = document.getElementById('shifts-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  if (shifts.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="py-6 text-center text-slate-400">当月の登録シフトはありません。「シフト追加」から登録してください</td></tr>';
+    return;
+  }
+
+  shifts.sort((a, b) => a.date.localeCompare(b.date));
+
+  shifts.forEach(s => {
+    const tr = document.createElement('tr');
+
+    let typeBadge = '';
+    if (s.shift_type === 'NORMAL') {
+      typeBadge = '<span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[11px]">通常</span>';
+    } else if (s.shift_type === 'PAID_LEAVE') {
+      typeBadge = '<span class="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded text-[11px]">有給休暇</span>';
+    } else {
+      typeBadge = '<span class="bg-slate-100 text-slate-500 px-2 py-0.5 rounded text-[11px]">公休</span>';
+    }
+
+    const timeRange = s.shift_type === 'NORMAL' && s.start_time ? `${s.start_time} - ${s.end_time}` : '-';
+
+    tr.innerHTML = `
+      <td class="py-3 px-4 font-mono">${s.date}</td>
+      <td class="py-3 px-4 font-bold text-slate-800">${s.user_name}</td>
+      <td class="py-3 px-4">${typeBadge}</td>
+      <td class="py-3 px-4 font-mono font-medium">${timeRange}</td>
+      <td class="py-3 px-4">${s.shift_type === 'NORMAL' ? `${s.break_minutes}分` : '-'}</td>
+      <td class="py-3 px-4 text-slate-500">${s.note || '-'}</td>
+      <td class="py-3 px-4 text-center">
+        <button onclick="deleteShift(${s.id})" class="text-rose-500 hover:text-rose-700 p-1 rounded hover:bg-rose-50 transition" title="削除">
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
+        </button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  lucide.createIcons({ root: tbody });
+}
+
+function switchAdminView(view) {
+  const gridView = document.getElementById('admin-calendar-grid-view');
+  const listView = document.getElementById('admin-calendar-list-view');
+  const tabCal = document.getElementById('admin-tab-calendar');
+  const tabList = document.getElementById('admin-tab-list');
+
+  if (view === 'calendar') {
+    gridView.classList.remove('hidden');
+    listView.classList.add('hidden');
+    tabCal.className = 'px-3 py-1.5 rounded-lg bg-white text-indigo-700 shadow-xs flex items-center space-x-1 transition';
+    tabList.className = 'px-3 py-1.5 rounded-lg hover:text-slate-900 flex items-center space-x-1 transition';
+  } else {
+    gridView.classList.add('hidden');
+    listView.classList.remove('hidden');
+    tabCal.className = 'px-3 py-1.5 rounded-lg hover:text-slate-900 flex items-center space-x-1 transition';
+    tabList.className = 'px-3 py-1.5 rounded-lg bg-white text-indigo-700 shadow-xs flex items-center space-x-1 transition';
+  }
+}
+
+function resetAdminToCurrentMonth() {
+  const now = new Date();
+  adminYear = now.getFullYear();
+  adminMonth = now.getMonth() + 1;
+  loadAdminShifts();
+}
+
+function changeAdminMonth(delta) {
+  adminMonth += delta;
+  if (adminMonth < 1) {
+    adminMonth = 12;
+    adminYear -= 1;
+  } else if (adminMonth > 12) {
+    adminMonth = 1;
+    adminYear += 1;
+  }
+  loadAdminShifts();
+}
+
+function openAddShiftModal(targetDate = null) {
+  const dateInput = document.getElementById('shift-date');
+  if (targetDate) {
+    dateInput.value = targetDate;
+  } else {
+    dateInput.value = new Date().toISOString().slice(0, 10);
+  }
+  document.getElementById('shift-type').value = 'NORMAL';
+  toggleShiftTypeFields();
+  document.getElementById('shift-modal').classList.remove('hidden');
+}
+
+function closeAddShiftModal() {
+  document.getElementById('shift-modal').classList.add('hidden');
+}
+
+function toggleShiftTypeFields() {
+  const type = document.getElementById('shift-type').value;
+  const timeGroup = document.getElementById('shift-time-group');
+  const breakGroup = document.getElementById('shift-break-group');
+  if (type === 'NORMAL') {
+    timeGroup.classList.remove('hidden');
+    breakGroup.classList.remove('hidden');
+  } else {
+    timeGroup.classList.add('hidden');
+    breakGroup.classList.add('hidden');
+  }
+}
+
+async function handleShiftSubmit(e) {
+  e.preventDefault();
+  const userId = parseInt(document.getElementById('shift-user-select').value, 10);
+  const dateStr = document.getElementById('shift-date').value;
+  const shiftType = document.getElementById('shift-type').value;
+  const startTime = shiftType === 'NORMAL' ? document.getElementById('shift-start-time').value : null;
+  const endTime = shiftType === 'NORMAL' ? document.getElementById('shift-end-time').value : null;
+  const breakMinutes = shiftType === 'NORMAL' ? parseInt(document.getElementById('shift-break-minutes').value, 10) : 0;
+  const note = document.getElementById('shift-note').value.trim();
+
+  try {
+    const res = await fetch('/api/admin/shifts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: userId,
+        date: dateStr,
+        shift_type: shiftType,
+        start_time: startTime,
+        end_time: endTime,
+        break_minutes: breakMinutes,
+        note: note
+      })
+    });
+
+    if (!res.ok) throw new Error('シフト登録に失敗しました');
+
+    showToast('シフトを登録しました');
+    closeAddShiftModal();
+    loadAdminShifts();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+async function deleteShift(id) {
+  if (!confirm('このシフトを削除しますか？')) return;
+  try {
+    const res = await fetch(`/api/admin/shifts/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('シフト削除に失敗しました');
+    showToast('シフトを削除しました');
+    loadAdminShifts();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+// 5. CSVダウンロード
+function downloadCsv() {
+  const monthVal = document.getElementById('csv-target-month').value;
+  if (!monthVal) {
+    showToast('対象年月を選択してください', 'error');
+    return;
+  }
+  const [y, m] = monthVal.split('-');
+  window.location.href = `/api/admin/export-csv?year=${parseInt(y, 10)}&month=${parseInt(m, 10)}`;
+}
+
+// 6. 薬局貼り出し用「月間シフト表 印刷機能」
+function printShiftTable() {
+  // 印刷ヘッダーにタイトルと印刷日時を反映
+  const titleEl = document.getElementById('print-sheet-title');
+  if (titleEl) {
+    titleEl.textContent = `${adminYear}年${adminMonth}月度 勤務シフト表`;
+  }
+  const timeEl = document.getElementById('print-timestamp');
+  if (timeEl) {
+    const now = new Date();
+    timeEl.textContent = `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  }
+
+  // カレンダー表示タブに切り替えてから印刷
+  switchAdminView('calendar');
+  window.print();
+}
+
+// 7. 雇用条件設定モーダル
+function openConditionModal() {
+  const select = document.getElementById('condition-user-select');
+  if (select && select.value) {
+    onConditionUserChange();
+  }
+  document.getElementById('condition-modal').classList.remove('hidden');
+}
+
+function closeConditionModal() {
+  document.getElementById('condition-modal').classList.add('hidden');
+}
+
+function onConditionUserChange() {
+  const select = document.getElementById('condition-user-select');
+  if (!select) return;
+  const userId = parseInt(select.value, 10);
+  const user = staffList.find(u => u.id === userId);
+  if (!user) return;
+
+  // 曜日チェックボックス設定
+  const workDays = (user.work_days || '0,1,2,4,5').split(',').map(s => s.trim());
+  document.querySelectorAll('input[name="work_day"]').forEach(cb => {
+    cb.checked = workDays.includes(cb.value);
+  });
+
+  document.getElementById('cond-start-time').value = user.default_start_time ? user.default_start_time.slice(0, 5) : '09:00';
+  document.getElementById('cond-end-time').value = user.default_end_time ? user.default_end_time.slice(0, 5) : '18:00';
+  document.getElementById('cond-break-minutes').value = user.default_break_minutes !== undefined ? user.default_break_minutes : 60;
+  document.getElementById('cond-hourly-wage').value = user.hourly_wage || 1500;
+  document.getElementById('cond-color-picker').value = user.color || '#059669';
+}
+
+function setPresetColor(color) {
+  const picker = document.getElementById('cond-color-picker');
+  if (picker) {
+    picker.value = color;
+  }
+}
+
+async function handleConditionSubmit(e) {
+  e.preventDefault();
+  const userId = parseInt(document.getElementById('condition-user-select').value, 10);
+  
+  // 選択された曜日
+  const selectedDays = Array.from(document.querySelectorAll('input[name="work_day"]:checked'))
+    .map(cb => cb.value)
+    .join(',');
+
+  const startTime = document.getElementById('cond-start-time').value;
+  const endTime = document.getElementById('cond-end-time').value;
+  const breakMinutes = parseInt(document.getElementById('cond-break-minutes').value, 10);
+  const hourlyWage = parseInt(document.getElementById('cond-hourly-wage').value, 10);
+  const color = document.getElementById('cond-color-picker').value;
+
+  try {
+    const res = await fetch(`/api/admin/users/${userId}/condition`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        work_days: selectedDays,
+        default_start_time: startTime,
+        default_end_time: endTime,
+        default_break_minutes: breakMinutes,
+        hourly_wage: hourlyWage,
+        color: color
+      })
+    });
+
+    if (!res.ok) throw new Error('雇用条件の保存に失敗しました');
+
+    showToast('雇用条件を保存しました');
+    closeConditionModal();
+    await loadStaffUsers();
+    loadAdminShifts();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+// 8. 1ヶ月分一括自動生成
+function openAutoGenerateModal() {
+  const autoGenMonth = document.getElementById('auto-gen-month');
+  if (autoGenMonth) {
+    autoGenMonth.value = `${adminYear}-${String(adminMonth).padStart(2, '0')}`;
+  }
+  document.getElementById('auto-generate-modal').classList.remove('hidden');
+}
+
+function closeAutoGenerateModal() {
+  document.getElementById('auto-generate-modal').classList.add('hidden');
+}
+
+async function handleAutoGenerateSubmit(e) {
+  e.preventDefault();
+  const monthVal = document.getElementById('auto-gen-month').value;
+  if (!monthVal) return;
+
+  const [y, m] = monthVal.split('-');
+  const year = parseInt(y, 10);
+  const month = parseInt(m, 10);
+  const overwrite = document.getElementById('auto-gen-overwrite').checked;
+
+  try {
+    const res = await fetch('/api/admin/shifts/auto-generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        year: year,
+        month: month,
+        overwrite: overwrite
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || '自動生成に失敗しました');
+
+    showToast(`シフト一括生成完了: 新規${data.generated}件, 更新${data.updated}件（希望休${data.skipped_requests}件スキップ）`);
+    closeAutoGenerateModal();
+
+    // カレンダーの表示月を生成月に合わせる
+    adminYear = year;
+    adminMonth = month;
+    loadAdminShifts();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}

@@ -1,0 +1,128 @@
+/* 薬局向けクリーンなアニメーションと微調整 */
+
+/* タップハイライトを無効化（スマホアプリ感） */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* スクロールバーのカスタマイズ */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ボタンのホバー＆アクティブ感 */
+button:active {
+  transform: scale(0.98);
+}
+
+/* カードのアニメーション */
+.card-hover {
+  transition: all 0.2s ease-in-out;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+}
+
+/* スマホ用タッチ最適化 */
+@media (max-width: 640px) {
+  .touch-target {
+    min-height: 44px;
+  }
+}
+
+/* 印刷専用ヘッダー（画面では非表示） */
+.print-only {
+  display: none;
+}
+
+/* =======================================
+   薬局貼り出し用「月間シフト表 印刷機能」
+   A4横向き 1枚完結レイアウト
+   ======================================= */
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 8mm;
+  }
+
+  /* 画面用UIの完全非表示 */
+  .no-print,
+  header,
+  #toast-container,
+  button,
+  .btn,
+  select,
+  input {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  body {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    font-size: 10pt;
+    padding: 0 !important;
+    margin: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  main {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+
+  /* カレンダー印刷用コンテナ */
+  .print-calendar-container {
+    border: 2px solid #334155 !important;
+    border-radius: 6px !important;
+    overflow: hidden;
+    page-break-inside: avoid;
+  }
+
+  /* カレンダーセル印刷スタイル */
+  .admin-cal-cell {
+    border: 1px solid #cbd5e1 !important;
+    min-height: 75px !important;
+    max-height: none !important;
+    height: auto !important;
+    padding: 3px !important;
+    background-color: #ffffff !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+  }
+
+  .admin-cal-cell * {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  /* シフトバッジ印刷対応 */
+  .shift-badge-print {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    border-width: 1px !important;
+  }
+
+  /* 削除ボタン等は印刷時非表示 */
+  .shift-delete-btn {
+    display: none !important;
+  }
+}
