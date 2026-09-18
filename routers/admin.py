@@ -616,6 +616,175 @@ def review_shift_request(
     db.commit()
     return {"message": f"シフト希望を {review_data.status} として処理しました"}
 
+# --- 月次給与・勤怠集計 ---
+@router.get("/payroll/monthly", response_model=schemas.MonthlyPayrollResponse)
+def get_monthly_payroll(
+    year: int = Query(default=None),
+    month: int = Query(default=None),
+    admin: models.User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    today = date.today()
+    target_year = year or today.year
+    target_month = month or today.month
+
+    first_day = date(target_year, target_month, 1)
+    _, last_day_num = calendar.monthrange(target_year, target_month)
+    last_day = date(target_year, target_month, last_day_num)
+
+    users = db.query(models.User).filter(
+        models.User.is_active == True
+    ).order_by(models.User.role.asc(), models.User.id.asc()).all()
+
+    items = []
+    total_payout = 0
+    total_minutes_all = 0
+
+    for user in users:
+        # 当月打刻レコード
+        records = db.query(models.TimeRecord).filter(
+            models.TimeRecord.user_id == user.id,
+            models.TimeRecord.date >= first_day,
+            models.TimeRecord.date <= last_day
+        ).all()
+
+        work_days = len([r for r in records if r.total_work_minutes > 0 or r.clock_in])
+        total_work_mins = sum(r.total_work_minutes for r in records)
+        total_break_mins = sum(r.total_break_minutes for r in records)
+        total_minutes_all += total_work_mins
+
+        # 予定シフト日数 (NORMAL)
+        scheduled_shifts_count = db.query(models.Shift).filter(
+            models.Shift.user_id == user.id,
+            models.Shift.date >= first_day,
+            models.Shift.date <= last_day,
+            models.Shift.shift_type == "NORMAL"
+        ).count()
+
+        # 有休消化日数
+        paid_leave_shifts = db.query(models.Shift).filter(
+            models.Shift.user_id == user.id,
+            models.Shift.date >= first_day,
+            models.Shift.date <= last_day,
+            models.Shift.shift_type == "PAID_LEAVE"
+        ).count()
+
+        daily_mins = user.get_daily_scheduled_minutes()
+
+        if user.wage_type == "MONTHLY":
+            work_sal = user.monthly_salary
+            pl_allowance = 0
+            est_total = user.monthly_salary
+        else:
+            work_sal = round((total_work_mins / 60.0) * user.hourly_wage)
+            pl_allowance = round((daily_mins / 60.0) * user.hourly_wage * paid_leave_shifts)
+            est_total = work_sal + pl_allowance
+
+        total_payout += est_total
+
+        h = total_work_mins // 60
+        m = total_work_mins % 60
+        h_str = f"{h}時間{m:02d}分"
+
+        items.append(schemas.MonthlyPayrollItem(
+            user_id=user.id,
+            username=user.username,
+            full_name=user.full_name,
+            role=user.role,
+            wage_type=user.wage_type,
+            hourly_wage=user.hourly_wage,
+            monthly_salary=user.monthly_salary,
+            work_days_count=work_days,
+            scheduled_days_count=scheduled_shifts_count,
+            total_work_minutes=total_work_mins,
+            total_work_hours_str=h_str,
+            total_break_minutes=total_break_mins,
+            paid_leave_days_count=float(paid_leave_shifts),
+            paid_leave_allowance=pl_allowance,
+            work_salary=work_sal,
+            total_estimated_salary=est_total
+        ))
+
+    return schemas.MonthlyPayrollResponse(
+        year=target_year,
+        month=target_month,
+        items=items,
+        total_payout=total_payout,
+        total_work_hours=round(total_minutes_all / 60.0, 2)
+    )
+
+# --- 管理者によるスタッフ勤怠直接登録・修正 ---
+@router.post("/time-records", response_model=schemas.TimeRecordResponse)
+def update_or_create_time_record(
+    req: schemas.AdminTimeRecordUpdate,
+    admin: models.User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    target_user = db.query(models.User).filter(models.User.id == req.user_id).first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="対象ユーザーが見つかりません")
+
+    record = db.query(models.TimeRecord).filter(
+        models.TimeRecord.user_id == req.user_id,
+        models.TimeRecord.date == req.date
+    ).first()
+
+    cin_dt = None
+    if req.clock_in:
+        try:
+            if " " in req.clock_in:
+                cin_dt = datetime.strptime(req.clock_in, "%Y-%m-%d %H:%M")
+            else:
+                cin_time = datetime.strptime(req.clock_in, "%H:%M").time()
+                cin_dt = datetime.combine(req.date, cin_time)
+        except Exception:
+            raise HTTPException(status_code=400, detail="出勤時刻の形式が不正です (例: 09:00)")
+
+    cout_dt = None
+    if req.clock_out:
+        try:
+            if " " in req.clock_out:
+                cout_dt = datetime.strptime(req.clock_out, "%Y-%m-%d %H:%M")
+            else:
+                cout_time = datetime.strptime(req.clock_out, "%H:%M").time()
+                cout_dt = datetime.combine(req.date, cout_time)
+        except Exception:
+            raise HTTPException(status_code=400, detail="退勤時刻の形式が不正です (例: 18:00)")
+
+    break_mins = max(0, req.total_break_minutes)
+
+    if not record:
+        record = models.TimeRecord(
+            user_id=req.user_id,
+            date=req.date,
+            clock_in=cin_dt,
+            clock_out=cout_dt,
+            total_break_minutes=break_mins,
+            status="LEFT" if cout_dt else ("WORKING" if cin_dt else "NONE"),
+            is_corrected=True,
+            note=req.note or "管理者直接入力"
+        )
+        db.add(record)
+    else:
+        record.clock_in = cin_dt
+        record.clock_out = cout_dt
+        record.total_break_minutes = break_mins
+        record.status = "LEFT" if cout_dt else ("WORKING" if cin_dt else "NONE")
+        record.is_corrected = True
+        if req.note:
+            record.note = req.note
+
+    # 実労働時間計算
+    if record.clock_in and record.clock_out:
+        diff_mins = int((record.clock_out - record.clock_in).total_seconds() // 60)
+        record.total_work_minutes = max(0, diff_mins - record.total_break_minutes)
+    else:
+        record.total_work_minutes = 0
+
+    db.commit()
+    db.refresh(record)
+    return record
+
 @router.get("/export-csv")
 def export_monthly_attendance_csv(
     year: int = Query(default=None),
@@ -632,9 +801,8 @@ def export_monthly_attendance_csv(
     last_day = date(target_year, target_month, last_day_num)
 
     users = db.query(models.User).filter(
-        models.User.role == "staff",
         models.User.is_active == True
-    ).all()
+    ).order_by(models.User.role.asc(), models.User.id.asc()).all()
 
     output = io.StringIO()
     # Excelで文字化けしない UTF-8 BOM を追加
@@ -645,15 +813,19 @@ def export_monthly_attendance_csv(
     writer.writerow([
         "社員/スタッフID",
         "氏名",
+        "役職",
         "給与形態",
         "基本時給/月給",
         "対象年月",
-        "出勤日数",
+        "実働日数",
+        "予定シフト日数",
         "有休消化日数",
         "総実労働時間(分)",
         "総実労働時間(時間)",
         "総休憩時間(分)",
-        "概算支給額(円)"
+        "実労働給与(円)",
+        "有休手当(円)",
+        "概算総支給額(円)"
     ])
 
     for user in users:
@@ -667,6 +839,14 @@ def export_monthly_attendance_csv(
         total_work_mins = sum(r.total_work_minutes for r in records)
         total_break_mins = sum(r.total_break_minutes for r in records)
 
+        # 予定シフト日数
+        scheduled_shifts_count = db.query(models.Shift).filter(
+            models.Shift.user_id == user.id,
+            models.Shift.date >= first_day,
+            models.Shift.date <= last_day,
+            models.Shift.shift_type == "NORMAL"
+        ).count()
+
         # 有休消化日数
         paid_leave_shifts = db.query(models.Shift).filter(
             models.Shift.user_id == user.id,
@@ -675,32 +855,41 @@ def export_monthly_attendance_csv(
             models.Shift.shift_type == "PAID_LEAVE"
         ).count()
 
-        hours_str = f"{total_work_mins / 60.0:.2f}"
-        
-        # 概算給与
+        daily_mins = user.get_daily_scheduled_minutes()
+
         if user.wage_type == "MONTHLY":
-            salary = user.monthly_salary
+            work_sal = user.monthly_salary
+            pl_allowance = 0
+            est_total = user.monthly_salary
             wage_label = f"月給 {user.monthly_salary:,}円"
         else:
-            salary = round((total_work_mins / 60.0) * user.hourly_wage)
+            work_sal = round((total_work_mins / 60.0) * user.hourly_wage)
+            pl_allowance = round((daily_mins / 60.0) * user.hourly_wage * paid_leave_shifts)
+            est_total = work_sal + pl_allowance
             wage_label = f"時給 {user.hourly_wage:,}円"
+
+        hours_str = f"{total_work_mins / 60.0:.2f}"
 
         writer.writerow([
             user.username,
             user.full_name,
+            "管理者" if user.role == "admin" else "スタッフ",
             user.wage_type,
             wage_label,
             f"{target_year}年{target_month}月",
             work_days,
+            scheduled_shifts_count,
             paid_leave_shifts,
             total_work_mins,
             hours_str,
             total_break_mins,
-            salary
+            work_sal,
+            pl_allowance,
+            est_total
         ])
 
     csv_data = output.getvalue()
-    filename = f"kintai_{target_year}_{target_month:02d}.csv"
+    filename = f"kintai_payroll_{target_year}_{target_month:02d}.csv"
 
     return Response(
         content=csv_data,
@@ -709,3 +898,4 @@ def export_monthly_attendance_csv(
             "Content-Disposition": f"attachment; filename={filename}"
         }
     )
+

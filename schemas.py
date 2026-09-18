@@ -198,3 +198,39 @@ class StaffDashboardResponse(BaseModel):
     paid_leave_remaining: float
     paid_leave_legal_obligation_progress: float  # 0.0 - 1.0 (5日基準)
     paid_leave_warning: bool
+
+# --- 管理者による勤怠直接更新 ---
+class AdminTimeRecordUpdate(BaseModel):
+    user_id: int
+    date: date
+    clock_in: Optional[str] = None   # "HH:MM" または "YYYY-MM-DD HH:MM"
+    clock_out: Optional[str] = None  # "HH:MM" または "YYYY-MM-DD HH:MM"
+    total_break_minutes: int = 60
+    note: Optional[str] = None
+
+# --- 月次給与集計 ---
+class MonthlyPayrollItem(BaseModel):
+    user_id: int
+    username: str
+    full_name: str
+    role: str
+    wage_type: str  # "HOURLY" or "MONTHLY"
+    hourly_wage: int
+    monthly_salary: int
+    work_days_count: int
+    scheduled_days_count: int
+    total_work_minutes: int
+    total_work_hours_str: str
+    total_break_minutes: int
+    paid_leave_days_count: float
+    paid_leave_allowance: int
+    work_salary: int
+    total_estimated_salary: int
+
+class MonthlyPayrollResponse(BaseModel):
+    year: int
+    month: int
+    items: List[MonthlyPayrollItem]
+    total_payout: int
+    total_work_hours: float
+

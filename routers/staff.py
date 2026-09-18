@@ -61,16 +61,27 @@ def get_dashboard(
 
     confirmed_minutes = sum(r.total_work_minutes for r in records_this_month)
     
-    # 時給計算
+    # 有休手当の計算
+    daily_scheduled_minutes = current_user.get_daily_scheduled_minutes()
+    
+    # 当月消化済みの有休（1日〜今日まで）
+    confirmed_paid_leave_count = db.query(models.Shift).filter(
+        models.Shift.user_id == current_user.id,
+        models.Shift.date >= first_day_of_month,
+        models.Shift.date <= today,
+        models.Shift.shift_type == "PAID_LEAVE"
+    ).count()
+
     hourly_wage = current_user.hourly_wage
     if current_user.wage_type == "MONTHLY":
         # 月給制の場合は基本給をベース
         confirmed_salary = current_user.monthly_salary
     else:
-        confirmed_salary = round((confirmed_minutes / 60.0) * hourly_wage)
+        paid_leave_allowance = round((daily_scheduled_minutes / 60.0) * hourly_wage * confirmed_paid_leave_count)
+        confirmed_salary = round((confirmed_minutes / 60.0) * hourly_wage) + paid_leave_allowance
 
     # 4. 月末着地見込み計算（今日以降の予定シフト）
-    # 今日以降の当月シフト
+    # 今日以降の当月通常シフト
     upcoming_shifts = db.query(models.Shift).filter(
         models.Shift.user_id == current_user.id,
         models.Shift.date >= today,
@@ -88,14 +99,23 @@ def get_dashboard(
             end_dt = datetime.combine(s.date, s.end_time)
             if end_dt > start_dt:
                 diff_min = int((end_dt - start_dt).total_seconds() // 60)
-                work_min = max(0, diff_min - s.break_minutes)
+                work_min = max(0, diff_min - (s.break_minutes or 0))
                 projected_remaining_minutes += work_min
+
+    # 今日以降の当月有休シフト
+    upcoming_paid_leave_count = db.query(models.Shift).filter(
+        models.Shift.user_id == current_user.id,
+        models.Shift.date > today,
+        models.Shift.date <= last_day_of_month,
+        models.Shift.shift_type == "PAID_LEAVE"
+    ).count()
 
     if current_user.wage_type == "MONTHLY":
         projected_remaining_salary = 0
         projected_month_end_salary = current_user.monthly_salary
     else:
-        projected_remaining_salary = round((projected_remaining_minutes / 60.0) * hourly_wage)
+        upcoming_paid_leave_allowance = round((daily_scheduled_minutes / 60.0) * hourly_wage * upcoming_paid_leave_count)
+        projected_remaining_salary = round((projected_remaining_minutes / 60.0) * hourly_wage) + upcoming_paid_leave_allowance
         projected_month_end_salary = confirmed_salary + projected_remaining_salary
 
     # 5. 扶養枠シミュレーション (103万・130万)

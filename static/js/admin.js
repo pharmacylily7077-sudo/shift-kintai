@@ -15,14 +15,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     autoGenMonth.value = `${adminYear}-${String(adminMonth).padStart(2, '0')}`;
   }
 
+  // 給与集計の年月初期値
+  const payrollMonth = document.getElementById('payroll-target-month');
+  if (payrollMonth) {
+    payrollMonth.value = `${adminYear}-${String(adminMonth).padStart(2, '0')}`;
+  }
+
   await loadStaffUsers();
+  initAdminClockStatus();
   loadAttendanceSummary();
   loadShiftRequests();
   loadCorrectionRequests();
   loadAdminShifts();
+  loadMonthlyPayroll();
 });
 
-// 1. スタッフ一覧取得（シフト登録・雇用条件モーダルのセレクトボックス）
+// 1. スタッフ一覧取得（シフト登録・雇用条件・勤怠編集モーダルのセレクトボックス）
 async function loadStaffUsers() {
   try {
     const res = await fetch('/api/admin/users');
@@ -58,6 +66,13 @@ async function loadStaffUsers() {
       if (staffList.some(u => String(u.id) === currentFilter) || currentFilter === 'ALL') {
         filterSelect.value = currentFilter;
       }
+    }
+
+    const trSelect = document.getElementById('time-record-user-select');
+    if (trSelect) {
+      trSelect.innerHTML = staffList
+        .map(u => `<option value="${u.id}">${u.full_name} (${u.role === 'admin' ? '管理者' : u.username})</option>`)
+        .join('');
     }
   } catch (err) {
     console.error(err);
@@ -1001,6 +1016,299 @@ async function handleAddStaffSubmit(e) {
     setTimeout(() => {
       window.location.reload();
     }, 600);
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+// 10. 薬局長（管理者）本日打刻機能
+async function initAdminClockStatus() {
+  try {
+    const res = await fetch('/api/me/dashboard');
+    if (!res.ok) return;
+    const data = await res.json();
+
+    const statusBadge = document.getElementById('admin-clock-status-badge');
+    const statusText = document.getElementById('admin-clock-status-text');
+    const display = document.getElementById('admin-today-clock-display');
+
+    const btnIn = document.getElementById('btn-admin-clock-in');
+    const btnBreakStart = document.getElementById('btn-admin-break-start');
+    const btnBreakEnd = document.getElementById('btn-admin-break-end');
+    const btnOut = document.getElementById('btn-admin-clock-out');
+
+    const statusMap = {
+      NONE: { text: '未出勤', bg: 'bg-slate-100', col: 'text-slate-600', dot: 'bg-slate-400' },
+      WORKING: { text: '勤務中', bg: 'bg-emerald-50', col: 'text-emerald-700', dot: 'bg-emerald-500' },
+      ON_BREAK: { text: '休憩中', bg: 'bg-amber-50', col: 'text-amber-700', dot: 'bg-amber-500' },
+      LEFT: { text: '退勤済', bg: 'bg-blue-50', col: 'text-blue-700', dot: 'bg-blue-500' },
+    };
+
+    const cur = statusMap[data.today_status] || statusMap.NONE;
+    if (statusText) statusText.textContent = cur.text;
+    if (statusBadge) {
+      statusBadge.className = `inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${cur.bg} ${cur.col}`;
+      const dot = statusBadge.querySelector('span:first-child');
+      if (dot) dot.className = `w-2 h-2 rounded-full ${cur.dot} ${data.today_status === 'WORKING' ? 'animate-pulse' : ''}`;
+    }
+
+    let cinStr = '未';
+    let coutStr = '未';
+    if (data.today_record) {
+      if (data.today_record.clock_in) {
+        const dIn = new Date(data.today_record.clock_in);
+        cinStr = `${String(dIn.getHours()).padStart(2, '0')}:${String(dIn.getMinutes()).padStart(2, '0')}`;
+      }
+      if (data.today_record.clock_out) {
+        const dOut = new Date(data.today_record.clock_out);
+        coutStr = `${String(dOut.getHours()).padStart(2, '0')}:${String(dOut.getMinutes()).padStart(2, '0')}`;
+      }
+    }
+    if (display) {
+      display.textContent = `出勤: ${cinStr} / 退勤: ${coutStr}`;
+    }
+
+    if (btnIn && btnBreakStart && btnBreakEnd && btnOut) {
+      if (data.today_status === 'NONE') {
+        btnIn.disabled = false;
+        btnBreakStart.disabled = true;
+        btnBreakEnd.disabled = true;
+        btnOut.disabled = true;
+      } else if (data.today_status === 'WORKING') {
+        btnIn.disabled = true;
+        btnBreakStart.disabled = false;
+        btnBreakEnd.disabled = true;
+        btnOut.disabled = false;
+      } else if (data.today_status === 'ON_BREAK') {
+        btnIn.disabled = true;
+        btnBreakStart.disabled = true;
+        btnBreakEnd.disabled = false;
+        btnOut.disabled = false;
+      } else if (data.today_status === 'LEFT') {
+        btnIn.disabled = true;
+        btnBreakStart.disabled = true;
+        btnBreakEnd.disabled = true;
+        btnOut.disabled = true;
+      }
+    }
+  } catch (err) {
+    console.error('initAdminClockStatus error:', err);
+  }
+}
+
+async function clockAdminAction(action) {
+  const confirmTexts = {
+    IN: '出勤打刻しますか？',
+    BREAK_START: '休憩に入りますか？',
+    BREAK_END: '休憩から戻りますか？',
+    OUT: '退勤打刻しますか？本日もお疲れ様でした！'
+  };
+
+  if (!confirm(confirmTexts[action])) return;
+
+  try {
+    const res = await fetch('/api/me/clock', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: action })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || '打刻に失敗しました');
+
+    const labels = { IN: '出勤', BREAK_START: '休憩入', BREAK_END: '休憩戻', OUT: '退勤' };
+    showToast(`薬局長: ${labels[action]}打刻を記録しました！`);
+
+    await initAdminClockStatus();
+    await loadAttendanceSummary();
+    await loadMonthlyPayroll();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+// 11. 月次給与集計 ＆ 勤怠パネル
+async function loadMonthlyPayroll() {
+  try {
+    const monthInput = document.getElementById('payroll-target-month');
+    let y = adminYear;
+    let m = adminMonth;
+
+    if (monthInput && monthInput.value) {
+      const parts = monthInput.value.split('-');
+      y = parseInt(parts[0], 10);
+      m = parseInt(parts[1], 10);
+    }
+
+    const res = await fetch(`/api/admin/payroll/monthly?year=${y}&month=${m}`);
+    if (!res.ok) throw new Error('月次給与集計の取得に失敗しました');
+
+    const data = await res.json();
+    renderMonthlyPayroll(data);
+  } catch (err) {
+    console.error('loadMonthlyPayroll error:', err);
+  }
+}
+
+function renderMonthlyPayroll(data) {
+  const payoutEl = document.getElementById('payroll-total-payout');
+  const hoursEl = document.getElementById('payroll-total-hours');
+  const staffEl = document.getElementById('payroll-total-staff');
+  const tbody = document.getElementById('payroll-tbody');
+
+  if (payoutEl) payoutEl.textContent = `¥${data.total_payout.toLocaleString()}`;
+  if (hoursEl) hoursEl.textContent = `${data.total_work_hours}時間`;
+  if (staffEl) staffEl.textContent = `${data.items.length}名`;
+
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  if (!data.items || data.items.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" class="py-6 text-center text-slate-400">集計対象スタッフがいません</td></tr>';
+    return;
+  }
+
+  data.items.forEach(item => {
+    const tr = document.createElement('tr');
+    tr.className = 'hover:bg-slate-50/60 transition';
+
+    let wageStr = '';
+    if (item.wage_type === 'MONTHLY') {
+      wageStr = `<span class="bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded text-[11px]">月給 ¥${item.monthly_salary.toLocaleString()}</span>`;
+    } else {
+      wageStr = `<span class="bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded text-[11px]">時給 ¥${item.hourly_wage.toLocaleString()}</span>`;
+    }
+
+    const roleBadge = item.role === 'admin' 
+      ? '<span class="ml-1 text-[10px] bg-indigo-100 text-indigo-800 font-bold px-1.5 py-0.5 rounded">管理者</span>'
+      : '';
+
+    tr.innerHTML = `
+      <td class="py-3 px-4 font-bold text-slate-900 flex items-center">
+        ${item.full_name}
+        ${roleBadge}
+      </td>
+      <td class="py-3 px-4">${wageStr}</td>
+      <td class="py-3 px-4 font-medium text-slate-700">
+        <span class="font-bold ${item.work_days_count > 0 ? 'text-slate-900' : 'text-slate-400'}">${item.work_days_count}日</span>
+        <span class="text-slate-400 text-[10px]"> / 予定${item.scheduled_days_count}日</span>
+      </td>
+      <td class="py-3 px-4 font-mono font-bold text-slate-800">${item.total_work_hours_str}</td>
+      <td class="py-3 px-4 font-semibold text-slate-700">
+        ${item.paid_leave_days_count > 0 ? `<span class="text-emerald-600 font-bold">🌿 ${item.paid_leave_days_count}日</span>` : '<span class="text-slate-300">-</span>'}
+      </td>
+      <td class="py-3 px-4 font-mono text-slate-700">
+        ${item.paid_leave_allowance > 0 ? `¥${item.paid_leave_allowance.toLocaleString()}` : '<span class="text-slate-300">-</span>'}
+      </td>
+      <td class="py-3 px-4 font-bold text-emerald-700 font-mono text-sm">
+        ¥${item.total_estimated_salary.toLocaleString()}
+      </td>
+      <td class="py-3 px-4 text-center">
+        <button onclick="openTimeRecordModal(${item.user_id})" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-lg text-xs font-semibold transition" title="勤怠手動入力">
+          勤怠修正
+        </button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function changePayrollMonth(delta) {
+  const monthInput = document.getElementById('payroll-target-month');
+  if (!monthInput || !monthInput.value) return;
+
+  const [yStr, mStr] = monthInput.value.split('-');
+  let y = parseInt(yStr, 10);
+  let m = parseInt(mStr, 10) + delta;
+
+  if (m < 1) {
+    m = 12;
+    y -= 1;
+  } else if (m > 12) {
+    m = 1;
+    y += 1;
+  }
+
+  monthInput.value = `${y}-${String(m).padStart(2, '0')}`;
+  loadMonthlyPayroll();
+}
+
+function downloadPayrollCsv() {
+  const monthInput = document.getElementById('payroll-target-month');
+  let y = adminYear;
+  let m = adminMonth;
+
+  if (monthInput && monthInput.value) {
+    const parts = monthInput.value.split('-');
+    y = parseInt(parts[0], 10);
+    m = parseInt(parts[1], 10);
+  }
+
+  window.location.href = `/api/admin/export-csv?year=${y}&month=${m}`;
+}
+
+// 12. 勤怠実績 手動入力・修正モーダル
+function openTimeRecordModal(targetUserId = null, targetDate = null) {
+  const userSelect = document.getElementById('time-record-user-select');
+  if (userSelect && targetUserId) {
+    userSelect.value = targetUserId;
+  }
+
+  const dateInput = document.getElementById('time-record-date');
+  if (dateInput) {
+    dateInput.value = targetDate || new Date().toISOString().slice(0, 10);
+  }
+
+  const cinInput = document.getElementById('time-record-clock-in');
+  if (cinInput) cinInput.value = '09:00';
+
+  const coutInput = document.getElementById('time-record-clock-out');
+  if (coutInput) coutInput.value = '18:00';
+
+  const breakInput = document.getElementById('time-record-break');
+  if (breakInput) breakInput.value = '60';
+
+  const noteInput = document.getElementById('time-record-note');
+  if (noteInput) noteInput.value = '';
+
+  document.getElementById('admin-time-record-modal').classList.remove('hidden');
+}
+
+function closeTimeRecordModal() {
+  document.getElementById('admin-time-record-modal').classList.add('hidden');
+}
+
+async function handleTimeRecordSubmit(e) {
+  e.preventDefault();
+  const userId = parseInt(document.getElementById('time-record-user-select').value, 10);
+  const dateStr = document.getElementById('time-record-date').value;
+  const clockIn = document.getElementById('time-record-clock-in').value;
+  const clockOut = document.getElementById('time-record-clock-out').value;
+  const breakMins = parseInt(document.getElementById('time-record-break').value, 10) || 60;
+  const note = document.getElementById('time-record-note').value.trim();
+
+  try {
+    const res = await fetch('/api/admin/time-records', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: userId,
+        date: dateStr,
+        clock_in: clockIn,
+        clock_out: clockOut,
+        total_break_minutes: breakMins,
+        note: note
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || '勤怠の保存に失敗しました');
+
+    showToast('勤怠実績を更新しました');
+    closeTimeRecordModal();
+
+    await loadAttendanceSummary();
+    await loadMonthlyPayroll();
   } catch (err) {
     showToast(err.message, 'error');
   }

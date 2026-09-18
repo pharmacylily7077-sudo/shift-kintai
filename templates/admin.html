@@ -56,6 +56,53 @@
     </div>
   </div>
 
+  <!-- 0. 薬局長（管理者）本日打刻カード -->
+  <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-100 no-print">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+          <i data-lucide="clock" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h3 class="font-bold text-slate-900">{{ user.full_name }} 様（薬局長打刻）</h3>
+            <span id="admin-clock-status-badge" class="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">
+              <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+              <span id="admin-clock-status-text">確認中...</span>
+            </span>
+          </div>
+          <p class="text-xs text-slate-500">
+            本日: <span id="admin-today-clock-display" class="font-mono text-slate-700">出勤: 未 / 退勤: 未</span>
+          </p>
+        </div>
+      </div>
+
+      <!-- 打刻ボタン群 -->
+      <div class="grid grid-cols-2 sm:flex sm:items-center gap-2">
+        <button id="btn-admin-clock-in" onclick="clockAdminAction('IN')"
+          class="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-3.5 py-2 rounded-xl text-xs shadow-xs transition flex items-center justify-center space-x-1.5">
+          <i data-lucide="log-in" class="w-4 h-4"></i>
+          <span>出勤</span>
+        </button>
+        <button id="btn-admin-break-start" onclick="clockAdminAction('BREAK_START')"
+          class="bg-amber-500 hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-3.5 py-2 rounded-xl text-xs shadow-xs transition flex items-center justify-center space-x-1.5">
+          <i data-lucide="coffee" class="w-4 h-4"></i>
+          <span>休憩入</span>
+        </button>
+        <button id="btn-admin-break-end" onclick="clockAdminAction('BREAK_END')"
+          class="bg-amber-600 hover:bg-amber-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-3.5 py-2 rounded-xl text-xs shadow-xs transition flex items-center justify-center space-x-1.5">
+          <i data-lucide="play" class="w-4 h-4"></i>
+          <span>休憩戻</span>
+        </button>
+        <button id="btn-admin-clock-out" onclick="clockAdminAction('OUT')"
+          class="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-3.5 py-2 rounded-xl text-xs shadow-xs transition flex items-center justify-center space-x-1.5">
+          <i data-lucide="log-out" class="w-4 h-4"></i>
+          <span>退勤</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- 1. 当日のリアルタイム勤怠モニタリング -->
   <div class="bg-white rounded-3xl p-6 shadow-xs border border-slate-100 no-print">
     <div class="flex items-center justify-between mb-4">
@@ -273,6 +320,105 @@
         <tbody id="shifts-tbody" class="divide-y divide-slate-100">
           <tr>
             <td colspan="7" class="py-6 text-center text-slate-400">読込中...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 4. 月次勤怠集計 ＆ 給与計算パネル -->
+  <div class="bg-white rounded-3xl p-6 shadow-xs border border-slate-100 no-print">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+      <div class="flex items-center space-x-2.5">
+        <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+          <i data-lucide="calculator" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h3 class="font-bold text-slate-900">月次勤怠集計 ＆ 給与計算</h3>
+          <p class="text-xs text-slate-500">毎月の実労働時間・有休手当・概算支給額の集計</p>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <!-- 年月セレクタ -->
+        <div class="flex items-center space-x-1 bg-slate-50 p-1 rounded-xl border border-slate-200">
+          <button onclick="changePayrollMonth(-1)" class="p-1.5 rounded-lg hover:bg-slate-200 text-slate-700 transition" title="前月">
+            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+          </button>
+          <input type="month" id="payroll-target-month" onchange="loadMonthlyPayroll()"
+            class="bg-transparent text-xs font-bold text-slate-800 focus:outline-none px-2 py-0.5">
+          <button onclick="changePayrollMonth(1)" class="p-1.5 rounded-lg hover:bg-slate-200 text-slate-700 transition" title="翌月">
+            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <!-- 勤怠手動入力ボタン -->
+        <button onclick="openTimeRecordModal()"
+          class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-3 py-2 rounded-xl transition flex items-center space-x-1.5 shadow-xs">
+          <i data-lucide="edit-3" class="w-4 h-4 text-slate-600"></i>
+          <span>勤怠実績を手動修正</span>
+        </button>
+
+        <!-- CSVダウンロードボタン -->
+        <button onclick="downloadPayrollCsv()"
+          class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5 shadow-xs">
+          <i data-lucide="download" class="w-4 h-4"></i>
+          <span>給与CSVダウンロード</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 給与サマリーカード -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div class="bg-emerald-50/60 border border-emerald-100 p-4 rounded-2xl flex items-center justify-between">
+        <div>
+          <span class="text-xs font-bold text-emerald-800">当月 総支給概算額</span>
+          <div id="payroll-total-payout" class="text-xl sm:text-2xl font-black text-emerald-700 mt-0.5">¥0</div>
+        </div>
+        <div class="w-10 h-10 rounded-xl bg-emerald-100/70 text-emerald-700 flex items-center justify-center">
+          <i data-lucide="banknote" class="w-5 h-5"></i>
+        </div>
+      </div>
+
+      <div class="bg-indigo-50/60 border border-indigo-100 p-4 rounded-2xl flex items-center justify-between">
+        <div>
+          <span class="text-xs font-bold text-indigo-800">全スタッフ 総実労働時間</span>
+          <div id="payroll-total-hours" class="text-xl sm:text-2xl font-black text-indigo-700 mt-0.5">0.0時間</div>
+        </div>
+        <div class="w-10 h-10 rounded-xl bg-indigo-100/70 text-indigo-700 flex items-center justify-center">
+          <i data-lucide="timer" class="w-5 h-5"></i>
+        </div>
+      </div>
+
+      <div class="bg-amber-50/60 border border-amber-100 p-4 rounded-2xl flex items-center justify-between">
+        <div>
+          <span class="text-xs font-bold text-amber-800">集計対象スタッフ</span>
+          <div id="payroll-total-staff" class="text-xl sm:text-2xl font-black text-amber-700 mt-0.5">0名</div>
+        </div>
+        <div class="w-10 h-10 rounded-xl bg-amber-100/70 text-amber-700 flex items-center justify-center">
+          <i data-lucide="users" class="w-5 h-5"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- 給与集計明細テーブル -->
+    <div class="overflow-x-auto rounded-2xl border border-slate-100">
+      <table class="w-full text-left text-xs text-slate-600">
+        <thead class="bg-slate-50 text-slate-700 uppercase font-semibold border-b border-slate-100">
+          <tr>
+            <th class="py-3 px-4">スタッフ氏名</th>
+            <th class="py-3 px-4">給与形態</th>
+            <th class="py-3 px-4">実働 / 予定</th>
+            <th class="py-3 px-4">総実労働時間</th>
+            <th class="py-3 px-4">有休消化</th>
+            <th class="py-3 px-4">有休手当</th>
+            <th class="py-3 px-4 font-bold text-slate-900">概算支給額</th>
+            <th class="py-3 px-4 text-center">操作</th>
+          </tr>
+        </thead>
+        <tbody id="payroll-tbody" class="divide-y divide-slate-100">
+          <tr>
+            <td colspan="8" class="py-6 text-center text-slate-400">読込中...</td>
           </tr>
         </tbody>
       </table>
@@ -576,6 +722,72 @@
         <button type="submit" class="px-4 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-sm flex items-center space-x-1">
           <i data-lucide="sparkles" class="w-4 h-4"></i>
           <span>一括生成を実行</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 勤怠実績 手動入力・修正モーダル -->
+<div id="admin-time-record-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 hidden no-print">
+  <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+      <div class="flex items-center space-x-2">
+        <span class="text-xl">⏱️</span>
+        <div>
+          <h3 class="font-bold text-slate-900">勤怠実績の直接入力・修正</h3>
+          <p class="text-xs text-slate-500">打刻忘れや打刻修正を即時反映</p>
+        </div>
+      </div>
+      <button onclick="closeTimeRecordModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <form id="admin-time-record-form" onsubmit="handleTimeRecordSubmit(event)" class="space-y-4">
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-1">対象スタッフ</label>
+        <select id="time-record-user-select" required
+          class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-1">対象日</label>
+        <input type="date" id="time-record-date" required
+          class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">出勤時刻</label>
+          <input type="time" id="time-record-clock-in" required
+            class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">退勤時刻</label>
+          <input type="time" id="time-record-clock-out" required
+            class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-1">休憩時間 (分)</label>
+        <input type="number" id="time-record-break" value="60" min="0" step="5" required
+          class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-1">修正理由・メモ</label>
+        <input type="text" id="time-record-note" placeholder="打刻忘れ、早出対応など"
+          class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+      </div>
+
+      <div class="pt-2 flex items-center justify-end space-x-2">
+        <button type="button" onclick="closeTimeRecordModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100">キャンセル</button>
+        <button type="submit" class="px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm flex items-center space-x-1">
+          <i data-lucide="check" class="w-4 h-4"></i>
+          <span>勤怠を保存</span>
         </button>
       </div>
     </form>

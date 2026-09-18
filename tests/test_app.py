@@ -558,5 +558,82 @@ def test_shift_manual_crud_and_reflection(client):
     day1_info_after = next(item for item in my_shifts_res2.json() if item["date"] == "2026-12-01")
     assert day1_info_after["shift"] is None
 
+def test_admin_direct_time_record_and_monthly_payroll(client):
+    admin_login = client.post("/api/auth/login", json={"username": "testadmin", "password": "adminpass"})
+    admin_token = admin_login.json()["access_token"]
+    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+
+    staff_login = client.post("/api/auth/login", json={"username": "teststaff", "password": "staffpass"})
+    staff_token = staff_login.json()["access_token"]
+    staff_headers = {"Authorization": f"Bearer {staff_token}"}
+    staff_me = client.get("/api/me/dashboard", headers=staff_headers).json()["user"]
+    staff_id = staff_me["id"]
+
+    # 1. 管理者がスタッフの勤怠実績を手動直接入力（9:00〜18:00、休憩60分 = 実働8時間480分）
+    rec_res = client.post("/api/admin/time-records", json={
+        "user_id": staff_id,
+        "date": "2026-11-10",
+        "clock_in": "09:00",
+        "clock_out": "18:00",
+        "total_break_minutes": 60,
+        "note": "管理者手動登録テスト"
+    }, headers=admin_headers)
+    assert rec_res.status_code == 200
+    rec_data = rec_res.json()
+    assert rec_data["total_work_minutes"] == 480
+    assert rec_data["is_corrected"] is True
+    assert rec_data["status"] == "LEFT"
+
+    # 2. スタッフに有休シフト（PAID_LEAVE）を登録
+    pl_res = client.post("/api/admin/shifts", json={
+        "user_id": staff_id,
+        "date": "2026-11-11",
+        "shift_type": "PAID_LEAVE",
+        "note": "有休テスト"
+    }, headers=admin_headers)
+    assert pl_res.status_code == 200
+
+    # 3. 月次給与集計API (GET /api/admin/payroll/monthly) の検証
+    payroll_res = client.get("/api/admin/payroll/monthly?year=2026&month=11", headers=admin_headers)
+    assert payroll_res.status_code == 200
+    p_data = payroll_res.json()
+    assert p_data["year"] == 2026
+    assert p_data["month"] == 11
+
+    # スタッフの集計行を確認
+    staff_p = next(item for item in p_data["items"] if item["user_id"] == staff_id)
+    assert staff_p["work_days_count"] == 1
+    assert staff_p["total_work_minutes"] == 480
+    assert staff_p["total_work_hours_str"] == "8時間00分"
+    assert staff_p["paid_leave_days_count"] == 1.0
+
+    # 時給に基づく計算確認 (8時間実労働 + 8時間有休手当)
+    wage = staff_p["hourly_wage"]
+    expected_work_sal = 8 * wage
+    expected_pl_allowance = 8 * wage
+    expected_total = expected_work_sal + expected_pl_allowance
+
+    assert staff_p["work_salary"] == expected_work_sal
+    assert staff_p["paid_leave_allowance"] == expected_pl_allowance
+    assert staff_p["total_estimated_salary"] == expected_total
+
+    # 4. 給与CSVダウンロード (GET /api/admin/export-csv) の検証
+    csv_res = client.get("/api/admin/export-csv?year=2026&month=11", headers=admin_headers)
+    assert csv_res.status_code == 200
+    assert "text/csv" in csv_res.headers["content-type"]
+    csv_text = csv_res.content.decode("utf-8")
+    assert "有休手当(円)" in csv_text
+    assert "概算総支給額(円)" in csv_text
+    assert str(expected_total) in csv_text
+
+    # 5. スタッフマイページ (/api/me/dashboard) の取得検証
+    dash_res = client.get("/api/me/dashboard", headers=staff_headers)
+    assert dash_res.status_code == 200
+    dash = dash_res.json()
+    assert dash["confirmed_salary"] >= 0
+    assert dash["projected_month_end_salary"] >= 0
+
+
+
 
 

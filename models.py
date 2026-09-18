@@ -33,6 +33,17 @@ class User(Base):
     correction_requests = relationship("CorrectionRequest", back_populates="user", cascade="all, delete-orphan")
     shift_requests = relationship("ShiftRequest", back_populates="user", cascade="all, delete-orphan")
 
+    def get_daily_scheduled_minutes(self) -> int:
+        if self.default_start_time and self.default_end_time:
+            dummy_d = date.today()
+            start_dt = datetime.combine(dummy_d, self.default_start_time)
+            end_dt = datetime.combine(dummy_d, self.default_end_time)
+            if end_dt > start_dt:
+                diff_min = int((end_dt - start_dt).total_seconds() // 60)
+                return max(0, diff_min - (self.default_break_minutes or 0))
+        return 480  # デフォルト8時間 (480分)
+
+
 
 class Shift(Base):
     __tablename__ = "shifts"
