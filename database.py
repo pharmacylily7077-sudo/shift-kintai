@@ -9,6 +9,8 @@ else:
     default_db_url = "sqlite:///./kintai.db"
 
 DATABASE_URL = os.getenv("DATABASE_URL", default_db_url)
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 # SQLiteの場合、スレッドチェックを無効化
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
