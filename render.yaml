@@ -1,11 +1,17 @@
 services:
   - type: web
     name: pharmacy-shift-kintai
-    runtime: python
+    runtime: docker
+    dockerfilePath: ./Dockerfile
     region: singapore
     plan: free
-    buildCommand: pip install -r requirements.txt && python seed.py
-    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    disk:
+      name: kintai-data
+      mountPath: /data
+      sizeGB: 1
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.8
+      - key: PORT
+        value: 8080
+      - key: SECRET_KEY
+        generateValue: true
+

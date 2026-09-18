@@ -808,6 +808,20 @@ function getWeeklyScheduleFromTable(prefix) {
   };
 }
 
+function onCondWageTypeChange() {
+  const wageType = document.getElementById('cond-wage-type').value;
+  const hourlyContainer = document.getElementById('cond-hourly-wage-container');
+  const monthlyContainer = document.getElementById('cond-monthly-salary-container');
+
+  if (wageType === 'MONTHLY') {
+    if (hourlyContainer) hourlyContainer.classList.add('hidden');
+    if (monthlyContainer) monthlyContainer.classList.remove('hidden');
+  } else {
+    if (hourlyContainer) hourlyContainer.classList.remove('hidden');
+    if (monthlyContainer) monthlyContainer.classList.add('hidden');
+  }
+}
+
 function onConditionUserChange() {
   const select = document.getElementById('condition-user-select');
   if (!select) return;
@@ -819,6 +833,21 @@ function onConditionUserChange() {
   if (nameInput) {
     nameInput.value = user.full_name || '';
   }
+
+  // 給与形態と給与額の反映
+  const wageTypeSelect = document.getElementById('cond-wage-type');
+  if (wageTypeSelect) {
+    wageTypeSelect.value = user.wage_type || 'HOURLY';
+  }
+  const hourlyInput = document.getElementById('cond-hourly-wage');
+  if (hourlyInput) {
+    hourlyInput.value = user.hourly_wage !== undefined ? user.hourly_wage : 1500;
+  }
+  const monthlyInput = document.getElementById('cond-monthly-salary');
+  if (monthlyInput) {
+    monthlyInput.value = user.monthly_salary !== undefined ? user.monthly_salary : 300000;
+  }
+  onCondWageTypeChange();
 
   // 削除ボタンの制御（管理者は削除不可）
   const deleteBtn = document.getElementById('cond-delete-staff-btn');
@@ -841,7 +870,6 @@ function onConditionUserChange() {
     user.default_break_minutes
   );
 
-  document.getElementById('cond-hourly-wage').value = user.hourly_wage || 1500;
   document.getElementById('cond-color-picker').value = user.color || '#059669';
 }
 
@@ -883,9 +911,11 @@ async function handleConditionSubmit(e) {
   e.preventDefault();
   const userId = parseInt(document.getElementById('condition-user-select').value, 10);
   const fullName = document.getElementById('cond-full-name').value.trim();
+  const wageType = document.getElementById('cond-wage-type') ? document.getElementById('cond-wage-type').value : 'HOURLY';
   
   const { scheduleJson, workDaysStr } = getWeeklyScheduleFromTable('cond');
-  const hourlyWage = parseInt(document.getElementById('cond-hourly-wage').value, 10);
+  const hourlyWage = parseInt(document.getElementById('cond-hourly-wage').value, 10) || 0;
+  const monthlySalary = parseInt(document.getElementById('cond-monthly-salary').value, 10) || 0;
   const color = document.getElementById('cond-color-picker').value;
 
   try {
@@ -894,9 +924,11 @@ async function handleConditionSubmit(e) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         full_name: fullName,
+        wage_type: wageType,
+        hourly_wage: hourlyWage,
+        monthly_salary: monthlySalary,
         work_days: workDaysStr,
         weekly_schedule: scheduleJson,
-        hourly_wage: hourlyWage,
         color: color
       })
     });

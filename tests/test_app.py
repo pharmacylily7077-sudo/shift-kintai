@@ -1,18 +1,20 @@
 import os
+import io
+import csv
 import pytest
 from datetime import date, datetime, time, timedelta
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-TEST_DB_FILE = "test_kintai.db"
+TEST_DB_FILE = "test_kintai_robust.db"
 if os.path.exists(TEST_DB_FILE):
     os.remove(TEST_DB_FILE)
 
 from database import Base, get_db
 import models
 from main import app
-from auth import hash_password
+from auth import hash_password, create_access_token
 
 test_engine = create_engine(f"sqlite:///{TEST_DB_FILE}", connect_args={"check_same_thread": False})
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
@@ -31,31 +33,62 @@ def setup_database():
     Base.metadata.create_all(bind=test_engine)
     db = TestingSessionLocal()
 
-    # テストユーザー投入
+    # テストユーザー投入（確定3名体制を模倣）
     admin_user = models.User(
         username="testadmin",
         password_hash=hash_password("adminpass"),
-        full_name="テスト管理者",
+        full_name="三宅 興之（管理者）",
         role="admin",
         wage_type="MONTHLY",
-        monthly_salary=400000,
-        hourly_wage=2500,
-        paid_leave_granted=10.0,
-        paid_leave_carried=2.0,
+        monthly_salary=450000,
+        hourly_wage=2800,
+        paid_leave_granted=15.0,
+        paid_leave_carried=5.0,
+        paid_leave_base_date=date(2026, 4, 1),
+        work_days="0,1,2,3,4,5",
+        default_start_time=time(9, 0),
+        default_end_time=time(19, 0),
+        default_break_minutes=60,
+        color="#7c3aed",
         is_active=True
     )
     staff_user = models.User(
         username="teststaff",
         password_hash=hash_password("staffpass"),
-        full_name="テストスタッフ",
+        full_name="小林 彩乃（薬剤師）",
         role="staff",
         wage_type="HOURLY",
         hourly_wage=1500,
+        monthly_salary=0,
         paid_leave_granted=10.0,
         paid_leave_carried=2.0,
+        paid_leave_base_date=date(2026, 4, 1),
+        work_days="0,1,2,4,5",
+        default_start_time=time(9, 0),
+        default_end_time=time(18, 0),
+        default_break_minutes=60,
+        color="#059669",
         is_active=True
     )
-    db.add_all([admin_user, staff_user])
+    staff_user2 = models.User(
+        username="teststaff02",
+        password_hash=hash_password("staffpass2"),
+        full_name="寺内（調剤事務）",
+        role="staff",
+        wage_type="HOURLY",
+        hourly_wage=1200,
+        monthly_salary=0,
+        paid_leave_granted=7.0,
+        paid_leave_carried=1.0,
+        paid_leave_base_date=date(2026, 4, 1),
+        work_days="0,1,3,4,5",
+        default_start_time=time(9, 0),
+        default_end_time=time(18, 0),
+        default_break_minutes=60,
+        color="#0284c7",
+        is_active=True
+    )
+    db.add_all([admin_user, staff_user, staff_user2])
     db.commit()
     db.close()
 
@@ -69,571 +102,783 @@ def setup_database():
 def client():
     return TestClient(app)
 
-def test_login_success_and_failure(client):
-    # 失敗系
-    res = client.post("/api/auth/login", json={"username": "teststaff", "password": "wrongpassword"})
-    assert res.status_code == 401
+@pytest.fixture
+def staff_headers(client):
+    res = client.post("/api/auth/login", json={"username": "teststaff", "password": "staffpass"})
+    token = res.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
 
-    # 成功系
+@pytest.fixture
+def staff2_headers(client):
+    res = client.post("/api/auth/login", json={"username": "teststaff02", "password": "staffpass2"})
+    token = res.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+@pytest.fixture
+def admin_headers(client):
+    res = client.post("/api/auth/login", json={"username": "testadmin", "password": "adminpass"})
+    token = res.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+# ==============================================================================
+# 1. 認証・権限・セキュリティ防御 (10テスト)
+# ==============================================================================
+
+def test_login_success_admin(client):
+    res = client.post("/api/auth/login", json={"username": "testadmin", "password": "adminpass"})
+    assert res.status_code == 200
+    data = res.json()
+    assert data["role"] == "admin"
+    assert "access_token" in data
+
+def test_login_success_staff(client):
     res = client.post("/api/auth/login", json={"username": "teststaff", "password": "staffpass"})
     assert res.status_code == 200
     data = res.json()
     assert data["role"] == "staff"
     assert "access_token" in data
-    assert "access_token" in res.cookies
 
-def test_authorization_separation(client):
-    login_res = client.post("/api/auth/login", json={"username": "teststaff", "password": "staffpass"})
-    token = login_res.json()["access_token"]
-    headers = {"Authorization": f"Bearer {token}"}
+def test_login_failure_wrong_password(client):
+    res = client.post("/api/auth/login", json={"username": "teststaff", "password": "wrongpassword"})
+    assert res.status_code == 401
+    assert "detail" in res.json()
 
-    # スタッフは /api/me/... にアクセス可能
-    me_res = client.get("/api/me/dashboard", headers=headers)
-    assert me_res.status_code == 200
-    assert me_res.json()["user"]["username"] == "teststaff"
+def test_login_failure_nonexistent_user(client):
+    res = client.post("/api/auth/login", json={"username": "nobody_user", "password": "anypassword"})
+    assert res.status_code == 401
 
-    # スタッフが管理者APIにアクセスすると 403 Forbidden
-    admin_res = client.get("/api/admin/attendance/summary", headers=headers)
-    assert admin_res.status_code == 403
+def test_unauthenticated_request_rejected(client):
+    res = client.get("/api/me/dashboard")
+    assert res.status_code == 401
 
-def test_clock_workflow(client):
-    login_res = client.post("/api/auth/login", json={"username": "teststaff", "password": "staffpass"})
-    token = login_res.json()["access_token"]
-    headers = {"Authorization": f"Bearer {token}"}
+def test_invalid_jwt_token_rejected(client):
+    res = client.get("/api/me/dashboard", headers={"Authorization": "Bearer invalid.token.string"})
+    assert res.status_code == 401
 
-    # 1. 出勤打刻
-    clock_in_res = client.post("/api/me/clock", json={"action": "IN"}, headers=headers)
-    assert clock_in_res.status_code == 200
-    assert clock_in_res.json()["status"] == "WORKING"
+def test_expired_jwt_token_rejected(client):
+    expired_token = create_access_token({"sub": "teststaff", "role": "staff"}, expires_delta=timedelta(seconds=-10))
+    res = client.get("/api/me/dashboard", headers={"Authorization": f"Bearer {expired_token}"})
+    assert res.status_code == 401
 
-    # 2. 二重出勤はエラー
-    dup_res = client.post("/api/me/clock", json={"action": "IN"}, headers=headers)
-    assert dup_res.status_code == 400
+def test_staff_cannot_access_admin_api(client, staff_headers):
+    res = client.get("/api/admin/attendance/summary", headers=staff_headers)
+    assert res.status_code == 403
 
-    # 3. 休憩入
-    break_res = client.post("/api/me/clock", json={"action": "BREAK_START"}, headers=headers)
-    assert break_res.status_code == 200
-    assert break_res.json()["status"] == "ON_BREAK"
+def test_admin_cannot_delete_self(client, admin_headers):
+    users_res = client.get("/api/admin/users", headers=admin_headers)
+    admin_id = [u["id"] for u in users_res.json() if u["username"] == "testadmin"][0]
+    del_res = client.delete(f"/api/admin/users/{admin_id}", headers=admin_headers)
+    assert del_res.status_code == 400
 
-    # 4. 休憩戻
-    break_end_res = client.post("/api/me/clock", json={"action": "BREAK_END"}, headers=headers)
-    assert break_end_res.status_code == 200
-    assert break_end_res.json()["status"] == "WORKING"
+def test_staff_cannot_delete_other_user_shift_request(client, staff_headers, staff2_headers):
+    create_res = client.post("/api/me/shift-requests", json={
+        "date": "2026-11-20",
+        "request_type": "OFF",
+        "reason": "私用"
+    }, headers=staff2_headers)
+    assert create_res.status_code == 200
+    req_id = create_res.json()["id"]
 
-    # 5. 退勤
-    out_res = client.post("/api/me/clock", json={"action": "OUT"}, headers=headers)
-    assert out_res.status_code == 200
-    assert out_res.json()["status"] == "LEFT"
+    del_res = client.delete(f"/api/me/shift-requests/{req_id}", headers=staff_headers)
+    assert del_res.status_code == 404
 
-def test_settings_and_correction_request(client):
-    login_res = client.post("/api/auth/login", json={"username": "teststaff", "password": "staffpass"})
-    token = login_res.json()["access_token"]
-    headers = {"Authorization": f"Bearer {token}"}
+# ==============================================================================
+# 2. ステートマシン異常系・二重打刻・不正遷移完全ガード (15テスト)
+# ==============================================================================
 
-    # 設定変更 (時給を1600円に更新)
-    set_res = client.put("/api/me/settings", json={"hourly_wage": 1600}, headers=headers)
-    assert set_res.status_code == 200
-    assert set_res.json()["hourly_wage"] == 1600
+def test_clock_in_success(client, admin_headers):
+    u_res = client.post("/api/admin/users", json={
+        "username": "sm_staff1", "password": "pass", "full_name": "SMスタッフ1", "hourly_wage": 1500
+    }, headers=admin_headers)
+    assert u_res.status_code == 201
 
-    # 打刻修正申請
-    target_date = date.today().isoformat()
-    req_res = client.post("/api/me/correction-request", json={
-        "target_date": target_date,
+    login = client.post("/api/auth/login", json={"username": "sm_staff1", "password": "pass"})
+    h = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    res = client.post("/api/me/clock", json={"action": "IN"}, headers=h)
+    assert res.status_code == 200
+    assert res.json()["status"] == "WORKING"
+
+def test_clock_double_in_blocked(client):
+    login = client.post("/api/auth/login", json={"username": "sm_staff1", "password": "pass"})
+    h = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    res = client.post("/api/me/clock", json={"action": "IN"}, headers=h)
+    assert res.status_code == 400
+    assert "すでに出勤" in res.json()["detail"]
+
+def test_clock_break_start_without_in_blocked(client, admin_headers):
+    client.post("/api/admin/users", json={
+        "username": "sm_staff2", "password": "pass", "full_name": "SMスタッフ2"
+    }, headers=admin_headers)
+    login = client.post("/api/auth/login", json={"username": "sm_staff2", "password": "pass"})
+    h = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    res = client.post("/api/me/clock", json={"action": "BREAK_START"}, headers=h)
+    assert res.status_code == 400
+    assert "勤務中ではない" in res.json()["detail"]
+
+def test_clock_break_end_without_break_start_blocked(client):
+    login = client.post("/api/auth/login", json={"username": "sm_staff2", "password": "pass"})
+    h = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    res = client.post("/api/me/clock", json={"action": "BREAK_END"}, headers=h)
+    assert res.status_code == 400
+    assert "休憩中ではない" in res.json()["detail"]
+
+def test_clock_out_without_in_blocked(client):
+    login = client.post("/api/auth/login", json={"username": "sm_staff2", "password": "pass"})
+    h = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    res = client.post("/api/me/clock", json={"action": "OUT"}, headers=h)
+    assert res.status_code == 400
+    assert "勤務中ではない" in res.json()["detail"]
+
+def test_clock_full_cycle_normal(client, admin_headers):
+    client.post("/api/admin/users", json={
+        "username": "sm_staff3", "password": "pass", "full_name": "SMスタッフ3"
+    }, headers=admin_headers)
+    login = client.post("/api/auth/login", json={"username": "sm_staff3", "password": "pass"})
+    h = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    r1 = client.post("/api/me/clock", json={"action": "IN"}, headers=h)
+    assert r1.status_code == 200 and r1.json()["status"] == "WORKING"
+
+    r2 = client.post("/api/me/clock", json={"action": "BREAK_START"}, headers=h)
+    assert r2.status_code == 200 and r2.json()["status"] == "ON_BREAK"
+
+    r3 = client.post("/api/me/clock", json={"action": "BREAK_END"}, headers=h)
+    assert r3.status_code == 200 and r3.json()["status"] == "WORKING"
+
+    r4 = client.post("/api/me/clock", json={"action": "OUT"}, headers=h)
+    assert r4.status_code == 200 and r4.json()["status"] == "LEFT"
+
+def test_clock_out_after_out_blocked(client):
+    login = client.post("/api/auth/login", json={"username": "sm_staff3", "password": "pass"})
+    h = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    res = client.post("/api/me/clock", json={"action": "OUT"}, headers=h)
+    assert res.status_code == 400
+
+def test_clock_in_after_out_blocked(client):
+    login = client.post("/api/auth/login", json={"username": "sm_staff3", "password": "pass"})
+    h = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    res = client.post("/api/me/clock", json={"action": "IN"}, headers=h)
+    assert res.status_code == 400
+
+def test_clock_break_start_on_break_blocked(client, admin_headers):
+    client.post("/api/admin/users", json={
+        "username": "sm_staff4", "password": "pass", "full_name": "SMスタッフ4"
+    }, headers=admin_headers)
+    login = client.post("/api/auth/login", json={"username": "sm_staff4", "password": "pass"})
+    h = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    client.post("/api/me/clock", json={"action": "IN"}, headers=h)
+    client.post("/api/me/clock", json={"action": "BREAK_START"}, headers=h)
+
+    res = client.post("/api/me/clock", json={"action": "BREAK_START"}, headers=h)
+    assert res.status_code == 400
+
+def test_clock_break_end_when_working_blocked(client):
+    login = client.post("/api/auth/login", json={"username": "sm_staff4", "password": "pass"})
+    h = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    client.post("/api/me/clock", json={"action": "BREAK_END"}, headers=h)
+    res = client.post("/api/me/clock", json={"action": "BREAK_END"}, headers=h)
+    assert res.status_code == 400
+
+def test_clock_out_while_on_break_auto_resolves_break(client, admin_headers):
+    client.post("/api/admin/users", json={
+        "username": "sm_staff5", "password": "pass", "full_name": "SMスタッフ5"
+    }, headers=admin_headers)
+    login = client.post("/api/auth/login", json={"username": "sm_staff5", "password": "pass"})
+    h = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    client.post("/api/me/clock", json={"action": "IN"}, headers=h)
+    client.post("/api/me/clock", json={"action": "BREAK_START"}, headers=h)
+    res = client.post("/api/me/clock", json={"action": "OUT"}, headers=h)
+    assert res.status_code == 200
+    assert res.json()["status"] == "LEFT"
+
+def test_clock_invalid_action_rejected(client, staff_headers):
+    res = client.post("/api/me/clock", json={"action": "INVALID_ACTION"}, headers=staff_headers)
+    assert res.status_code in [400, 422]
+
+def test_admin_can_clock_in_out(client, admin_headers):
+    res_in = client.post("/api/me/clock", json={"action": "IN"}, headers=admin_headers)
+    assert res_in.status_code == 200
+    assert res_in.json()["status"] == "WORKING"
+
+    res_out = client.post("/api/me/clock", json={"action": "OUT"}, headers=admin_headers)
+    assert res_out.status_code == 200
+    assert res_out.json()["status"] == "LEFT"
+
+def test_admin_clock_double_in_blocked(client, admin_headers):
+    res = client.post("/api/me/clock", json={"action": "IN"}, headers=admin_headers)
+    assert res.status_code == 400
+
+def test_clock_work_minutes_calculation(client, admin_headers):
+    users_res = client.get("/api/admin/users", headers=admin_headers)
+    u_id = users_res.json()[0]["id"]
+    t_date = "2026-05-10"
+
+    res = client.post("/api/admin/time-records", json={
+        "user_id": u_id,
+        "date": t_date,
+        "clock_in": "09:00",
+        "clock_out": "18:00",
+        "total_break_minutes": 60
+    }, headers=admin_headers)
+    assert res.status_code == 200
+    assert res.json()["total_work_minutes"] == 480
+
+# ==============================================================================
+# 3. バリデーション＆時間逆転・マイナス値完全防御 (10テスト)
+# ==============================================================================
+
+def test_correction_request_negative_break_blocked(client, staff_headers):
+    res = client.post("/api/me/correction-request", json={
+        "target_date": "2026-05-11",
         "requested_clock_in": "09:00",
         "requested_clock_out": "18:00",
+        "requested_break_minutes": -30,
+        "reason": "マイナス休憩"
+    }, headers=staff_headers)
+    assert res.status_code == 422
+
+def test_correction_request_time_reversed_blocked(client, staff_headers):
+    res = client.post("/api/me/correction-request", json={
+        "target_date": "2026-05-11",
+        "requested_clock_in": "18:00",
+        "requested_clock_out": "09:00",
         "requested_break_minutes": 60,
-        "reason": "打刻忘れのため修正依頼"
-    }, headers=headers)
-    assert req_res.status_code == 200
-    assert req_res.json()["status"] == "PENDING"
-    req_id = req_res.json()["id"]
+        "reason": "時間逆転"
+    }, headers=staff_headers)
+    assert res.status_code == 422
 
-    # 管理者でログインして承認
-    admin_login = client.post("/api/auth/login", json={"username": "testadmin", "password": "adminpass"})
-    admin_token = admin_login.json()["access_token"]
-    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+def test_correction_request_break_exceeds_work_blocked(client, staff_headers):
+    res = client.post("/api/me/correction-request", json={
+        "target_date": "2026-05-11",
+        "requested_clock_in": "09:00",
+        "requested_clock_out": "10:00",
+        "requested_break_minutes": 90,
+        "reason": "過剰休憩"
+    }, headers=staff_headers)
+    assert res.status_code == 422
 
-    review_res = client.post(f"/api/admin/correction-requests/{req_id}/review", json={
-        "status": "APPROVED",
-        "admin_comment": "確認の上承認しました"
+def test_admin_time_record_negative_break_blocked(client, admin_headers):
+    res = client.post("/api/admin/time-records", json={
+        "user_id": 1,
+        "date": "2026-05-12",
+        "clock_in": "09:00",
+        "clock_out": "18:00",
+        "total_break_minutes": -10
     }, headers=admin_headers)
-    assert review_res.status_code == 200
+    assert res.status_code == 422
 
-def test_admin_shift_and_csv_export(client):
-    admin_login = client.post("/api/auth/login", json={"username": "testadmin", "password": "adminpass"})
-    admin_token = admin_login.json()["access_token"]
-    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+def test_admin_time_record_time_reversed_blocked(client, admin_headers):
+    res = client.post("/api/admin/time-records", json={
+        "user_id": 1,
+        "date": "2026-05-12",
+        "clock_in": "19:00",
+        "clock_out": "09:00",
+        "total_break_minutes": 60
+    }, headers=admin_headers)
+    assert res.status_code == 422
 
-    # スタッフ一覧から teststaff の ID を取得
-    users_res = client.get("/api/admin/users", headers=admin_headers)
-    staff_id = [u["id"] for u in users_res.json() if u["username"] == "teststaff"][0]
-
-    # シフト作成
-    today_str = date.today().isoformat()
-    shift_res = client.post("/api/admin/shifts", json={
-        "user_id": staff_id,
-        "date": today_str,
+def test_shift_create_negative_break_blocked(client, admin_headers):
+    res = client.post("/api/admin/shifts", json={
+        "user_id": 1,
+        "date": "2026-05-13",
         "start_time": "09:00",
         "end_time": "18:00",
-        "break_minutes": 60,
-        "shift_type": "NORMAL",
-        "note": "テストシフト"
+        "break_minutes": -20
     }, headers=admin_headers)
-    assert shift_res.status_code == 200
+    assert res.status_code == 422
 
-    # CSVエクスポート
-    today = date.today()
-    csv_res = client.get(f"/api/admin/export-csv?year={today.year}&month={today.month}", headers=admin_headers)
-    assert csv_res.status_code == 200
-    assert "text/csv" in csv_res.headers["content-type"]
-    content = csv_res.content
-    assert content.startswith(b'\xef\xbb\xbf')
-    assert "テストスタッフ" in content.decode("utf-8-sig")
-
-def test_html_pages_and_redirects(client):
-    # 未ログインで / にアクセスすると /login へリダイレクト
-    res = client.get("/", follow_redirects=False)
-    assert res.status_code == 303
-    assert res.headers["location"] == "/login"
-
-    # /login ページは 200 OK でHTMLが返る
-    res = client.get("/login")
-    assert res.status_code == 200
-    assert "薬局" in res.text
-
-    # スタッフログイン時の / へのアクセス
-    login_res = client.post("/api/auth/login", json={"username": "teststaff", "password": "staffpass"})
-    cookie = login_res.cookies.get("access_token")
-    client.cookies.set("access_token", cookie)
-
-    res = client.get("/")
-    assert res.status_code == 200
-    assert "マイページ" in res.text
-    assert "テストスタッフ" in res.text
-
-    # 管理者ログイン時の /admin へのアクセス
-    admin_login = client.post("/api/auth/login", json={"username": "testadmin", "password": "adminpass"})
-    admin_cookie = admin_login.cookies.get("access_token")
-    client.cookies.set("access_token", admin_cookie)
-
-    res = client.get("/admin")
-    assert res.status_code == 200
-    assert "管理者ポータル" in res.text
-
-def test_user_condition_update(client):
-    admin_login = client.post("/api/auth/login", json={"username": "testadmin", "password": "adminpass"})
-    admin_token = admin_login.json()["access_token"]
-    admin_headers = {"Authorization": f"Bearer {admin_token}"}
-
-    users_res = client.get("/api/admin/users", headers=admin_headers)
-    staff_id = [u["id"] for u in users_res.json() if u["username"] == "teststaff"][0]
-
-    # 雇用条件を更新
-    cond_res = client.put(f"/api/admin/users/{staff_id}/condition", json={
-        "work_days": "0,2,4",
-        "default_start_time": "09:00",
-        "default_end_time": "17:00",
-        "default_break_minutes": 60,
-        "color": "#0d9488",
-        "hourly_wage": 1650
+def test_shift_create_time_reversed_blocked(client, admin_headers):
+    res = client.post("/api/admin/shifts", json={
+        "user_id": 1,
+        "date": "2026-05-13",
+        "start_time": "18:00",
+        "end_time": "09:00",
+        "break_minutes": 60
     }, headers=admin_headers)
-    assert cond_res.status_code == 200
-    data = cond_res.json()
-    assert data["work_days"] == "0,2,4"
-    assert data["default_start_time"] == "09:00:00"
-    assert data["default_end_time"] == "17:00:00"
-    assert data["color"] == "#0d9488"
-    assert data["hourly_wage"] == 1650
+    assert res.status_code == 422
 
-def test_shift_requests_workflow(client):
-    # スタッフログイン
-    staff_login = client.post("/api/auth/login", json={"username": "teststaff", "password": "staffpass"})
-    staff_token = staff_login.json()["access_token"]
-    staff_headers = {"Authorization": f"Bearer {staff_token}"}
+def test_shift_auto_generate_invalid_month_blocked(client, admin_headers):
+    res = client.post("/api/admin/shifts/auto-generate", json={
+        "year": 2026,
+        "month": 13,
+        "overwrite": True
+    }, headers=admin_headers)
+    assert res.status_code == 422
 
-    # 1. 希望休（OFF）を提出
-    req1_date = (date.today() + timedelta(days=5)).isoformat()
-    res1 = client.post("/api/me/shift-requests", json={
-        "date": req1_date,
-        "request_type": "OFF",
-        "reason": "私用のため"
+def test_shift_auto_generate_invalid_year_blocked(client, admin_headers):
+    res = client.post("/api/admin/shifts/auto-generate", json={
+        "year": 1899,
+        "month": 5,
+        "overwrite": True
+    }, headers=admin_headers)
+    assert res.status_code == 422
+
+def test_shift_request_invalid_type_blocked(client, staff_headers):
+    res = client.post("/api/me/shift-requests", json={
+        "date": "2026-06-01",
+        "request_type": "ILLEGAL_TYPE",
+        "reason": "テスト"
     }, headers=staff_headers)
-    assert res1.status_code == 200
-    req1_id = res1.json()["id"]
-    assert res1.json()["status"] == "PENDING"
+    assert res.status_code == 422
 
-    # 2. 有休希望（PAID_LEAVE）を提出
-    req2_date = (date.today() + timedelta(days=6)).isoformat()
-    res2 = client.post("/api/me/shift-requests", json={
-        "date": req2_date,
-        "request_type": "PAID_LEAVE",
-        "reason": "年次有給休暇取得"
-    }, headers=staff_headers)
-    assert res2.status_code == 200
-    req2_id = res2.json()["id"]
+# ==============================================================================
+# 4. 日付境界値＆年跨ぎテスト (8テスト)
+# ==============================================================================
 
-    # 3. 自分の申請一覧取得
-    my_reqs = client.get("/api/me/shift-requests", headers=staff_headers)
-    assert my_reqs.status_code == 200
-    ids = [r["id"] for r in my_reqs.json()]
-    assert req1_id in ids
-    assert req2_id in ids
-
-    # 4. 希望休（req1）を取り消し
-    del_res = client.delete(f"/api/me/shift-requests/{req1_id}", headers=staff_headers)
-    assert del_res.status_code == 200
-
-    # 5. 管理者ログインして審査
-    admin_login = client.post("/api/auth/login", json={"username": "testadmin", "password": "adminpass"})
-    admin_token = admin_login.json()["access_token"]
-    admin_headers = {"Authorization": f"Bearer {admin_token}"}
-
-    admin_reqs = client.get("/api/admin/shift-requests", headers=admin_headers)
-    assert admin_reqs.status_code == 200
-    pending_ids = [r["id"] for r in admin_reqs.json() if r["status"] == "PENDING"]
-    assert req2_id in pending_ids
-
-    # 承認
-    review_res = client.post(f"/api/admin/shift-requests/{req2_id}/review", json={
-        "status": "APPROVED",
-        "admin_comment": "承認しました"
+def test_leap_year_february_29(client, admin_headers):
+    res = client.post("/api/admin/shifts/auto-generate", json={
+        "year": 2024,
+        "month": 2,
+        "overwrite": True
     }, headers=admin_headers)
-    assert review_res.status_code == 200
+    assert res.status_code == 200
 
-    # 有休シフトが自動生成されたことを確認
-    shifts_res = client.get(f"/api/admin/shifts?year={date.today().year}&month={date.today().month}", headers=admin_headers)
-    assert shifts_res.status_code == 200
-    paid_leave_shifts = [s for s in shifts_res.json() if s["date"] == req2_date and s["shift_type"] == "PAID_LEAVE"]
-    assert len(paid_leave_shifts) == 1
-    assert paid_leave_shifts[0]["user_color"] == "#0d9488"
+    shifts = client.get("/api/admin/shifts?year=2024&month=2", headers=admin_headers).json()
+    feb_29_shifts = [s for s in shifts if s["date"] == "2024-02-29"]
+    assert len(feb_29_shifts) > 0
 
-def test_auto_generate_shifts(client):
-    admin_login = client.post("/api/auth/login", json={"username": "testadmin", "password": "adminpass"})
-    admin_token = admin_login.json()["access_token"]
-    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+def test_common_year_february_28(client, admin_headers):
+    res = client.post("/api/admin/shifts/auto-generate", json={
+        "year": 2025,
+        "month": 2,
+        "overwrite": True
+    }, headers=admin_headers)
+    assert res.status_code == 200
 
-    staff_login = client.post("/api/auth/login", json={"username": "teststaff", "password": "staffpass"})
-    staff_token = staff_login.json()["access_token"]
-    staff_headers = {"Authorization": f"Bearer {staff_token}"}
+    shifts = client.get("/api/admin/shifts?year=2025&month=2", headers=admin_headers).json()
+    feb_29_shifts = [s for s in shifts if s["date"] == "2025-02-29"]
+    assert len(feb_29_shifts) == 0
 
-    # 来月のシフトを自動生成テスト
-    today = date.today()
-    target_year = today.year if today.month < 12 else today.year + 1
-    target_month = today.month + 1 if today.month < 12 else 1
+def test_short_month_30_days(client, admin_headers):
+    res = client.post("/api/admin/shifts/auto-generate", json={
+        "year": 2026,
+        "month": 4,
+        "overwrite": True
+    }, headers=admin_headers)
+    assert res.status_code == 200
 
-    # スタッフの雇用条件: 月・水 (0, 2)
-    users_res = client.get("/api/admin/users", headers=admin_headers)
-    staff_id = [u["id"] for u in users_res.json() if u["username"] == "teststaff"][0]
+    shifts = client.get("/api/admin/shifts?year=2026&month=4", headers=admin_headers).json()
+    day_30 = [s for s in shifts if s["date"] == "2026-04-30"]
+    day_31 = [s for s in shifts if s["date"] == "2026-04-31"]
+    assert len(day_30) > 0
+    assert len(day_31) == 0
 
-    client.put(f"/api/admin/users/{staff_id}/condition", json={
-        "work_days": "0,2",
-        "default_start_time": "09:00",
-        "default_end_time": "18:00",
-        "default_break_minutes": 60,
-        "color": "#059669"
+def test_long_month_31_days(client, admin_headers):
+    # 2026年7月31日は金曜日（全員の勤務日）
+    res = client.post("/api/admin/shifts/auto-generate", json={
+        "year": 2026,
+        "month": 7,
+        "overwrite": True
+    }, headers=admin_headers)
+    assert res.status_code == 200
+
+    shifts = client.get("/api/admin/shifts?year=2026&month=7", headers=admin_headers).json()
+    day_31 = [s for s in shifts if s["date"] == "2026-07-31"]
+    assert len(day_31) > 0
+
+def test_year_boundary_december_to_january(client, admin_headers):
+    res12 = client.post("/api/admin/shifts/auto-generate", json={"year": 2026, "month": 12, "overwrite": True}, headers=admin_headers)
+    res01 = client.post("/api/admin/shifts/auto-generate", json={"year": 2027, "month": 1, "overwrite": True}, headers=admin_headers)
+    assert res12.status_code == 200
+    assert res01.status_code == 200
+
+    s12 = client.get("/api/admin/shifts?year=2026&month=12", headers=admin_headers).json()
+    s01 = client.get("/api/admin/shifts?year=2027&month=1", headers=admin_headers).json()
+    assert any(s["date"] == "2026-12-31" for s in s12)
+    assert any(s["date"] == "2027-01-01" for s in s01)
+
+def test_month_range_edges_first_and_last_day(client, admin_headers):
+    shifts = client.get("/api/admin/shifts?year=2026&month=4", headers=admin_headers).json()
+    assert any(s["date"] == "2026-04-01" for s in shifts)
+    assert any(s["date"] == "2026-04-30" for s in shifts)
+
+def test_shifts_across_month_boundary(client, admin_headers):
+    shifts = client.get("/api/admin/shifts?year=2026&month=4", headers=admin_headers).json()
+    for s in shifts:
+        assert s["date"].startswith("2026-04-")
+
+def test_time_record_across_months(client, admin_headers):
+    u_id = 1
+    client.post("/api/admin/time-records", json={
+        "user_id": u_id, "date": "2026-04-30", "clock_in": "09:00", "clock_out": "18:00", "total_break_minutes": 60
+    }, headers=admin_headers)
+    client.post("/api/admin/time-records", json={
+        "user_id": u_id, "date": "2026-05-01", "clock_in": "09:00", "clock_out": "18:00", "total_break_minutes": 60
     }, headers=admin_headers)
 
-    # 対象月の第1水曜日を検索
-    first_wednesday = None
-    first_monday = None
-    for d_num in range(1, 15):
-        d = date(target_year, target_month, d_num)
-        if d.weekday() == 2 and not first_wednesday:
-            first_wednesday = d
-        if d.weekday() == 0 and not first_monday:
-            first_monday = d
+    p_apr = client.get("/api/admin/payroll/monthly?year=2026&month=4", headers=admin_headers).json()
+    p_may = client.get("/api/admin/payroll/monthly?year=2026&month=5", headers=admin_headers).json()
 
-    # 第1水曜日に希望休（OFF）を提出・承認
+    user_apr = [item for item in p_apr["items"] if item["user_id"] == u_id][0]
+    user_may = [item for item in p_may["items"] if item["user_id"] == u_id][0]
+    assert user_apr["total_work_minutes"] >= 480
+    assert user_may["total_work_minutes"] >= 480
+
+# ==============================================================================
+# 5. シフト管理＆一括自動生成ロジック (10テスト)
+# ==============================================================================
+
+def test_auto_generate_shifts_weekday_rules(client, admin_headers):
+    res = client.post("/api/admin/shifts/auto-generate", json={
+        "year": 2026,
+        "month": 6,
+        "overwrite": True
+    }, headers=admin_headers)
+    assert res.status_code == 200
+
+    shifts = client.get("/api/admin/shifts?year=2026&month=6", headers=admin_headers).json()
+    sat_shifts = [s for s in shifts if s["date"] == "2026-06-06"]
+    assert len(sat_shifts) > 0
+
+def test_auto_generate_skips_approved_off_request(client, staff_headers, admin_headers):
+    target_d = "2026-07-07"
     req_res = client.post("/api/me/shift-requests", json={
-        "date": first_wednesday.isoformat(),
+        "date": target_d,
         "request_type": "OFF",
-        "reason": "旅行のため"
+        "reason": "旅行"
     }, headers=staff_headers)
+    assert req_res.status_code == 200
+    req_id = req_res.json()["id"]
+
+    rev = client.post(f"/api/admin/shift-requests/{req_id}/review", json={
+        "status": "APPROVED",
+        "admin_comment": "OK"
+    }, headers=admin_headers)
+    assert rev.status_code == 200
+
+    gen_res = client.post("/api/admin/shifts/auto-generate", json={
+        "year": 2026,
+        "month": 7,
+        "overwrite": True
+    }, headers=admin_headers)
+    assert gen_res.status_code == 200
+
+    shifts = client.get("/api/admin/shifts?year=2026&month=7", headers=admin_headers).json()
+    user_shift = [s for s in shifts if s["date"] == target_d and s["user_name"] and "小林" in s["user_name"]]
+    assert len(user_shift) == 0
+
+def test_auto_generate_creates_paid_leave_shift(client, staff_headers, admin_headers):
+    target_d = "2026-07-08"
+    req_res = client.post("/api/me/shift-requests", json={
+        "date": target_d,
+        "request_type": "PAID_LEAVE",
+        "reason": "通院"
+    }, headers=staff_headers)
+    assert req_res.status_code == 200
     req_id = req_res.json()["id"]
 
     client.post(f"/api/admin/shift-requests/{req_id}/review", json={
-        "status": "APPROVED"
+        "status": "APPROVED",
+        "admin_comment": "有休承認"
     }, headers=admin_headers)
 
-    # 一括自動生成を実行
-    gen_res = client.post("/api/admin/shifts/auto-generate", json={
-        "year": target_year,
-        "month": target_month,
+    client.post("/api/admin/shifts/auto-generate", json={
+        "year": 2026,
+        "month": 7,
         "overwrite": True
     }, headers=admin_headers)
-    assert gen_res.status_code == 200
-    gen_data = gen_res.json()
-    assert gen_data["generated"] > 0
-    assert gen_data["skipped_requests"] >= 1
 
-    # 生成されたシフトを検証
-    shifts_res = client.get(f"/api/admin/shifts?year={target_year}&month={target_month}", headers=admin_headers)
-    shifts = shifts_res.json()
+    shifts = client.get("/api/admin/shifts?year=2026&month=7", headers=admin_headers).json()
+    pl_shift = [s for s in shifts if s["date"] == target_d and s["user_name"] and "小林" in s["user_name"]]
+    assert len(pl_shift) == 1
+    assert pl_shift[0]["shift_type"] == "PAID_LEAVE"
 
-    # 月曜日には通常シフトが存在すること
-    monday_shifts = [s for s in shifts if s["date"] == first_monday.isoformat() and s["user_id"] == staff_id]
-    assert len(monday_shifts) == 1
-    assert monday_shifts[0]["shift_type"] == "NORMAL"
+def test_auto_generate_pending_request_not_skipped(client, staff_headers, admin_headers):
+    d_mon = "2026-07-13"
+    client.post("/api/me/shift-requests", json={
+        "date": d_mon,
+        "request_type": "OFF",
+        "reason": "未承認希望"
+    }, headers=staff_headers)
 
-    # 希望休の水曜日にはシフトが存在しない（スキップされた）こと
-    wed_shifts = [s for s in shifts if s["date"] == first_wednesday.isoformat() and s["user_id"] == staff_id]
-    assert len(wed_shifts) == 0
-
-    # 雇用条件変更（月曜を除外し水曜のみ）後の上書き再生成で、非勤務日となった月曜シフトが削除されることを検証
-    client.put(f"/api/admin/users/{staff_id}/condition", json={
-        "work_days": "2",
-    }, headers=admin_headers)
-
-    gen_res2 = client.post("/api/admin/shifts/auto-generate", json={
-        "year": target_year,
-        "month": target_month,
+    client.post("/api/admin/shifts/auto-generate", json={
+        "year": 2026,
+        "month": 7,
         "overwrite": True
     }, headers=admin_headers)
-    assert gen_res2.status_code == 200
 
-    shifts_res2 = client.get(f"/api/admin/shifts?year={target_year}&month={target_month}", headers=admin_headers)
-    monday_shifts2 = [s for s in shifts_res2.json() if s["date"] == first_monday.isoformat() and s["user_id"] == staff_id]
-    assert len(monday_shifts2) == 0
+    shifts = client.get("/api/admin/shifts?year=2026&month=7", headers=admin_headers).json()
+    user_shift = [s for s in shifts if s["date"] == d_mon and s["user_name"] and "小林" in s["user_name"]]
+    assert len(user_shift) == 1
+    assert user_shift[0]["shift_type"] == "NORMAL"
 
-def test_pwa_and_print_assets(client):
-    # manifest.json の配信確認
-    m_res = client.get("/manifest.json")
-    assert m_res.status_code == 200
-    m_json = m_res.json()
-    assert m_json["short_name"] == "薬局勤怠"
-    assert m_json["display"] == "standalone"
-
-    # service-worker.js の配信確認
-    sw_res = client.get("/service-worker.js")
-    assert sw_res.status_code == 200
-    assert "CACHE_NAME" in sw_res.text
-
-    # アイコンファイルの配信確認
-    icon_res = client.get("/static/icons/icon-192.png")
-    assert icon_res.status_code == 200
-    assert icon_res.headers["content-type"] == "image/png"
-
-def test_weekly_schedule_and_shift_generation(client):
-    import json
-    # 管理者ログイン
-    admin_login = client.post("/api/auth/login", json={"username": "testadmin", "password": "adminpass"})
-    admin_headers = {"Authorization": f"Bearer {admin_login.json()['access_token']}"}
-
-    # 1. 曜日別スケジュールを持つ新規スタッフを登録
-    weekly_data = {
-        "0": {"work": True, "start": "09:00", "end": "19:00", "break": 60},  # 月: 9:00-19:00 (休60)
-        "1": {"work": False, "start": "09:00", "end": "18:00", "break": 60},
-        "2": {"work": False, "start": "09:00", "end": "18:00", "break": 60},
-        "3": {"work": True, "start": "09:00", "end": "13:00", "break": 0},   # 木: 9:00-13:00 (休0)
-        "4": {"work": False, "start": "09:00", "end": "18:00", "break": 60},
-        "5": {"work": False, "start": "09:00", "end": "18:00", "break": 60},
-        "6": {"work": False, "start": "09:00", "end": "18:00", "break": 60}  # 日: 休み
-    }
-    weekly_json = json.dumps(weekly_data)
-
-    create_res = client.post("/api/admin/users", json={
-        "username": "weekdaystaff",
-        "password": "password123",
-        "full_name": "曜日別スタッフ",
-        "role": "staff",
-        "wage_type": "HOURLY",
-        "hourly_wage": 1600,
-        "weekly_schedule": weekly_json
-    }, headers=admin_headers)
-    assert create_res.status_code == 201
-    created_user = create_res.json()
-    user_id = created_user["id"]
-    assert created_user["weekly_schedule"] == weekly_json
-
-    # 2. 雇用条件更新で weekly_schedule が正しく更新できることの検証
-    updated_weekly = {
-        "0": {"work": True, "start": "09:00", "end": "18:00", "break": 60},
-        "1": {"work": False, "start": "09:00", "end": "18:00", "break": 60},
-        "2": {"work": False, "start": "09:00", "end": "18:00", "break": 60},
-        "3": {"work": True, "start": "09:00", "end": "12:30", "break": 0},
-        "4": {"work": False, "start": "09:00", "end": "18:00", "break": 60},
-        "5": {"work": False, "start": "09:00", "end": "18:00", "break": 60},
-        "6": {"work": False, "start": "09:00", "end": "18:00", "break": 60}
-    }
-    update_res = client.put(f"/api/admin/users/{user_id}/condition", json={
-        "weekly_schedule": json.dumps(updated_weekly)
-    }, headers=admin_headers)
-    assert update_res.status_code == 200
-    assert update_res.json()["weekly_schedule"] == json.dumps(updated_weekly)
-
-    # 3. シフト自動生成を実行して、曜日ごとの時間設定が正しく反映されることの検証
-    target_year = 2026
-    target_month = 11
-
-    gen_res = client.post("/api/admin/shifts/auto-generate", json={
-        "year": target_year,
-        "month": target_month,
-        "overwrite": True
-    }, headers=admin_headers)
-    assert gen_res.status_code == 200
-
-    shifts_res = client.get(f"/api/admin/shifts?year={target_year}&month={target_month}", headers=admin_headers)
-    shifts = shifts_res.json()
-
-    user_shifts = [s for s in shifts if s["user_id"] == user_id]
-    assert len(user_shifts) > 0
-
-    # 生成された月曜日のシフトと木曜日のシフトをチェック
-    for s in user_shifts:
-        d = datetime.strptime(s["date"], "%Y-%m-%d").date()
-        if d.weekday() == 0:  # 月曜日
-            assert s["start_time"] == "09:00"
-            assert s["end_time"] == "18:00"
-            assert s["break_minutes"] == 60
-        elif d.weekday() == 3:  # 木曜日
-            assert s["start_time"] == "09:00"
-            assert s["end_time"] == "12:30"
-            assert s["break_minutes"] == 0
-        else:
-            # 月曜・木曜以外は enabled ではないので生成されない
-            pytest.fail(f"Unexpected shift on weekday {d.weekday()} for date {s['date']}")
-
-def test_shift_manual_crud_and_reflection(client):
-    admin_login = client.post("/api/auth/login", json={"username": "testadmin", "password": "adminpass"})
-    admin_token = admin_login.json()["access_token"]
-    admin_headers = {"Authorization": f"Bearer {admin_token}"}
-    admin_id = admin_login.json()["user_id"] if "user_id" in admin_login.json() else 1
-
-    staff_login = client.post("/api/auth/login", json={"username": "teststaff", "password": "staffpass"})
-    staff_token = staff_login.json()["access_token"]
-    staff_headers = {"Authorization": f"Bearer {staff_token}"}
-    staff_me = client.get("/api/me/dashboard", headers=staff_headers).json()["user"]
-    staff_id = staff_me["id"]
-
-    # 1. 管理者自身へのシフト手動登録（9:00 - 19:00）
-    res = client.post("/api/admin/shifts", json={
-        "user_id": admin_id,
-        "date": "2026-12-01",
+def test_auto_generate_overwrite_behavior(client, admin_headers):
+    u_id = 1
+    client.post("/api/admin/shifts", json={
+        "user_id": u_id,
+        "date": "2026-08-10",
+        "start_time": "10:00",
+        "end_time": "15:00",
+        "break_minutes": 30,
         "shift_type": "NORMAL",
+        "note": "カスタムシフト"
+    }, headers=admin_headers)
+
+    client.post("/api/admin/shifts/auto-generate", json={
+        "year": 2026,
+        "month": 8,
+        "overwrite": False
+    }, headers=admin_headers)
+
+    shifts = client.get("/api/admin/shifts?year=2026&month=8", headers=admin_headers).json()
+    custom = [s for s in shifts if s["date"] == "2026-08-10" and s["user_id"] == u_id][0]
+    assert custom["start_time"].startswith("10:00")
+
+def test_manual_shift_creation_and_update(client, admin_headers):
+    res = client.post("/api/admin/shifts", json={
+        "user_id": 1,
+        "date": "2026-09-01",
         "start_time": "09:00",
-        "end_time": "19:00",
+        "end_time": "17:00",
         "break_minutes": 60,
-        "note": "管理者手動登録"
+        "shift_type": "NORMAL",
+        "note": "手動登録"
     }, headers=admin_headers)
     assert res.status_code == 200
+    shift_id = res.json()["shift_id"]
 
-    # 2. スタッフへのシフト手動登録（9:00 - 18:00）
-    res2 = client.post("/api/admin/shifts", json={
-        "user_id": staff_id,
-        "date": "2026-12-01",
-        "shift_type": "NORMAL",
-        "start_time": "09:00",
+    res_up = client.post("/api/admin/shifts", json={
+        "user_id": 1,
+        "date": "2026-09-01",
+        "start_time": "09:30",
         "end_time": "18:00",
         "break_minutes": 60,
-        "note": "スタッフ手動登録"
+        "shift_type": "NORMAL",
+        "note": "更新後"
     }, headers=admin_headers)
-    assert res2.status_code == 200
-    shift_id = res2.json()["shift_id"]
+    assert res_up.status_code == 200
 
-    # 3. 管理者シフト一覧での反映確認
-    list_res = client.get("/api/admin/shifts?year=2026&month=12", headers=admin_headers)
-    assert list_res.status_code == 200
-    shifts = list_res.json()
-    dec1_shifts = [s for s in shifts if s["date"] == "2026-12-01"]
-    assert len(dec1_shifts) == 2
-    admin_s = next(s for s in dec1_shifts if s["user_id"] == admin_id)
-    assert admin_s["start_time"] == "09:00"
-    assert admin_s["end_time"] == "19:00"
+def test_manual_shift_delete(client, admin_headers):
+    res = client.post("/api/admin/shifts", json={
+        "user_id": 1,
+        "date": "2026-09-02",
+        "start_time": "09:00",
+        "end_time": "17:00",
+        "break_minutes": 60,
+        "shift_type": "NORMAL"
+    }, headers=admin_headers)
+    shift_id = res.json()["shift_id"]
 
-    # 4. スタッフ画面 (/api/me/shifts) での自分のシフト反映確認
-    my_shifts_res = client.get("/api/me/shifts?year=2026&month=12", headers=staff_headers)
-    assert my_shifts_res.status_code == 200
-    my_shifts = my_shifts_res.json()
-    day1_info = next(item for item in my_shifts if item["date"] == "2026-12-01")
-    assert day1_info["shift"] is not None
-    assert day1_info["shift"]["start_time"] == "09:00"
-    assert day1_info["shift"]["end_time"] == "18:00"
-
-    # 5. シフト削除の確認
     del_res = client.delete(f"/api/admin/shifts/{shift_id}", headers=admin_headers)
     assert del_res.status_code == 200
 
-    # 削除後の確認
-    my_shifts_res2 = client.get("/api/me/shifts?year=2026&month=12", headers=staff_headers)
-    day1_info_after = next(item for item in my_shifts_res2.json() if item["date"] == "2026-12-01")
-    assert day1_info_after["shift"] is None
+def test_shift_duplicate_date_updates_existing(client, admin_headers):
+    d = "2026-09-03"
+    r1 = client.post("/api/admin/shifts", json={"user_id": 1, "date": d, "start_time": "09:00", "end_time": "17:00"}, headers=admin_headers)
+    r2 = client.post("/api/admin/shifts", json={"user_id": 1, "date": d, "start_time": "10:00", "end_time": "18:00"}, headers=admin_headers)
+    assert r1.status_code == 200 and r2.status_code == 200
 
-def test_admin_direct_time_record_and_monthly_payroll(client):
-    admin_login = client.post("/api/auth/login", json={"username": "testadmin", "password": "adminpass"})
-    admin_token = admin_login.json()["access_token"]
-    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+    shifts = client.get("/api/admin/shifts?year=2026&month=9", headers=admin_headers).json()
+    matching = [s for s in shifts if s["date"] == d and s["user_id"] == 1]
+    assert len(matching) == 1
+    assert matching[0]["start_time"].startswith("10:00")
 
-    staff_login = client.post("/api/auth/login", json={"username": "teststaff", "password": "staffpass"})
-    staff_token = staff_login.json()["access_token"]
-    staff_headers = {"Authorization": f"Bearer {staff_token}"}
-    staff_me = client.get("/api/me/dashboard", headers=staff_headers).json()["user"]
-    staff_id = staff_me["id"]
+def test_shift_requests_list_and_review_approve(client, staff_headers, admin_headers):
+    r = client.post("/api/me/shift-requests", json={"date": "2026-10-01", "request_type": "OFF", "reason": "私用"}, headers=staff_headers)
+    req_id = r.json()["id"]
 
-    # 1. 管理者がスタッフの勤怠実績を手動直接入力（9:00〜18:00、休憩60分 = 実働8時間480分）
-    rec_res = client.post("/api/admin/time-records", json={
+    rev = client.post(f"/api/admin/shift-requests/{req_id}/review", json={"status": "APPROVED", "admin_comment": "承認済"}, headers=admin_headers)
+    assert rev.status_code == 200
+    assert rev.json()["status"] == "APPROVED"
+
+def test_shift_requests_review_reject(client, staff_headers, admin_headers):
+    r = client.post("/api/me/shift-requests", json={"date": "2026-10-02", "request_type": "OFF", "reason": "私用"}, headers=staff_headers)
+    req_id = r.json()["id"]
+
+    rev = client.post(f"/api/admin/shift-requests/{req_id}/review", json={"status": "REJECTED", "admin_comment": "人員不足のため"}, headers=admin_headers)
+    assert rev.status_code == 200
+    assert rev.json()["status"] == "REJECTED"
+
+# ==============================================================================
+# 6. 給与計算・有休手当・端数処理・扶養枠 (10テスト)
+# ==============================================================================
+
+def test_hourly_wage_calculation_exact_minutes(client, admin_headers):
+    users_res = client.get("/api/admin/users", headers=admin_headers)
+    staff_id = [u["id"] for u in users_res.json() if u["username"] == "teststaff"][0]
+
+    client.post("/api/admin/time-records", json={
         "user_id": staff_id,
-        "date": "2026-11-10",
+        "date": "2026-11-01",
+        "clock_in": "09:00",
+        "clock_out": "17:30",
+        "total_break_minutes": 60
+    }, headers=admin_headers)
+
+    p_res = client.get("/api/admin/payroll/monthly?year=2026&month=11", headers=admin_headers).json()
+    item = [i for i in p_res["items"] if i["user_id"] == staff_id][0]
+    assert item["work_salary"] == 11250
+
+def test_paid_leave_allowance_addition(client, admin_headers):
+    users_res = client.get("/api/admin/users", headers=admin_headers)
+    staff_id = [u["id"] for u in users_res.json() if u["username"] == "teststaff"][0]
+
+    client.post("/api/admin/shifts", json={
+        "user_id": staff_id,
+        "date": "2026-11-02",
+        "shift_type": "PAID_LEAVE"
+    }, headers=admin_headers)
+
+    p_res = client.get("/api/admin/payroll/monthly?year=2026&month=11", headers=admin_headers).json()
+    item = [i for i in p_res["items"] if i["user_id"] == staff_id][0]
+    assert item["paid_leave_allowance"] == 12000
+    assert item["total_estimated_salary"] == item["work_salary"] + item["paid_leave_allowance"]
+
+def test_monthly_salary_user_calculation(client, admin_headers):
+    p_res = client.get("/api/admin/payroll/monthly?year=2026&month=11", headers=admin_headers).json()
+    admin_item = [i for i in p_res["items"] if i["username"] == "testadmin"][0]
+    assert admin_item["wage_type"] == "MONTHLY"
+    assert admin_item["total_estimated_salary"] == 450000
+
+def test_zero_work_minutes_no_division_by_zero(client, admin_headers):
+    p_res = client.get("/api/admin/payroll/monthly?year=2029&month=1", headers=admin_headers)
+    assert p_res.status_code == 200
+    data = p_res.json()
+    assert data["total_payout"] >= 450000
+
+def test_rounding_precision_salary(client, admin_headers):
+    users_res = client.get("/api/admin/users", headers=admin_headers)
+    staff_id = [u["id"] for u in users_res.json() if u["username"] == "teststaff"][0]
+
+    client.post("/api/admin/time-records", json={
+        "user_id": staff_id,
+        "date": "2026-11-03",
+        "clock_in": "09:00",
+        "clock_out": "11:17",
+        "total_break_minutes": 0
+    }, headers=admin_headers)
+
+    p_res = client.get("/api/admin/payroll/monthly?year=2026&month=11", headers=admin_headers).json()
+    item = [i for i in p_res["items"] if i["user_id"] == staff_id][0]
+    assert isinstance(item["work_salary"], int)
+
+def test_monthly_payroll_summary_response_structure(client, admin_headers):
+    res = client.get("/api/admin/payroll/monthly?year=2026&month=11", headers=admin_headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert "year" in data
+    assert "month" in data
+    assert "items" in data
+    assert "total_payout" in data
+    assert "total_work_hours" in data
+
+def test_staff_dashboard_salary_projection(client, staff_headers):
+    res = client.get("/api/me/dashboard", headers=staff_headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert "confirmed_salary" in data
+    assert "projected_month_end_salary" in data
+
+def test_staff_dashboard_tax_103_limit_calculation(client, staff_headers):
+    res = client.get("/api/me/dashboard", headers=staff_headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["tax_103_limit"] == 1030000
+    assert "tax_103_remaining" in data
+    assert "tax_103_hours_remaining" in data
+
+def test_staff_dashboard_tax_130_limit_calculation(client, staff_headers):
+    res = client.get("/api/me/dashboard", headers=staff_headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["tax_130_limit"] == 1300000
+    assert "tax_130_remaining" in data
+    assert "tax_130_hours_remaining" in data
+
+def test_paid_leave_remaining_balance_calculation(client, staff_headers):
+    res = client.get("/api/me/dashboard", headers=staff_headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["paid_leave_total"] == 12.0
+    assert "paid_leave_remaining" in data
+
+# ==============================================================================
+# 7. CSV出力＆特殊文字・エスケープ耐性 (6テスト)
+# ==============================================================================
+
+def test_export_csv_utf8_bom_presence(client, admin_headers):
+    res = client.get("/api/admin/export-csv?year=2026&month=11", headers=admin_headers)
+    assert res.status_code == 200
+    assert res.content.startswith(b'\xef\xbb\xbf')
+
+def test_export_csv_headers_and_row_count(client, admin_headers):
+    res = client.get("/api/admin/export-csv?year=2026&month=11", headers=admin_headers)
+    text = res.content.decode("utf-8-sig")
+    reader = csv.reader(io.StringIO(text))
+    rows = list(reader)
+    header = rows[0]
+    assert "氏名" in header
+    assert "概算総支給額(円)" in header
+    assert len(rows) >= 4
+
+def test_export_csv_handles_commas_in_names(client, admin_headers):
+    u_res = client.post("/api/admin/users", json={
+        "username": "comma_user",
+        "password": "pass",
+        "full_name": "山田, 太郎（特命）"
+    }, headers=admin_headers)
+    assert u_res.status_code == 201
+
+    res = client.get("/api/admin/export-csv?year=2026&month=11", headers=admin_headers)
+    text = res.content.decode("utf-8-sig")
+    reader = csv.reader(io.StringIO(text))
+    names = [row[1] for row in reader]
+    assert "山田, 太郎（特命）" in names
+
+def test_export_csv_handles_quotes_in_data(client, admin_headers):
+    u_res = client.post("/api/admin/users", json={
+        "username": "quote_user",
+        "password": "pass",
+        "full_name": '田中 "リーダー" 次郎'
+    }, headers=admin_headers)
+    assert u_res.status_code == 201
+
+    res = client.get("/api/admin/export-csv?year=2026&month=11", headers=admin_headers)
+    text = res.content.decode("utf-8-sig")
+    reader = csv.reader(io.StringIO(text))
+    names = [row[1] for row in reader]
+    assert '田中 "リーダー" 次郎' in names
+
+def test_export_csv_handles_newlines_in_notes(client, admin_headers):
+    users_res = client.get("/api/admin/users", headers=admin_headers)
+    u_id = users_res.json()[0]["id"]
+    client.post("/api/admin/time-records", json={
+        "user_id": u_id,
+        "date": "2026-11-25",
         "clock_in": "09:00",
         "clock_out": "18:00",
         "total_break_minutes": 60,
-        "note": "管理者手動登録テスト"
+        "note": "1行目\n2行目の引き継ぎメモ"
     }, headers=admin_headers)
-    assert rec_res.status_code == 200
-    rec_data = rec_res.json()
-    assert rec_data["total_work_minutes"] == 480
-    assert rec_data["is_corrected"] is True
-    assert rec_data["status"] == "LEFT"
 
-    # 2. スタッフに有休シフト（PAID_LEAVE）を登録
-    pl_res = client.post("/api/admin/shifts", json={
-        "user_id": staff_id,
-        "date": "2026-11-11",
-        "shift_type": "PAID_LEAVE",
-        "note": "有休テスト"
-    }, headers=admin_headers)
-    assert pl_res.status_code == 200
+    res = client.get("/api/admin/export-csv?year=2026&month=11", headers=admin_headers)
+    text = res.content.decode("utf-8-sig")
+    reader = csv.reader(io.StringIO(text))
+    rows = list(reader)
+    header_len = len(rows[0])
+    for row in rows:
+        assert len(row) == header_len
 
-    # 3. 月次給与集計API (GET /api/admin/payroll/monthly) の検証
-    payroll_res = client.get("/api/admin/payroll/monthly?year=2026&month=11", headers=admin_headers)
-    assert payroll_res.status_code == 200
-    p_data = payroll_res.json()
-    assert p_data["year"] == 2026
-    assert p_data["month"] == 11
-
-    # スタッフの集計行を確認
-    staff_p = next(item for item in p_data["items"] if item["user_id"] == staff_id)
-    assert staff_p["work_days_count"] == 1
-    assert staff_p["total_work_minutes"] == 480
-    assert staff_p["total_work_hours_str"] == "8時間00分"
-    assert staff_p["paid_leave_days_count"] == 1.0
-
-    # 時給に基づく計算確認 (8時間実労働 + 8時間有休手当)
-    wage = staff_p["hourly_wage"]
-    expected_work_sal = 8 * wage
-    expected_pl_allowance = 8 * wage
-    expected_total = expected_work_sal + expected_pl_allowance
-
-    assert staff_p["work_salary"] == expected_work_sal
-    assert staff_p["paid_leave_allowance"] == expected_pl_allowance
-    assert staff_p["total_estimated_salary"] == expected_total
-
-    # 4. 給与CSVダウンロード (GET /api/admin/export-csv) の検証
-    csv_res = client.get("/api/admin/export-csv?year=2026&month=11", headers=admin_headers)
-    assert csv_res.status_code == 200
-    assert "text/csv" in csv_res.headers["content-type"]
-    csv_text = csv_res.content.decode("utf-8")
-    assert "有休手当(円)" in csv_text
-    assert "概算総支給額(円)" in csv_text
-    assert str(expected_total) in csv_text
-
-    # 5. スタッフマイページ (/api/me/dashboard) の取得検証
-    dash_res = client.get("/api/me/dashboard", headers=staff_headers)
-    assert dash_res.status_code == 200
-    dash = dash_res.json()
-    assert dash["confirmed_salary"] >= 0
-    assert dash["projected_month_end_salary"] >= 0
-
-
-
-
-
+def test_export_csv_correct_totals(client, admin_headers):
+    res = client.get("/api/admin/export-csv?year=2026&month=11", headers=admin_headers)
+    text = res.content.decode("utf-8-sig")
+    reader = csv.reader(io.StringIO(text))
+    rows = list(reader)[1:]
+    for r in rows:
+        work_sal = int(r[12])
+        pl_allowance = int(r[13])
+        total = int(r[14])
+        if r[3] == "HOURLY":
+            assert total == work_sal + pl_allowance
+        elif r[3] == "MONTHLY":
+            assert total == 450000

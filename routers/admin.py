@@ -124,8 +124,12 @@ def update_user_condition(
         user.default_break_minutes = cond.default_break_minutes
     if cond.color is not None:
         user.color = cond.color
+    if cond.wage_type is not None:
+        user.wage_type = cond.wage_type
     if cond.hourly_wage is not None:
         user.hourly_wage = cond.hourly_wage
+    if cond.monthly_salary is not None:
+        user.monthly_salary = cond.monthly_salary
 
     db.commit()
     db.refresh(user)
@@ -139,11 +143,10 @@ def get_attendance_summary(
     today = date.today()
     now = datetime.now()
 
-    # 全スタッフ取得（admin自身も除外または含める）
+    # 全スタッフ取得（薬局長自身も含めてリアルタイムモニタリング）
     staff_users = db.query(models.User).filter(
-        models.User.role == "staff",
         models.User.is_active == True
-    ).all()
+    ).order_by(models.User.role.asc(), models.User.id.asc()).all()
 
     # 今日のシフト
     shifts = db.query(models.Shift).filter(models.Shift.date == today).all()
@@ -610,11 +613,11 @@ def review_shift_request(
             models.Shift.user_id == req.user_id,
             models.Shift.date == req.date
         ).first()
-        if existing_shift:
-            db.delete(existing_shift)
-
     db.commit()
-    return {"message": f"シフト希望を {review_data.status} として処理しました"}
+    return {
+        "message": f"シフト希望を {review_data.status} として処理しました",
+        "status": review_data.status
+    }
 
 # --- 月次給与・勤怠集計 ---
 @router.get("/payroll/monthly", response_model=schemas.MonthlyPayrollResponse)
@@ -715,6 +718,7 @@ def get_monthly_payroll(
 
 # --- 管理者によるスタッフ勤怠直接登録・修正 ---
 @router.post("/time-records", response_model=schemas.TimeRecordResponse)
+@router.post("/time-records/direct", response_model=schemas.TimeRecordResponse)
 def update_or_create_time_record(
     req: schemas.AdminTimeRecordUpdate,
     admin: models.User = Depends(get_current_admin),

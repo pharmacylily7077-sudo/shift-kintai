@@ -1,6 +1,6 @@
 from datetime import datetime, date, time
 from typing import Optional, List
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 # --- 認証関連 ---
 class Token(BaseModel):
@@ -48,15 +48,52 @@ class UserSettingsUpdate(BaseModel):
     paid_leave_carried: Optional[float] = None
     paid_leave_base_date: Optional[date] = None
 
+    @field_validator("hourly_wage")
+    @classmethod
+    def validate_wage(cls, v):
+        if v is not None and v < 0:
+            raise ValueError("時給は0以上である必要があります")
+        return v
+
 class UserConditionUpdate(BaseModel):
     full_name: Optional[str] = None
+    wage_type: Optional[str] = None  # "HOURLY" or "MONTHLY"
+    hourly_wage: Optional[int] = None
+    monthly_salary: Optional[int] = None
     work_days: Optional[str] = None
     weekly_schedule: Optional[str] = None
     default_start_time: Optional[str] = None  # "09:00"
     default_end_time: Optional[str] = None    # "18:00"
     default_break_minutes: Optional[int] = None
     color: Optional[str] = None
-    hourly_wage: Optional[int] = None
+
+    @field_validator("wage_type")
+    @classmethod
+    def validate_wage_type(cls, v):
+        if v is not None and v not in ["HOURLY", "MONTHLY"]:
+            raise ValueError("wage_type は 'HOURLY' または 'MONTHLY' である必要があります")
+        return v
+
+    @field_validator("monthly_salary")
+    @classmethod
+    def validate_monthly_salary(cls, v):
+        if v is not None and v < 0:
+            raise ValueError("月給は0円以上である必要があります")
+        return v
+
+    @field_validator("default_break_minutes")
+    @classmethod
+    def validate_break(cls, v):
+        if v is not None and v < 0:
+            raise ValueError("休憩時間は0分以上である必要があります")
+        return v
+
+    @field_validator("hourly_wage")
+    @classmethod
+    def validate_wage(cls, v):
+        if v is not None and v < 0:
+            raise ValueError("時給は0円以上である必要があります")
+        return v
 
 class UserAdminCreate(BaseModel):
     username: str
@@ -72,15 +109,36 @@ class UserAdminCreate(BaseModel):
     default_break_minutes: int = 60
     color: str = "#059669"
 
+    @field_validator("hourly_wage")
+    @classmethod
+    def validate_wage(cls, v):
+        if v < 0:
+            raise ValueError("時給は0円以上である必要があります")
+        return v
+
 # --- シフト希望関連 ---
 class ShiftRequestCreate(BaseModel):
     date: date
     request_type: str = "OFF"  # "OFF" or "PAID_LEAVE"
     reason: Optional[str] = None
 
+    @field_validator("request_type")
+    @classmethod
+    def validate_request_type(cls, v):
+        if v not in ["OFF", "PAID_LEAVE"]:
+            raise ValueError("request_type は 'OFF' または 'PAID_LEAVE' である必要があります")
+        return v
+
 class ShiftRequestReview(BaseModel):
     status: str  # "APPROVED" or "REJECTED"
     admin_comment: Optional[str] = None
+
+    @field_validator("status")
+    @classmethod
+    def validate_status(cls, v):
+        if v not in ["APPROVED", "REJECTED"]:
+            raise ValueError("status は 'APPROVED' または 'REJECTED' である必要があります")
+        return v
 
 class ShiftRequestResponse(BaseModel):
     id: int
@@ -113,10 +171,40 @@ class ShiftCreate(BaseModel):
     shift_type: str = "NORMAL"
     note: Optional[str] = None
 
+    @field_validator("break_minutes")
+    @classmethod
+    def validate_break(cls, v):
+        if v < 0:
+            raise ValueError("休憩時間は0分以上である必要があります")
+        return v
+
+    @model_validator(mode="after")
+    def validate_shift_times(self):
+        if self.start_time and self.end_time:
+            st = datetime.strptime(self.start_time, "%H:%M").time()
+            et = datetime.strptime(self.end_time, "%H:%M").time()
+            if et <= st:
+                raise ValueError("終了時刻は開始時刻より後である必要があります")
+        return self
+
 class ShiftAutoGenerateRequest(BaseModel):
     year: int
     month: int
     overwrite: bool = False
+
+    @field_validator("year")
+    @classmethod
+    def validate_year(cls, v):
+        if v < 2000 or v > 2100:
+            raise ValueError("年は2000〜2100年の範囲で指定してください")
+        return v
+
+    @field_validator("month")
+    @classmethod
+    def validate_month(cls, v):
+        if v < 1 or v > 12:
+            raise ValueError("月は1〜12の範囲で指定してください")
+        return v
 
 class ShiftResponse(ShiftBase):
     id: int
@@ -128,6 +216,13 @@ class ShiftResponse(ShiftBase):
 class ClockRequest(BaseModel):
     action: str  # "IN" (出勤), "BREAK_START" (休憩入), "BREAK_END" (休憩戻), "OUT" (退勤)
     note: Optional[str] = None
+
+    @field_validator("action")
+    @classmethod
+    def validate_action(cls, v):
+        if v not in ["IN", "BREAK_START", "BREAK_END", "OUT"]:
+            raise ValueError("不正な打刻アクションです")
+        return v
 
 class TimeRecordResponse(BaseModel):
     id: int
@@ -152,9 +247,51 @@ class CorrectionRequestCreate(BaseModel):
     requested_break_minutes: int = 60
     reason: str
 
+    @field_validator("requested_break_minutes")
+    @classmethod
+    def validate_break(cls, v):
+        if v < 0:
+            raise ValueError("休憩時間は0分以上である必要があります")
+        return v
+
+    @model_validator(mode="after")
+    def validate_correction_times(self):
+        if self.requested_clock_in and self.requested_clock_out:
+            # 時刻パースチェック
+            def parse_dt(val: str, ref_date: date) -> datetime:
+                val = val.strip()
+                if " " in val:
+                    return datetime.strptime(val, "%Y-%m-%d %H:%M")
+                elif "T" in val:
+                    return datetime.fromisoformat(val)
+                else:
+                    t = datetime.strptime(val, "%H:%M").time()
+                    return datetime.combine(ref_date, t)
+            
+            try:
+                dt_in = parse_dt(self.requested_clock_in, self.target_date)
+                dt_out = parse_dt(self.requested_clock_out, self.target_date)
+                if dt_out <= dt_in:
+                    raise ValueError("退勤日時は出勤日時より後である必要があります")
+                diff_min = int((dt_out - dt_in).total_seconds() // 60)
+                if self.requested_break_minutes > diff_min:
+                    raise ValueError("休憩時間は勤務時間以内で指定してください")
+            except ValueError as e:
+                raise e
+            except Exception:
+                raise ValueError("日時の指定形式が不正です")
+        return self
+
 class CorrectionRequestReview(BaseModel):
     status: str  # "APPROVED" or "REJECTED"
     admin_comment: Optional[str] = None
+
+    @field_validator("status")
+    @classmethod
+    def validate_status(cls, v):
+        if v not in ["APPROVED", "REJECTED"]:
+            raise ValueError("status は 'APPROVED' または 'REJECTED' である必要があります")
+        return v
 
 class CorrectionRequestResponse(BaseModel):
     id: int
@@ -170,6 +307,7 @@ class CorrectionRequestResponse(BaseModel):
     admin_comment: Optional[str] = None
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
+
 
 # --- ダッシュボード・シミュレーション関連 ---
 class StaffDashboardResponse(BaseModel):
@@ -207,6 +345,41 @@ class AdminTimeRecordUpdate(BaseModel):
     clock_out: Optional[str] = None  # "HH:MM" または "YYYY-MM-DD HH:MM"
     total_break_minutes: int = 60
     note: Optional[str] = None
+
+    @field_validator("total_break_minutes")
+    @classmethod
+    def validate_break(cls, v):
+        if v < 0:
+            raise ValueError("休憩時間は0分以上である必要があります")
+        return v
+
+    @model_validator(mode="after")
+    def validate_admin_time_record(self):
+        if self.clock_in and self.clock_out:
+            def parse_dt(val: str, ref_date: date) -> datetime:
+                val = val.strip()
+                if " " in val:
+                    return datetime.strptime(val, "%Y-%m-%d %H:%M")
+                elif "T" in val:
+                    return datetime.fromisoformat(val)
+                else:
+                    t = datetime.strptime(val, "%H:%M").time()
+                    return datetime.combine(ref_date, t)
+
+            try:
+                dt_in = parse_dt(self.clock_in, self.date)
+                dt_out = parse_dt(self.clock_out, self.date)
+                if dt_out <= dt_in:
+                    raise ValueError("退勤日時は出勤日時より後である必要があります")
+                diff_min = int((dt_out - dt_in).total_seconds() // 60)
+                if self.total_break_minutes > diff_min:
+                    raise ValueError("休憩時間は勤務時間以内で指定してください")
+            except ValueError as e:
+                raise e
+            except Exception:
+                raise ValueError("日時の指定形式が不正です")
+        return self
+
 
 # --- 月次給与集計 ---
 class MonthlyPayrollItem(BaseModel):

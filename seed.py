@@ -13,7 +13,15 @@ def seed_data():
         # 既存データの確認
         existing_admin = db.query(models.User).filter(models.User.username == "admin").first()
         if existing_admin:
-            print("マスターデータは既に存在します。スキップします。")
+            # 確定仕様に合わせて既存ユーザーの時給・スケジュールを同期
+            existing_s1 = db.query(models.User).filter(models.User.username == "staff01").first()
+            if existing_s1:
+                existing_s1.hourly_wage = 1500
+            existing_s2 = db.query(models.User).filter(models.User.username == "staff02").first()
+            if existing_s2:
+                existing_s2.hourly_wage = 1200
+            db.commit()
+            print("マスターデータは既に存在します。時給設定を同期しました。")
             return
 
         print("初期マスターデータを作成中...")
@@ -49,7 +57,7 @@ def seed_data():
             is_active=True
         )
 
-        # 小林 彩乃（薬剤師）: 月火水金 09:00〜18:00, 土 09:00〜13:00
+        # 小林 彩乃（薬剤師）: 月火水金 09:00〜18:00, 土 09:00〜13:00 (時給1,500円)
         kobayashi_schedule = json.dumps({
             "0": {"work": True, "start": "09:00", "end": "18:00", "break": 60},
             "1": {"work": True, "start": "09:00", "end": "18:00", "break": 60},
@@ -65,7 +73,7 @@ def seed_data():
             full_name="小林 彩乃（薬剤師）",
             role="staff",
             wage_type="HOURLY",
-            hourly_wage=2400,
+            hourly_wage=1500,
             monthly_salary=0,
             paid_leave_granted=10.0,
             paid_leave_carried=2.0,
@@ -79,7 +87,7 @@ def seed_data():
             is_active=True
         )
 
-        # 寺内（調剤事務）: 月火木金 09:00〜18:00, 土 09:00〜13:00
+        # 寺内（調剤事務）: 月火木金 09:00〜18:00, 土 09:00〜13:00 (時給1,200円)
         terauchi_schedule = json.dumps({
             "0": {"work": True, "start": "09:00", "end": "18:00", "break": 60},
             "1": {"work": True, "start": "09:00", "end": "18:00", "break": 60},
@@ -95,7 +103,7 @@ def seed_data():
             full_name="寺内（調剤事務）",
             role="staff",
             wage_type="HOURLY",
-            hourly_wage=1300,
+            hourly_wage=1200,
             monthly_salary=0,
             paid_leave_granted=7.0,
             paid_leave_carried=1.0,

@@ -8,5 +8,8 @@ tests/
 .git/
 .gitignore
 .env
-test_kintai.db
+test_kintai*.db
 *.log
+cloudflared*
+kintai.db*
+*.bak*
