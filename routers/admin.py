@@ -105,6 +105,34 @@ def delete_staff_user(
     db.commit()
     return {"message": f"スタッフ「{user_name}」およびシフトを完全に削除しました"}
 
+@router.post("/reset-all")
+def reset_all_staff_and_shifts(
+    admin: models.User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    管理者（三宅様）以外の全スタッフ、全シフト、全打刻、全申請を一括削除（オールクリア）する。
+    まっさらな状態から運用を開始するための機能。
+    """
+    # 1. 管理者以外の全スタッフIDを取得
+    staff_users = db.query(models.User).filter(models.User.id != admin.id).all()
+    deleted_count = len(staff_users)
+
+    # 2. 全シフト、全打刻、全申請を削除
+    db.query(models.Shift).delete()
+    db.query(models.TimeRecord).delete()
+    db.query(models.ShiftRequest).delete()
+    db.query(models.CorrectionRequest).delete()
+
+    # 3. 管理者以外のスタッフアカウントを物理削除
+    for u in staff_users:
+        db.delete(u)
+
+    db.commit()
+    return {
+        "message": f"全スタッフ({deleted_count}名)・シフト・勤怠データを一括初期化（オールリセット）しました。管理者（三宅様）のみが保持されています。"
+    }
+
 @router.put("/users/{user_id}/condition", response_model=schemas.UserResponse)
 def update_user_condition(
     user_id: int,

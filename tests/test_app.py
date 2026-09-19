@@ -1139,3 +1139,21 @@ def test_staff_deletion_cleans_shifts_and_login(client, admin_headers):
     )
     assert login_attempt.status_code == 401
 
+
+def test_reset_all_staff_and_shifts(client, admin_headers):
+    # 初期化API実行
+    reset_res = client.post("/api/admin/reset-all", headers=admin_headers)
+    assert reset_res.status_code == 200
+    assert "一括初期化（オールリセット）しました" in reset_res.json()["message"]
+
+    # ユーザー一覧が管理者1名のみになっていること
+    users_after = client.get("/api/admin/users", headers=admin_headers).json()
+    assert len(users_after) == 1
+    assert users_after[0]["role"] == "admin"
+    assert "三宅" in users_after[0]["full_name"]
+
+    # シフトが0件になっていること
+    shifts_after = client.get("/api/admin/shifts?year=2026&month=6", headers=admin_headers).json()
+    assert len(shifts_after) == 0
+
+

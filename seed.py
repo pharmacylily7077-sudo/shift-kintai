@@ -10,22 +10,21 @@ def seed_data():
     db = SessionLocal()
 
     try:
-        # 既存データの確認
+        # 既存管理者データの確認
         existing_admin = db.query(models.User).filter(models.User.username == "admin").first()
         if existing_admin:
-            # 確定仕様に合わせて既存ユーザーの時給・スケジュールを同期
+            # 確定仕様に合わせて管理者氏名を同期
             existing_admin.full_name = "三宅 智之（管理薬剤師）"
-            existing_s1 = db.query(models.User).filter(models.User.username == "staff01").first()
-            if existing_s1:
-                existing_s1.hourly_wage = 1500
-            existing_s2 = db.query(models.User).filter(models.User.username == "staff02").first()
-            if existing_s2:
-                existing_s2.hourly_wage = 1200
             db.commit()
-            print("マスターデータは既に存在します。管理者名（三宅 智之 様）および時給設定を同期しました。")
+            print("管理者アカウント（三宅 智之 様）が存在します。")
             return
 
-        print("初期マスターデータを作成中...")
+        # 既存ユーザーが1人でも存在する場合は初期シードを実行しない（削除されたスタッフを復活させない）
+        if db.query(models.User).count() > 0:
+            print("ユーザーデータが存在するため、初期シードをスキップします。")
+            return
+
+        print("初期マスターデータ（初回起動時のみ）を作成中...")
 
         # 1. ユーザー作成（三宅様、小林彩乃様、寺内様の3名体制）
         # 三宅 智之（管理薬剤師）: 月火水金 09:00〜19:00, 木土 09:00〜13:00(半日)

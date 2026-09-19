@@ -1868,4 +1868,36 @@ async function handlePasswordModalSubmit(e) {
   }
 }
 
+// --- 全データ初期化（オールリセット） ---
+async function handleResetAllStaffAndShifts() {
+  const confirm1 = confirm(
+    "【警告】管理者（三宅様）以外の「全スタッフ」「全シフト」「全打刻」「全申請」を一括削除し、初期化しますか？\n\n※この操作を実行すると、テストデータがすべて消去され、元に戻せません。"
+  );
+  if (!confirm1) return;
+
+  const confirm2 = confirm(
+    "本当に実行してよろしいですか？\n実行後、管理者（三宅様）のアカウントのみが残ります。"
+  );
+  if (!confirm2) return;
+
+  try {
+    const res = await fetch('/api/admin/reset-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || '初期化に失敗しました');
+    }
+
+    const data = await res.json();
+    alert(data.message || '初期化が完了しました。');
+    window.location.reload();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+
 
