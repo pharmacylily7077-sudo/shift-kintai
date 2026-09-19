@@ -1,6 +1,44 @@
 let adminYear = new Date().getFullYear();
 let adminMonth = new Date().getMonth() + 1;
 let staffList = [];
+let activeMainTab = 'shift';
+let monthlyBalanceData = null;
+let complianceData = null;
+let shareTextData = null;
+let currentShareTab = 'all';
+
+// 3大導線タブ切り替え（① シフトを作る, ② 出勤を確認する, ③ スタッフを設定する）
+function switchMainTab(tab) {
+  activeMainTab = tab;
+  const tabs = ['shift', 'attendance', 'staff'];
+
+  tabs.forEach(t => {
+    const sec = document.getElementById(`section-${t}`);
+    const btn = document.getElementById(`nav-tab-${t}`);
+    if (!sec || !btn) return;
+
+    if (t === tab) {
+      sec.classList.remove('hidden');
+      btn.className = 'flex items-center justify-center space-x-2.5 py-3 px-4 rounded-xl text-sm font-extrabold transition-all duration-200 bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-600/20';
+    } else {
+      sec.classList.add('hidden');
+      btn.className = 'flex items-center justify-center space-x-2.5 py-3 px-4 rounded-xl text-sm font-extrabold transition-all duration-200 bg-slate-100 hover:bg-slate-200 text-slate-700';
+    }
+  });
+
+  if (tab === 'shift') {
+    loadAdminShifts();
+    loadShiftRequests();
+  } else if (tab === 'attendance') {
+    loadAttendanceSummary();
+    loadCorrectionRequests();
+    loadMonthlyPayroll();
+  } else if (tab === 'staff') {
+    loadComplianceStatus().then(() => renderStaffManagementCards());
+  }
+
+  lucide.createIcons();
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
   // 当月をCSV初期値に設定
@@ -22,12 +60,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   await loadStaffUsers();
+  await loadComplianceStatus();
   initAdminClockStatus();
   loadAttendanceSummary();
   loadShiftRequests();
   loadCorrectionRequests();
   loadAdminShifts();
   loadMonthlyPayroll();
+  renderStaffManagementCards();
 });
 
 // 1. スタッフ一覧取得（シフト登録・雇用条件・勤怠編集モーダルのセレクトボックス）
@@ -74,6 +114,8 @@ async function loadStaffUsers() {
         .map(u => `<option value="${u.id}">${u.full_name} (${u.role === 'admin' ? '管理者' : u.username})</option>`)
         .join('');
     }
+
+    renderStaffManagementCards();
   } catch (err) {
     console.error(err);
   }
@@ -263,6 +305,16 @@ async function loadCorrectionRequests() {
     const pendingList = list.filter(r => r.status === 'PENDING');
     document.getElementById('pending-count-badge').textContent = `保留中: ${pendingList.length}件`;
 
+    const navBadge = document.getElementById('nav-pending-badge');
+    if (navBadge) {
+      if (pendingList.length > 0) {
+        navBadge.textContent = `${pendingList.length}件`;
+        navBadge.classList.remove('hidden');
+      } else {
+        navBadge.classList.add('hidden');
+      }
+    }
+
     if (list.length === 0) {
       tbody.innerHTML = '<tr><td colspan="7" class="py-6 text-center text-slate-400">現在、修正申請はありません</td></tr>';
       return;
@@ -334,14 +386,26 @@ async function reviewCorrection(id, status) {
   }
 }
 
-// 4. シフト管理
+// 4. シフト管理 & 人員バランス判定
 async function loadAdminShifts() {
   try {
     document.getElementById('admin-calendar-title').textContent = `${adminYear}年${adminMonth}月`;
-    const res = await fetch(`/api/admin/shifts?year=${adminYear}&month=${adminMonth}`);
-    if (!res.ok) throw new Error('シフト取得失敗');
 
-    let shifts = await res.json();
+    // シフトデータと人員バランス判定を並行取得
+    const [shiftsRes, balanceRes] = await Promise.all([
+      fetch(`/api/admin/shifts?year=${adminYear}&month=${adminMonth}`),
+      fetch(`/api/admin/shifts/balance?year=${adminYear}&month=${adminMonth}`)
+    ]);
+
+    if (!shiftsRes.ok) throw new Error('シフト取得失敗');
+    let shifts = await shiftsRes.json();
+
+    if (balanceRes.ok) {
+      monthlyBalanceData = await balanceRes.json();
+      renderBalanceAlertBanner(monthlyBalanceData);
+    } else {
+      monthlyBalanceData = null;
+    }
 
     // スタッフ絞り込みフィルター適用
     const filterVal = document.getElementById('admin-staff-filter')?.value;
@@ -355,6 +419,67 @@ async function loadAdminShifts() {
   } catch (err) {
     console.error(err);
   }
+}
+
+// 人員バランス・偏り警告バナーの描画
+function renderBalanceAlertBanner(balance) {
+  const banner = document.getElementById('balance-alert-banner');
+  if (!banner) return;
+
+  if (!balance || balance.warning_days_count === 0) {
+    banner.classList.add('hidden');
+    return;
+  }
+
+  banner.classList.remove('hidden');
+
+  const titleEl = document.getElementById('balance-alert-title');
+  const badgeEl = document.getElementById('balance-alert-badge');
+  const descEl = document.getElementById('balance-alert-desc');
+  const detailsEl = document.getElementById('balance-alert-details');
+  const iconBox = document.getElementById('balance-alert-icon-box');
+
+  const hasDanger = balance.days.some(d => d.warning_level === 'danger');
+
+  if (hasDanger) {
+    banner.className = 'rounded-3xl p-4 sm:p-5 transition-all no-print border bg-rose-50/80 border-rose-200 text-rose-900 shadow-2xs';
+    if (iconBox) iconBox.className = 'w-10 h-10 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center flex-shrink-0 mt-0.5';
+    if (titleEl) titleEl.textContent = '【警告】人員不足または薬剤師不在の日があります';
+    if (badgeEl) {
+      badgeEl.className = 'text-[11px] font-black px-2.5 py-0.5 rounded-full bg-rose-600 text-white';
+      badgeEl.textContent = `要確認 ${balance.warning_days_count}日`;
+    }
+    if (descEl) descEl.textContent = `${balance.year}年${balance.month}月のシフトにおいて、薬剤師不在または出勤0名の日が検出されました。シフト希望や出勤条件をご確認ください。`;
+  } else {
+    banner.className = 'rounded-3xl p-4 sm:p-5 transition-all no-print border bg-amber-50/80 border-amber-200 text-amber-900 shadow-2xs';
+    if (iconBox) iconBox.className = 'w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0 mt-0.5';
+    if (titleEl) titleEl.textContent = '【注意】ワンオペ・1名出勤の日があります';
+    if (badgeEl) {
+      badgeEl.className = 'text-[11px] font-black px-2.5 py-0.5 rounded-full bg-amber-600 text-white';
+      badgeEl.textContent = `注意 ${balance.warning_days_count}日`;
+    }
+    if (descEl) descEl.textContent = `${balance.year}年${balance.month}月において、出勤スタッフが1名のみ（ワンオペ）の日があります。休憩や混雑時の対応にご注意ください。`;
+  }
+
+  if (detailsEl) {
+    const warningDays = balance.days.filter(d => d.has_warning);
+    detailsEl.innerHTML = warningDays.map(d => {
+      const dayNum = parseInt(d.date.split('-')[2], 10);
+      const isDan = d.warning_level === 'danger';
+      const bg = isDan ? 'bg-rose-100/90 text-rose-800 border-rose-200' : 'bg-amber-100/90 text-amber-800 border-amber-200';
+      const msg = d.warning_messages.join('・');
+      return `
+        <span class="inline-flex items-center px-2 py-0.5 rounded-lg border text-[11px] ${bg}">
+          <strong>${dayNum}日</strong>: ${msg}
+        </span>
+      `;
+    }).join('');
+  }
+}
+
+function dismissBalanceAlert() {
+  const banner = document.getElementById('balance-alert-banner');
+  if (banner) banner.classList.add('hidden');
 }
 
 // 管理者用 7列月間グリッドカレンダー（メイン表示）
@@ -374,6 +499,14 @@ function renderAdminCalendarGrid(shifts) {
     if (!shiftsByDate[s.date]) shiftsByDate[s.date] = [];
     shiftsByDate[s.date].push(s);
   });
+
+  // 日付ごとの人員バランス情報マップ
+  const balanceByDate = {};
+  if (monthlyBalanceData && monthlyBalanceData.days) {
+    monthlyBalanceData.days.forEach(d => {
+      balanceByDate[d.date] = d;
+    });
+  }
 
   // 月初の前の余白セル
   for (let i = 0; i < startDayOfWeek; i++) {
@@ -395,11 +528,40 @@ function renderAdminCalendarGrid(shifts) {
     if (dayOfWeek === 0) dayNumColor = 'text-rose-600 font-black';
     if (dayOfWeek === 6) dayNumColor = 'text-blue-600 font-black';
 
+    const dayBalance = balanceByDate[dateStr];
+    let balanceBadgeHtml = '';
+
+    if (dayBalance && dayBalance.has_warning) {
+      if (dayBalance.warning_level === 'danger') {
+        balanceBadgeHtml = `
+          <span class="inline-flex items-center text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-rose-600 text-white shadow-2xs cursor-help" title="${dayBalance.warning_messages.join(', ')}">
+            ⚠️ 不足
+          </span>
+        `;
+      } else if (dayBalance.warning_level === 'warning') {
+        balanceBadgeHtml = `
+          <span class="inline-flex items-center text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500 text-white shadow-2xs cursor-help" title="${dayBalance.warning_messages.join(', ')}">
+            1名
+          </span>
+        `;
+      }
+    } else if (dayBalance && dayBalance.total_staff > 0 && dayOfWeek !== 0) {
+      balanceBadgeHtml = `
+        <span class="inline-flex items-center text-[9px] font-semibold px-1 py-0.2 rounded bg-slate-100 text-slate-500 no-print" title="計${dayBalance.total_staff}名 (薬剤師${dayBalance.pharmacist_count}名)">
+          ${dayBalance.total_staff}名
+        </span>
+      `;
+    }
+
     const cell = document.createElement('div');
+    const warningBorder = dayBalance && dayBalance.has_warning
+      ? (dayBalance.warning_level === 'danger' ? 'border-rose-300 ring-1 ring-rose-200 bg-rose-50/20' : 'border-amber-300 ring-1 ring-amber-100 bg-amber-50/20')
+      : '';
+
     cell.className = `min-h-[125px] sm:min-h-[145px] p-1.5 sm:p-2 rounded-2xl border transition-all ${
       isToday 
         ? 'bg-indigo-50/50 border-indigo-300 ring-1 ring-indigo-200' 
-        : 'bg-white border-slate-200 hover:border-slate-300 shadow-2xs'
+        : (warningBorder || 'bg-white border-slate-200 hover:border-slate-300 shadow-2xs')
     } group`;
     cell.onclick = (e) => {
       if (e.target.closest('button')) return;
@@ -408,9 +570,12 @@ function renderAdminCalendarGrid(shifts) {
 
     const headerHtml = `
       <div class="flex items-center justify-between mb-1">
-        <span class="text-xs sm:text-sm font-black ${isToday ? 'bg-indigo-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]' : dayNumColor}">
-          ${day}
-        </span>
+        <div class="flex items-center space-x-1">
+          <span class="text-xs sm:text-sm font-black ${isToday ? 'bg-indigo-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]' : dayNumColor}">
+            ${day}
+          </span>
+          ${balanceBadgeHtml}
+        </div>
         <div class="flex items-center space-x-1 no-print">
           ${isToday ? '<span class="text-[9px] font-black text-indigo-700 bg-indigo-100 px-1 rounded hidden sm:inline">今日</span>' : ''}
           <button onclick="event.stopPropagation(); openAddShiftModal('${dateStr}')" class="opacity-0 group-hover:opacity-100 text-indigo-600 hover:text-indigo-800 p-0.5 rounded hover:bg-indigo-50 transition" title="この日にシフト追加">
@@ -988,13 +1153,19 @@ async function handleAutoGenerateSubmit(e) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || '自動生成に失敗しました');
 
-    showToast(`シフト一括生成完了: 新規${data.generated}件, 更新${data.updated}件（希望休${data.skipped_requests}件スキップ）`);
+    let msg = `シフト一括生成完了: 新規${data.generated}件, 更新${data.updated}件（希望休${data.skipped_requests}件スキップ）`;
+    if (data.warning_days_count && data.warning_days_count > 0) {
+      msg += ` ※人員不足・注意の日が${data.warning_days_count}日あります`;
+      showToast(msg, 'warning');
+    } else {
+      showToast(msg);
+    }
     closeAutoGenerateModal();
 
     // カレンダーの表示月を生成月に合わせる
     adminYear = year;
     adminMonth = month;
-    loadAdminShifts();
+    await loadAdminShifts();
   } catch (err) {
     showToast(err.message, 'error');
   }
@@ -1345,3 +1516,261 @@ async function handleTimeRecordSubmit(e) {
     showToast(err.message, 'error');
   }
 }
+
+// 13. 導線③: スタッフ管理カード一覧の描画
+function renderStaffManagementCards() {
+  const container = document.getElementById('staff-management-cards');
+  if (!container) return;
+  container.innerHTML = '';
+
+  if (!staffList || staffList.length === 0) {
+    container.innerHTML = '<div class="col-span-full py-8 text-center text-slate-400">スタッフが登録されていません</div>';
+    return;
+  }
+
+  const dayNames = ['月', '火', '水', '木', '金', '土', '日'];
+
+  staffList.forEach(u => {
+    const card = document.createElement('div');
+    card.className = 'bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs hover:border-slate-300 transition-all flex flex-col justify-between space-y-4';
+
+    // 勤務曜日のバッジ
+    let workDayBadges = '';
+    const workDaysList = (u.work_days || '').split(',').map(s => s.trim());
+    workDayBadges = dayNames.map((name, idx) => {
+      const isWork = workDaysList.includes(String(idx));
+      return `<span class="w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-bold ${
+        isWork ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-300'
+      }">${name}</span>`;
+    }).join('');
+
+    const staffColor = u.color || '#059669';
+    const isMonthly = u.wage_type === 'MONTHLY';
+    const wageDisplay = isMonthly ? `月給 ¥${(u.monthly_salary || 0).toLocaleString()}` : `時給 ¥${(u.hourly_wage || 0).toLocaleString()}`;
+
+    const roleBadge = u.role === 'admin'
+      ? '<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-800">管理者 / 薬局長</span>'
+      : '<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">スタッフ</span>';
+
+    card.innerHTML = `
+      <div class="space-y-3">
+        <div class="flex items-start justify-between">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-2xl flex items-center justify-center text-white font-black text-sm shadow-2xs" style="background-color: ${staffColor}">
+              ${u.full_name ? u.full_name.charAt(0) : '員'}
+            </div>
+            <div>
+              <div class="flex items-center space-x-2">
+                <h4 class="font-extrabold text-slate-900 text-sm">${u.full_name}</h4>
+                ${roleBadge}
+              </div>
+              <p class="text-xs text-slate-400 font-mono">ID: ${u.username}</p>
+            </div>
+          </div>
+          <span class="w-3.5 h-3.5 rounded-full border border-white shadow-2xs" style="background-color: ${staffColor}" title="カレンダー表示色"></span>
+        </div>
+
+        <div class="bg-slate-50 p-3 rounded-xl space-y-1.5 text-xs text-slate-600">
+          <div class="flex justify-between">
+            <span class="text-slate-400">給与形態:</span>
+            <span class="font-bold text-slate-800">${wageDisplay}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">有休付与/残:</span>
+            <span class="font-semibold text-emerald-700">付与${u.paid_leave_granted}日 / 繰越${u.paid_leave_carried}日</span>
+          </div>
+          ${(() => {
+            if (!complianceData || !complianceData.staff) return '';
+            const comp = complianceData.staff.find(s => s.user_id === u.id);
+            if (!comp) return '';
+            let badgeClass = 'bg-emerald-100 text-emerald-800';
+            let statusLabel = `達成 (${comp.used_days}/5日)`;
+            if (comp.status === 'IN_PROGRESS') {
+              badgeClass = 'bg-amber-100 text-amber-800';
+              statusLabel = `進行中 (${comp.used_days}/5日)`;
+            } else if (comp.status === 'ACTION_REQUIRED') {
+              badgeClass = 'bg-rose-100 text-rose-800 font-bold';
+              statusLabel = `要取得 (${comp.used_days}/5日)`;
+            }
+            return `
+              <div class="flex justify-between items-center pt-1 border-t border-slate-200/60">
+                <span class="text-[11px] text-slate-400">年5日有休義務:</span>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${badgeClass}" title="${comp.warning_message || ''}">
+                  ${statusLabel}
+                </span>
+              </div>
+            `;
+          })()}
+        </div>
+
+        <div class="space-y-1">
+          <span class="text-[10px] font-bold text-slate-400">出勤曜日設定</span>
+          <div class="flex items-center space-x-1">
+            ${workDayBadges}
+          </div>
+        </div>
+      </div>
+
+      <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
+        <button onclick="editStaffSettings(${u.id})" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center space-x-1 py-1 px-2.5 rounded-lg hover:bg-indigo-50 transition">
+          <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+          <span>条件・名前を編集</span>
+        </button>
+        ${u.role !== 'admin' ? `
+          <button onclick="directDeleteStaff(${u.id}, '${u.full_name}')" class="text-xs font-semibold text-rose-500 hover:text-rose-700 p-1 rounded-lg hover:bg-rose-50 transition" title="スタッフ退職・削除">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          </button>
+        ` : ''}
+      </div>
+    `;
+
+    container.appendChild(card);
+  });
+
+  lucide.createIcons({ root: container });
+}
+
+function editStaffSettings(userId) {
+  const select = document.getElementById('condition-user-select');
+  if (select) {
+    select.value = userId;
+    onConditionUserChange();
+  }
+  openConditionModal();
+}
+
+async function directDeleteStaff(userId, fullName) {
+  if (!confirm(`スタッフ「${fullName}」を削除（退職・非表示）しますか？\n※過去データとの整合性を保つため非表示になります。`)) {
+    return;
+  }
+  try {
+    const res = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.detail || '削除に失敗しました');
+    }
+    showToast(`スタッフ「${fullName}」を削除しました`);
+    setTimeout(() => window.location.reload(), 600);
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+// --- フェーズ4: 法定有休 年5日取得義務コンプライアンス判定 ---
+async function loadComplianceStatus() {
+  try {
+    const res = await fetch(`/api/admin/compliance/paid-leave?year=${adminYear}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    complianceData = data;
+
+    const banner = document.getElementById('compliance-alert-banner');
+    const countBadge = document.getElementById('compliance-alert-count');
+    const staffListEl = document.getElementById('compliance-alert-staff-list');
+
+    if (banner && countBadge && staffListEl) {
+      if (data.action_required_count > 0) {
+        banner.classList.remove('hidden');
+        countBadge.textContent = `要対応: ${data.action_required_count}名`;
+        const alertStaff = data.staff.filter(s => s.status === 'ACTION_REQUIRED');
+        staffListEl.innerHTML = alertStaff.map(s => `
+          <span class="px-2.5 py-1 rounded-lg bg-white border border-rose-200 text-rose-700 font-bold flex items-center space-x-1 shadow-2xs">
+            <span>⚠️ ${s.full_name}</span>
+            <span class="text-slate-500 font-normal">（取得 ${s.used_days}/5日）</span>
+          </span>
+        `).join('');
+      } else {
+        banner.classList.add('hidden');
+      }
+    }
+  } catch (err) {
+    console.error('Compliance status error:', err);
+  }
+}
+
+// --- フェーズ4: LINE・連絡用テキスト共有 ---
+async function openShareTextModal() {
+  const modal = document.getElementById('share-text-modal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+
+  try {
+    const res = await fetch(`/api/admin/shifts/share-text?year=${adminYear}&month=${adminMonth}`);
+    if (!res.ok) throw new Error('共有テキストの取得に失敗しました');
+    const data = await res.json();
+    shareTextData = data;
+
+    const select = document.getElementById('share-staff-select');
+    if (select) {
+      select.innerHTML = data.by_staff.map(s => `
+        <option value="${s.user_id}">${s.user_name}（${s.days_count}日）</option>
+      `).join('');
+    }
+
+    switchShareTab(currentShareTab || 'all');
+    lucide.createIcons({ root: modal });
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+function closeShareTextModal() {
+  const modal = document.getElementById('share-text-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
+function switchShareTab(tab) {
+  currentShareTab = tab;
+  const tabAll = document.getElementById('share-tab-all');
+  const tabIndiv = document.getElementById('share-tab-individual');
+  const select = document.getElementById('share-staff-select');
+  const textarea = document.getElementById('share-text-content');
+  if (!shareTextData) return;
+
+  if (tab === 'all') {
+    if (tabAll) tabAll.className = 'px-3 py-1.5 rounded-lg bg-white text-emerald-700 shadow-xs transition';
+    if (tabIndiv) tabIndiv.className = 'px-3 py-1.5 rounded-lg hover:text-slate-900 transition';
+    if (select) select.classList.add('hidden');
+    if (textarea) textarea.value = shareTextData.full_text;
+  } else {
+    if (tabAll) tabAll.className = 'px-3 py-1.5 rounded-lg hover:text-slate-900 transition';
+    if (tabIndiv) tabIndiv.className = 'px-3 py-1.5 rounded-lg bg-white text-emerald-700 shadow-xs transition';
+    if (select) select.classList.remove('hidden');
+    onShareStaffSelectChange();
+  }
+}
+
+function onShareStaffSelectChange() {
+  const select = document.getElementById('share-staff-select');
+  const textarea = document.getElementById('share-text-content');
+  if (!select || !textarea || !shareTextData) return;
+
+  const uid = parseInt(select.value, 10);
+  const staffObj = shareTextData.by_staff.find(s => s.user_id === uid);
+  if (staffObj) {
+    textarea.value = staffObj.text;
+  }
+}
+
+async function copyShareText() {
+  const textarea = document.getElementById('share-text-content');
+  if (!textarea || !textarea.value) {
+    showToast('コピーするテキストがありません', 'error');
+    return;
+  }
+
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(textarea.value);
+    } else {
+      textarea.select();
+      document.execCommand('copy');
+    }
+    showToast('📋 LINE・連絡用テキストをクリップボードにコピーしました！');
+  } catch (err) {
+    textarea.select();
+    document.execCommand('copy');
+    showToast('📋 テキストをコピーしました！');
+  }
+}
+

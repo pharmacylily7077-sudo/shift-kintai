@@ -206,6 +206,22 @@ class ShiftAutoGenerateRequest(BaseModel):
             raise ValueError("月は1〜12の範囲で指定してください")
         return v
 
+class ShiftDayBalance(BaseModel):
+    date: date
+    weekday: int  # 0=月..6=日
+    total_staff: int
+    pharmacist_count: int
+    clerk_count: int
+    has_warning: bool
+    warning_level: str  # "ok", "warning", "danger"
+    warning_messages: List[str]
+
+class ShiftBalanceResponse(BaseModel):
+    year: int
+    month: int
+    days: List[ShiftDayBalance]
+    warning_days_count: int
+
 class ShiftResponse(ShiftBase):
     id: int
     user_name: Optional[str] = None
@@ -406,4 +422,38 @@ class MonthlyPayrollResponse(BaseModel):
     items: List[MonthlyPayrollItem]
     total_payout: int
     total_work_hours: float
+
+# --- シフト共有・LINE連絡テキスト ---
+class ShiftShareStaffText(BaseModel):
+    user_id: int
+    user_name: str
+    days_count: int
+    text: str
+
+class ShiftShareTextResponse(BaseModel):
+    year: int
+    month: int
+    full_text: str
+    by_staff: List[ShiftShareStaffText]
+
+# --- 法定有給休暇 年5日取得義務コンプライアンス ---
+class PaidLeaveComplianceUser(BaseModel):
+    user_id: int
+    username: str
+    full_name: str
+    role: str
+    total_granted: float
+    used_days: float
+    remaining_days: float
+    legal_progress_percent: int
+    status: str  # "ACHIEVED", "IN_PROGRESS", "ACTION_REQUIRED"
+    warning_message: Optional[str] = None
+
+class PaidLeaveComplianceResponse(BaseModel):
+    year: int
+    total_target_staff: int
+    achieved_count: int
+    in_progress_count: int
+    action_required_count: int
+    staff: List[PaidLeaveComplianceUser]
 

@@ -882,3 +882,154 @@ def test_export_csv_correct_totals(client, admin_headers):
             assert total == work_sal + pl_allowance
         elif r[3] == "MONTHLY":
             assert total == 450000
+
+# ==============================================================================
+# 8. フェーズ2＆3: 人員バランス判定・偏り警告機能 (5テスト)
+# ==============================================================================
+
+def test_shifts_balance_endpoint_structure(client, admin_headers):
+    res = client.get("/api/admin/shifts/balance?year=2026&month=6", headers=admin_headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["year"] == 2026
+    assert data["month"] == 6
+    assert "days" in data
+    assert len(data["days"]) == 30
+    assert "warning_days_count" in data
+    day1 = data["days"][0]
+    assert "date" in day1
+    assert "weekday" in day1
+    assert "total_staff" in day1
+    assert "pharmacist_count" in day1
+    assert "clerk_count" in day1
+    assert "has_warning" in day1
+    assert "warning_level" in day1
+    assert "warning_messages" in day1
+
+def test_shifts_balance_detects_empty_and_shortage(client, admin_headers):
+    # 新しい月（2028年3月）でシフト未生成の場合、日曜日以外はdanger警告
+    res = client.get("/api/admin/shifts/balance?year=2028&month=3", headers=admin_headers)
+    assert res.status_code == 200
+    data = res.json()
+    # 2028年3月は31日間、日曜日は4日あるので、営業日27日は未配置(total_staff==0)警告
+    assert data["warning_days_count"] > 0
+    non_sun_warnings = [d for d in data["days"] if d["weekday"] != 6 and d["has_warning"]]
+    assert len(non_sun_warnings) > 0
+    assert non_sun_warnings[0]["warning_level"] == "danger"
+
+def test_shifts_balance_detects_no_pharmacist(client, admin_headers):
+    # 2028年4月1日（土曜日）に調剤事務スタッフのみ登録した場合、薬剤師不在警告
+    users_res = client.get("/api/admin/users", headers=admin_headers)
+    clerk = [u for u in users_res.json() if "寺内" in u["full_name"]][0]
+
+    client.post("/api/admin/shifts", json={
+        "user_id": clerk["id"],
+        "date": "2028-04-01",
+        "start_time": "09:00",
+        "end_time": "18:00",
+        "shift_type": "NORMAL"
+    }, headers=admin_headers)
+
+    res = client.get("/api/admin/shifts/balance?year=2028&month=4", headers=admin_headers)
+    assert res.status_code == 200
+    data = res.json()
+    day1 = [d for d in data["days"] if d["date"] == "2028-04-01"][0]
+    assert day1["pharmacist_count"] == 0
+    assert day1["clerk_count"] == 1
+    assert day1["has_warning"] is True
+    assert day1["warning_level"] == "danger"
+    assert any("薬剤師が不在" in msg for msg in day1["warning_messages"])
+
+def test_shifts_balance_single_staff_warning(client, admin_headers):
+    # 2028年5月1日（月曜日）に薬剤師1名のみ登録した場合、ワンオペwarning
+    users_res = client.get("/api/admin/users", headers=admin_headers)
+    pharma = [u for u in users_res.json() if "小林" in u["full_name"]][0]
+
+    client.post("/api/admin/shifts", json={
+        "user_id": pharma["id"],
+        "date": "2028-05-01",
+        "start_time": "09:00",
+        "end_time": "18:00",
+        "shift_type": "NORMAL"
+    }, headers=admin_headers)
+
+    res = client.get("/api/admin/shifts/balance?year=2028&month=5", headers=admin_headers)
+    assert res.status_code == 200
+    data = res.json()
+    day1 = [d for d in data["days"] if d["date"] == "2028-05-01"][0]
+    assert day1["pharmacist_count"] == 1
+    assert day1["total_staff"] == 1
+    assert day1["has_warning"] is True
+    assert day1["warning_level"] == "warning"
+    assert any("ワンオペ" in msg for msg in day1["warning_messages"])
+
+def test_auto_generate_returns_balance_warnings(client, admin_headers):
+    res = client.post("/api/admin/shifts/auto-generate", json={
+        "year": 2026,
+        "month": 6,
+        "overwrite": True
+    }, headers=admin_headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert "warning_days_count" in data
+    assert "balance_warnings" in data
+    assert isinstance(data["balance_warnings"], list)
+
+# ==============================================================================
+# フェーズ4: 堅牢化・法改正対応・一括バックアップ テスト
+# ==============================================================================
+def test_shift_share_text_api(client, admin_headers):
+    # シフト共有テキスト生成APIの検証
+    res = client.get("/api/admin/shifts/share-text?year=2026&month=6", headers=admin_headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["year"] == 2026
+    assert data["month"] == 6
+    assert "full_text" in data
+    assert "by_staff" in data
+    assert len(data["by_staff"]) >= 3
+    assert "【ひまわり調剤薬局 2026年6月度" in data["full_text"]
+    staff_names = [s["user_name"] for s in data["by_staff"]]
+    assert any("三宅" in n for n in staff_names)
+    assert any("小林" in n for n in staff_names)
+    assert any("寺内" in n for n in staff_names)
+
+def test_paid_leave_compliance_api(client, admin_headers):
+    # 法定有給休暇 年5日取得義務コンプライアンス判定APIの検証
+    res = client.get("/api/admin/compliance/paid-leave?year=2026", headers=admin_headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["year"] == 2026
+    assert "total_target_staff" in data
+    assert "action_required_count" in data
+    assert "staff" in data
+    assert isinstance(data["staff"], list)
+    # 三宅様（付与+繰越 20日）と小林様（12日）は10日以上の対象者
+    assert data["total_target_staff"] >= 2
+    for s in data["staff"]:
+        assert s["status"] in ["ACHIEVED", "IN_PROGRESS", "ACTION_REQUIRED"]
+        assert 0 <= s["legal_progress_percent"] <= 100
+
+def test_backup_export_zip_api(client, admin_headers):
+    import zipfile
+    # 全データ一括バックアップ（ZIP/CSV）APIの検証
+    res = client.get("/api/admin/backup/export", headers=admin_headers)
+    assert res.status_code == 200
+    assert "application/zip" in res.headers.get("content-type", "")
+    assert "attachment; filename=shift_kintai_backup_" in res.headers.get("content-disposition", "")
+    
+    # ZIP解凍およびファイル構成チェック
+    zip_bytes = io.BytesIO(res.content)
+    with zipfile.ZipFile(zip_bytes, "r") as zf:
+        file_list = zf.namelist()
+        assert "users.csv" in file_list
+        assert "shifts.csv" in file_list
+        assert "time_records.csv" in file_list
+        assert "shift_requests.csv" in file_list
+        assert "correction_requests.csv" in file_list
+        
+        # users.csvの内容確認
+        users_content = zf.read("users.csv").decode("utf-8-sig")
+        assert "ユーザーID" in users_content
+        assert "三宅 興之" in users_content
+        assert "小林 彩乃" in users_content

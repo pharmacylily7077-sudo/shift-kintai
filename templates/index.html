@@ -32,39 +32,41 @@
         </div>
       </div>
 
-      <!-- 大型打刻ボタンエリア（片手でタップしやすい設計） -->
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 w-full lg:w-auto">
-        <!-- 出勤ボタン -->
-        <button id="btn-clock-in" onclick="clockAction('IN')"
-          class="h-24 sm:h-28 flex flex-col items-center justify-center p-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-200 hover:shadow-lg active:scale-95 transition disabled:opacity-40 disabled:pointer-events-none group">
-          <i data-lucide="sun" class="w-7 h-7 sm:w-8 sm:h-8 mb-1 group-hover:scale-110 transition"></i>
-          <span class="font-extrabold text-base tracking-wide">出勤</span>
-          <span class="text-[10px] text-emerald-100" id="clock-in-time-display">未打刻</span>
-        </button>
+      <!-- 大型2大打刻ボタンエリア（片手でタップ・絶対に押し間違えない設計） -->
+      <div class="flex flex-col gap-2.5 w-full lg:w-96">
+        <!-- 2大メインボタン: 出勤する / 退勤する -->
+        <div class="grid grid-cols-2 gap-3">
+          <!-- 出勤ボタン -->
+          <button id="btn-clock-in" onclick="clockAction('IN')"
+            class="h-28 sm:h-32 flex flex-col items-center justify-center p-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-200 hover:shadow-xl active:scale-95 transition disabled:opacity-40 disabled:pointer-events-none group">
+            <i data-lucide="sun" class="w-8 h-8 sm:w-9 sm:h-9 mb-1 group-hover:scale-110 transition"></i>
+            <span class="font-black text-lg sm:text-xl tracking-wider">出勤する</span>
+            <span class="text-[11px] text-emerald-100 font-medium mt-0.5" id="clock-in-time-display">未打刻</span>
+          </button>
 
-        <!-- 休憩入ボタン -->
-        <button id="btn-break-start" onclick="clockAction('BREAK_START')"
-          class="h-24 sm:h-28 flex flex-col items-center justify-center p-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white shadow-md shadow-amber-200 hover:shadow-lg active:scale-95 transition disabled:opacity-40 disabled:pointer-events-none group">
-          <i data-lucide="coffee" class="w-7 h-7 sm:w-8 sm:h-8 mb-1 group-hover:scale-110 transition"></i>
-          <span class="font-extrabold text-base tracking-wide">休憩入</span>
-          <span class="text-[10px] text-amber-100">一時離席</span>
-        </button>
+          <!-- 退勤ボタン -->
+          <button id="btn-clock-out" onclick="clockAction('OUT')"
+            class="h-28 sm:h-32 flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-800 hover:bg-slate-900 text-white shadow-lg shadow-slate-300 hover:shadow-xl active:scale-95 transition disabled:opacity-40 disabled:pointer-events-none group">
+            <i data-lucide="moon" class="w-8 h-8 sm:w-9 sm:h-9 mb-1 group-hover:scale-110 transition"></i>
+            <span class="font-black text-lg sm:text-xl tracking-wider">退勤する</span>
+            <span class="text-[11px] text-slate-300 font-medium mt-0.5" id="clock-out-time-display">お疲れ様でした</span>
+          </button>
+        </div>
 
-        <!-- 休憩戻ボタン -->
-        <button id="btn-break-end" onclick="clockAction('BREAK_END')"
-          class="h-24 sm:h-28 flex flex-col items-center justify-center p-3 rounded-2xl bg-teal-500 hover:bg-teal-600 text-white shadow-md shadow-teal-200 hover:shadow-lg active:scale-95 transition disabled:opacity-40 disabled:pointer-events-none group">
-          <i data-lucide="play" class="w-7 h-7 sm:w-8 sm:h-8 mb-1 group-hover:scale-110 transition"></i>
-          <span class="font-extrabold text-base tracking-wide">休憩戻</span>
-          <span class="text-[10px] text-teal-100">再開</span>
-        </button>
+        <!-- 休憩サブ操作バー（一時離席・再開用） -->
+        <div class="grid grid-cols-2 gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200">
+          <button id="btn-break-start" onclick="clockAction('BREAK_START')"
+            class="py-2 px-3 rounded-lg bg-white hover:bg-amber-50 text-amber-800 border border-amber-200 shadow-2xs text-xs font-bold flex items-center justify-center space-x-1.5 active:scale-95 transition disabled:opacity-40 disabled:pointer-events-none">
+            <i data-lucide="coffee" class="w-3.5 h-3.5 text-amber-600"></i>
+            <span>☕️ 休憩に入る</span>
+          </button>
 
-        <!-- 退勤ボタン -->
-        <button id="btn-clock-out" onclick="clockAction('OUT')"
-          class="h-24 sm:h-28 flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-800 hover:bg-slate-900 text-white shadow-md shadow-slate-300 hover:shadow-lg active:scale-95 transition disabled:opacity-40 disabled:pointer-events-none group">
-          <i data-lucide="moon" class="w-7 h-7 sm:w-8 sm:h-8 mb-1 group-hover:scale-110 transition"></i>
-          <span class="font-extrabold text-base tracking-wide">退勤</span>
-          <span class="text-[10px] text-slate-300" id="clock-out-time-display">お疲れ様でした</span>
-        </button>
+          <button id="btn-break-end" onclick="clockAction('BREAK_END')"
+            class="py-2 px-3 rounded-lg bg-white hover:bg-teal-50 text-teal-800 border border-teal-200 shadow-2xs text-xs font-bold flex items-center justify-center space-x-1.5 active:scale-95 transition disabled:opacity-40 disabled:pointer-events-none">
+            <i data-lucide="play" class="w-3.5 h-3.5 text-teal-600"></i>
+            <span>▶️ 休憩から戻る</span>
+          </button>
+        </div>
       </div>
 
     </div>
@@ -472,5 +474,5 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="/static/js/app.js"></script>
+<script src="/static/js/app.js?v=20260919_phase4"></script>
 {% endblock %}

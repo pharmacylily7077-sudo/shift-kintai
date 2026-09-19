@@ -27,28 +27,28 @@
       <p class="text-xs text-purple-200">リアルタイム勤怠状況、高度シフト編成、希望休審査、CSV出力</p>
     </div>
 
-    <!-- 右上アクションボタン群 -->
+    <!-- 右上クイック情報 -->
     <div class="flex flex-wrap items-center gap-2">
       <!-- スタッフ新規追加ボタン -->
-      <button onclick="openAddStaffModal()"
+      <button onclick="switchMainTab('staff'); openAddStaffModal()"
         class="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold px-3 py-2 rounded-xl transition flex items-center space-x-1.5 shadow-xs">
         <i data-lucide="user-plus" class="w-4 h-4"></i>
         <span>＋ スタッフ追加</span>
       </button>
 
-      <!-- 雇用条件設定ボタン -->
-      <button onclick="openConditionModal()"
-        class="bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs font-bold px-3 py-2 rounded-xl transition flex items-center space-x-1.5 shadow-xs">
-        <i data-lucide="users" class="w-4 h-4"></i>
-        <span>👥 スタッフ管理・雇用条件</span>
-      </button>
+      <!-- 全データZIPバックアップ -->
+      <a href="/api/admin/backup/export" download
+        class="bg-purple-700/70 hover:bg-purple-700 text-white text-xs font-bold px-3 py-2 rounded-xl transition flex items-center space-x-1.5 shadow-xs border border-white/20" title="全データ（スタッフ・シフト・打刻・申請）をZIPで一括保存">
+        <i data-lucide="archive" class="w-4 h-4"></i>
+        <span>全保存(ZIP)</span>
+      </a>
 
       <!-- CSVダウンロードUI -->
-      <div class="bg-white/10 backdrop-blur-xs p-2 rounded-2xl border border-white/10 flex items-center space-x-2">
+      <div class="bg-white/10 backdrop-blur-xs p-1.5 rounded-2xl border border-white/10 flex items-center space-x-1.5">
         <input type="month" id="csv-target-month"
-          class="bg-white text-slate-800 text-xs px-2.5 py-1 rounded-xl font-medium focus:outline-none">
+          class="bg-white text-slate-800 text-xs px-2 py-1 rounded-xl font-medium focus:outline-none">
         <button onclick="downloadCsv()"
-          class="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold px-3 py-1 rounded-xl shadow-xs transition flex items-center space-x-1">
+          class="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold px-2.5 py-1 rounded-xl shadow-xs transition flex items-center space-x-1" title="勤怠・給与CSV">
           <i data-lucide="download" class="w-4 h-4"></i>
           <span>CSV</span>
         </button>
@@ -56,372 +56,500 @@
     </div>
   </div>
 
-  <!-- 0. 薬局長（管理者）本日打刻カード -->
-  <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-100 no-print">
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <div class="flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
-          <i data-lucide="clock" class="w-5 h-5"></i>
-        </div>
-        <div>
-          <div class="flex items-center space-x-2">
-            <h3 class="font-bold text-slate-900">{{ user.full_name }} 様（薬局長打刻）</h3>
-            <span id="admin-clock-status-badge" class="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">
-              <span class="w-2 h-2 rounded-full bg-slate-400"></span>
-              <span id="admin-clock-status-text">確認中...</span>
-            </span>
-          </div>
-          <p class="text-xs text-slate-500">
-            本日: <span id="admin-today-clock-display" class="font-mono text-slate-700">出勤: 未 / 退勤: 未</span>
-          </p>
-        </div>
-      </div>
+  <!-- 3大導線 ナビゲーションバー (フェーズ3: 最も迷わないUI/UX整理) -->
+  <div class="bg-white rounded-2xl p-2 shadow-xs border border-slate-200 no-print">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+      <!-- 導線①: シフトを作る -->
+      <button id="nav-tab-shift" onclick="switchMainTab('shift')"
+        class="flex items-center justify-center space-x-2.5 py-3 px-4 rounded-xl text-sm font-extrabold transition-all duration-200 bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-600/20">
+        <i data-lucide="calendar" class="w-5 h-5"></i>
+        <span>① シフトを作る</span>
+      </button>
 
-      <!-- 打刻ボタン群 -->
-      <div class="grid grid-cols-2 sm:flex sm:items-center gap-2">
-        <button id="btn-admin-clock-in" onclick="clockAdminAction('IN')"
-          class="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-3.5 py-2 rounded-xl text-xs shadow-xs transition flex items-center justify-center space-x-1.5">
-          <i data-lucide="log-in" class="w-4 h-4"></i>
-          <span>出勤</span>
-        </button>
-        <button id="btn-admin-break-start" onclick="clockAdminAction('BREAK_START')"
-          class="bg-amber-500 hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-3.5 py-2 rounded-xl text-xs shadow-xs transition flex items-center justify-center space-x-1.5">
-          <i data-lucide="coffee" class="w-4 h-4"></i>
-          <span>休憩入</span>
-        </button>
-        <button id="btn-admin-break-end" onclick="clockAdminAction('BREAK_END')"
-          class="bg-amber-600 hover:bg-amber-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-3.5 py-2 rounded-xl text-xs shadow-xs transition flex items-center justify-center space-x-1.5">
-          <i data-lucide="play" class="w-4 h-4"></i>
-          <span>休憩戻</span>
-        </button>
-        <button id="btn-admin-clock-out" onclick="clockAdminAction('OUT')"
-          class="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-3.5 py-2 rounded-xl text-xs shadow-xs transition flex items-center justify-center space-x-1.5">
-          <i data-lucide="log-out" class="w-4 h-4"></i>
-          <span>退勤</span>
-        </button>
-      </div>
-    </div>
-  </div>
+      <!-- 導線②: 出勤を確認する -->
+      <button id="nav-tab-attendance" onclick="switchMainTab('attendance')"
+        class="flex items-center justify-center space-x-2.5 py-3 px-4 rounded-xl text-sm font-extrabold transition-all duration-200 bg-slate-100 hover:bg-slate-200 text-slate-700">
+        <i data-lucide="clock" class="w-5 h-5"></i>
+        <span>② 出勤を確認する</span>
+        <span id="nav-pending-badge" class="hidden ml-1 px-2 py-0.5 text-xs rounded-full bg-rose-500 text-white font-bold">0</span>
+      </button>
 
-  <!-- 1. 当日のリアルタイム勤怠モニタリング -->
-  <div class="bg-white rounded-3xl p-6 shadow-xs border border-slate-100 no-print">
-    <div class="flex items-center justify-between mb-4">
-      <div class="flex items-center space-x-2.5">
-        <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-          <i data-lucide="activity" class="w-5 h-5"></i>
-        </div>
-        <div>
-          <h3 class="font-bold text-slate-900">当日の出勤モニタリング</h3>
-          <p class="text-xs text-slate-500" id="today-monitor-date">本日のリアルタイム稼働状況</p>
-        </div>
-      </div>
-      <button onclick="loadAttendanceSummary()" class="text-xs font-medium text-slate-500 hover:text-emerald-600 p-2 rounded-xl hover:bg-slate-50 transition flex items-center space-x-1">
-        <i data-lucide="rotate-cw" class="w-4 h-4"></i>
-        <span>更新</span>
+      <!-- 導線③: スタッフを設定する -->
+      <button id="nav-tab-staff" onclick="switchMainTab('staff')"
+        class="flex items-center justify-center space-x-2.5 py-3 px-4 rounded-xl text-sm font-extrabold transition-all duration-200 bg-slate-100 hover:bg-slate-200 text-slate-700">
+        <i data-lucide="users" class="w-5 h-5"></i>
+        <span>③ スタッフを設定する</span>
       </button>
     </div>
-
-    <div class="overflow-x-auto rounded-2xl border border-slate-100">
-      <table class="w-full text-left text-xs text-slate-600">
-        <thead class="bg-slate-50 text-slate-700 uppercase font-semibold border-b border-slate-100">
-          <tr>
-            <th class="py-3 px-4">スタッフ名</th>
-            <th class="py-3 px-4">予定シフト</th>
-            <th class="py-3 px-4">現在の状況</th>
-            <th class="py-3 px-4">出勤打刻</th>
-            <th class="py-3 px-4">退勤打刻</th>
-            <th class="py-3 px-4">実労働時間</th>
-            <th class="py-3 px-4">アラート・特記</th>
-          </tr>
-        </thead>
-        <tbody id="attendance-summary-tbody" class="divide-y divide-slate-100">
-          <tr>
-            <td colspan="7" class="py-6 text-center text-slate-400">読込中...</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
   </div>
 
-  <!-- 2. シフト希望（休み希望・有休希望）の審査パネル -->
-  <div class="bg-white rounded-3xl p-6 shadow-xs border border-slate-100 no-print">
-    <div class="flex items-center justify-between mb-4">
-      <div class="flex items-center space-x-2.5">
-        <div class="w-9 h-9 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
-          <i data-lucide="palmtree" class="w-5 h-5"></i>
+  <!-- 法定有給休暇 年5日取得義務アラートバナー (フェーズ4: 堅牢化・法改正対応) -->
+  <div id="compliance-alert-banner" class="hidden bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl p-4 no-print flex items-start justify-between gap-3 shadow-xs">
+    <div class="flex items-start space-x-3">
+      <div class="w-9 h-9 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+        <i data-lucide="scale" class="w-5 h-5"></i>
+      </div>
+      <div class="space-y-1">
+        <div class="flex items-center space-x-2">
+          <h4 class="font-extrabold text-sm text-rose-900">労働基準法「年5日有休取得義務」注意アラート</h4>
+          <span id="compliance-alert-count" class="text-[11px] font-black px-2 py-0.5 rounded-full bg-rose-200 text-rose-900">要対応: 0名</span>
         </div>
-        <div>
-          <h3 class="font-bold text-slate-900">従業員のシフト希望（休み希望）審査</h3>
-          <p class="text-xs text-slate-500">スタッフからの希望休・有給休暇申請の確認と審査</p>
+        <p class="text-xs text-rose-700">
+          年10日以上の有給休暇が付与されているスタッフで、今年度の消化ペースが未達（3日未満）のスタッフがいます。計画的な取得を推奨してください。
+        </p>
+        <div id="compliance-alert-staff-list" class="flex flex-wrap gap-2 pt-1 text-xs font-semibold">
+          <!-- JSで未達スタッフ名を挿入 -->
         </div>
       </div>
-      <span id="shift-requests-pending-badge" class="px-2.5 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-800">
-        審査待ち: 0件
-      </span>
     </div>
-
-    <div class="overflow-x-auto rounded-2xl border border-slate-100">
-      <table class="w-full text-left text-xs text-slate-600">
-        <thead class="bg-slate-50 text-slate-700 uppercase font-semibold border-b border-slate-100">
-          <tr>
-            <th class="py-3 px-4">申請スタッフ</th>
-            <th class="py-3 px-4">希望日</th>
-            <th class="py-3 px-4">区分</th>
-            <th class="py-3 px-4">申請理由</th>
-            <th class="py-3 px-4 text-center">状態</th>
-            <th class="py-3 px-4 text-center">審査操作</th>
-          </tr>
-        </thead>
-        <tbody id="shift-requests-tbody" class="divide-y divide-slate-100">
-          <tr>
-            <td colspan="6" class="py-6 text-center text-slate-400">読込中...</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <button onclick="document.getElementById('compliance-alert-banner').classList.add('hidden')" class="text-rose-400 hover:text-rose-600 p-1 rounded-lg" title="閉じる">
+      <i data-lucide="x" class="w-4 h-4"></i>
+    </button>
   </div>
 
-  <!-- 3. 打刻修正申請の審査パネル -->
-  <div class="bg-white rounded-3xl p-6 shadow-xs border border-slate-100 no-print">
-    <div class="flex items-center justify-between mb-4">
-      <div class="flex items-center space-x-2.5">
-        <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-          <i data-lucide="inbox" class="w-5 h-5"></i>
+  <!-- ================================================================= -->
+  <!-- 導線①: 【シフトを作る】セクション -->
+  <!-- ================================================================= -->
+  <div id="section-shift" class="space-y-6">
+
+    <!-- 人員バランス・偏り警告バナー（フェーズ2） -->
+    <div id="balance-alert-banner" class="hidden rounded-3xl p-4 sm:p-5 transition-all no-print border">
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex items-start space-x-3">
+          <div id="balance-alert-icon-box" class="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 mt-0.5">
+            <i id="balance-alert-icon" data-lucide="alert-triangle" class="w-5 h-5"></i>
+          </div>
+          <div class="space-y-1">
+            <div class="flex items-center space-x-2">
+              <h4 id="balance-alert-title" class="font-extrabold text-sm sm:text-base tracking-tight">人員配置バランス判定</h4>
+              <span id="balance-alert-badge" class="text-[11px] font-black px-2.5 py-0.5 rounded-full">--</span>
+            </div>
+            <p id="balance-alert-desc" class="text-xs">
+              当月の全出勤シフトから、薬剤師不在日やワンオペ・人手不足の偏りを自動検知しています。
+            </p>
+            <div id="balance-alert-details" class="flex flex-wrap gap-2 pt-1 text-xs font-semibold">
+              <!-- JSで警告日のタグを挿入 -->
+            </div>
+          </div>
         </div>
-        <div>
-          <h3 class="font-bold text-slate-900">打刻修正申請の審査</h3>
-          <p class="text-xs text-slate-500">スタッフからの打刻漏れ・修正依頼</p>
-        </div>
+        <button onclick="dismissBalanceAlert()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg flex-shrink-0" title="閉じる">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
       </div>
-      <span id="pending-count-badge" class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">
-        保留中: 0件
-      </span>
     </div>
 
-    <div class="overflow-x-auto rounded-2xl border border-slate-100">
-      <table class="w-full text-left text-xs text-slate-600">
-        <thead class="bg-slate-50 text-slate-700 uppercase font-semibold border-b border-slate-100">
-          <tr>
-            <th class="py-3 px-4">申請者</th>
-            <th class="py-3 px-4">対象日</th>
-            <th class="py-3 px-4">希望出退勤</th>
-            <th class="py-3 px-4">休憩</th>
-            <th class="py-3 px-4">申請理由</th>
-            <th class="py-3 px-4 text-center">状態</th>
-            <th class="py-3 px-4 text-center">審査操作</th>
-          </tr>
-        </thead>
-        <tbody id="correction-requests-tbody" class="divide-y divide-slate-100">
-          <tr>
-            <td colspan="7" class="py-6 text-center text-slate-400">読込中...</td>
-          </tr>
-        </tbody>
-      </table>
+    <!-- 月間シフト管理・カレンダー編成カード -->
+    <div class="bg-white rounded-3xl p-6 shadow-xs border border-slate-100 print:border-none print:shadow-none print:p-0">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 no-print">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <i data-lucide="calendar-range" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-900">月間シフトカレンダー編成</h3>
+            <p class="text-xs text-slate-500">全スタッフのシフト（マス目クリックで即時登録・人員状況表示）</p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- スタッフ絞り込みフィルター -->
+          <select id="admin-staff-filter" onchange="loadAdminShifts()"
+            class="bg-slate-50 border border-slate-200 text-xs rounded-xl px-3 py-1.5 font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none text-slate-700">
+            <option value="ALL">全スタッフ表示</option>
+          </select>
+
+          <!-- 表示切り替えタブ -->
+          <div class="inline-flex bg-slate-100 p-1 rounded-xl text-xs font-semibold text-slate-600">
+            <button id="admin-tab-calendar" onclick="switchAdminView('calendar')"
+              class="px-3 py-1.5 rounded-lg bg-white text-indigo-700 shadow-xs flex items-center space-x-1 transition">
+              <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+              <span>カレンダー</span>
+            </button>
+            <button id="admin-tab-list" onclick="switchAdminView('list')"
+              class="px-3 py-1.5 rounded-lg hover:text-slate-900 flex items-center space-x-1 transition">
+              <i data-lucide="list" class="w-3.5 h-3.5"></i>
+              <span>一覧</span>
+            </button>
+          </div>
+
+          <!-- 月送り -->
+          <div class="flex items-center space-x-1 bg-slate-50 p-1 rounded-xl border border-slate-200">
+            <button onclick="changeAdminMonth(-1)" class="p-1.5 rounded-lg hover:bg-slate-200 text-slate-700 transition" title="前月">
+              <i data-lucide="chevron-left" class="w-4 h-4"></i>
+            </button>
+            <span id="admin-calendar-title" class="text-xs font-bold text-slate-800 min-w-[80px] text-center">----年--月</span>
+            <button onclick="changeAdminMonth(1)" class="p-1.5 rounded-lg hover:bg-slate-200 text-slate-700 transition" title="翌月">
+              <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            </button>
+            <button onclick="resetAdminToCurrentMonth()" class="text-[11px] font-bold text-indigo-700 hover:bg-indigo-50 px-2 py-1 rounded-lg transition border border-indigo-200">今月</button>
+          </div>
+
+          <!-- 一括自動生成ボタン -->
+          <button onclick="openAutoGenerateModal()" class="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-xs transition flex items-center space-x-1">
+            <i data-lucide="sparkles" class="w-4 h-4"></i>
+            <span>✨ 一括自動生成</span>
+          </button>
+
+          <!-- 印刷ボタン -->
+          <button onclick="printShiftTable()" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-xs transition flex items-center space-x-1">
+            <i data-lucide="printer" class="w-4 h-4"></i>
+            <span>🖨️ A4横印刷</span>
+          </button>
+
+          <!-- LINE・連絡用テキスト共有ボタン (フェーズ4) -->
+          <button onclick="openShareTextModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-xs transition flex items-center space-x-1" title="スタッフへのシフト連絡・LINE共有テキストを生成">
+            <i data-lucide="message-circle" class="w-4 h-4"></i>
+            <span>💬 LINE共有</span>
+          </button>
+
+          <button onclick="openAddShiftModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-2 rounded-xl shadow-xs transition flex items-center space-x-1">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span>シフト追加</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- A. 管理者用 月間グリッドカレンダー（メイン表示） -->
+      <div id="admin-calendar-grid-view" class="space-y-1">
+        <!-- 7曜日ヘッダー -->
+        <div class="grid grid-cols-7 gap-1 text-center text-xs font-bold py-2 border-b border-slate-100">
+          <div class="text-rose-500">日</div>
+          <div class="text-slate-600">月</div>
+          <div class="text-slate-600">火</div>
+          <div class="text-slate-600">水</div>
+          <div class="text-slate-600">木</div>
+          <div class="text-slate-600">金</div>
+          <div class="text-blue-500">土</div>
+        </div>
+        <!-- マス目グリッド（動的生成） -->
+        <div id="admin-calendar-grid-cells" class="grid grid-cols-7 gap-1 sm:gap-1.5 pt-1">
+          <!-- JSでセル生成 -->
+        </div>
+      </div>
+
+      <!-- B. 管理者用 リスト表示（補助） -->
+      <div id="admin-calendar-list-view" class="hidden overflow-x-auto rounded-2xl border border-slate-100 mt-2">
+        <table class="w-full text-left text-xs text-slate-600">
+          <thead class="bg-slate-50 text-slate-700 uppercase font-semibold border-b border-slate-100">
+            <tr>
+              <th class="py-3 px-4">日付</th>
+              <th class="py-3 px-4">スタッフ名</th>
+              <th class="py-3 px-4">区分</th>
+              <th class="py-3 px-4">時間帯</th>
+              <th class="py-3 px-4">休憩</th>
+              <th class="py-3 px-4">備考</th>
+              <th class="py-3 px-4 text-center">操作</th>
+            </tr>
+          </thead>
+          <tbody id="shifts-tbody" class="divide-y divide-slate-100">
+            <tr>
+              <td colspan="7" class="py-6 text-center text-slate-400">読込中...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
+
+    <!-- 休み希望（有休・希望休）審査パネル（シフト編成の直下に配置） -->
+    <div class="bg-white rounded-3xl p-6 shadow-xs border border-slate-100 no-print">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-9 h-9 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
+            <i data-lucide="palmtree" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-900">従業員のシフト希望（休み希望）審査</h3>
+            <p class="text-xs text-slate-500">スタッフからの希望休・有給休暇申請の承認（承認すると一括生成に自動反映されます）</p>
+          </div>
+        </div>
+        <span id="shift-requests-pending-badge" class="px-2.5 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-800">
+          審査待ち: 0件
+        </span>
+      </div>
+
+      <div class="overflow-x-auto rounded-2xl border border-slate-100">
+        <table class="w-full text-left text-xs text-slate-600">
+          <thead class="bg-slate-50 text-slate-700 uppercase font-semibold border-b border-slate-100">
+            <tr>
+              <th class="py-3 px-4">申請スタッフ</th>
+              <th class="py-3 px-4">希望日</th>
+              <th class="py-3 px-4">区分</th>
+              <th class="py-3 px-4">申請理由</th>
+              <th class="py-3 px-4 text-center">状態</th>
+              <th class="py-3 px-4 text-center">審査操作</th>
+            </tr>
+          </thead>
+          <tbody id="shift-requests-tbody" class="divide-y divide-slate-100">
+            <tr>
+              <td colspan="6" class="py-6 text-center text-slate-400">読込中...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
 
-  <!-- 3. 月間シフト管理・カレンダー編成 -->
-  <div class="bg-white rounded-3xl p-6 shadow-xs border border-slate-100 print:border-none print:shadow-none print:p-0">
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 no-print">
-      <div class="flex items-center space-x-2.5">
-        <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-          <i data-lucide="calendar" class="w-5 h-5"></i>
-        </div>
-        <div>
-          <h3 class="font-bold text-slate-900">月間シフトカレンダー編成</h3>
-          <p class="text-xs text-slate-500">全スタッフのシフト状況（マス目クリックで即時登録）</p>
-        </div>
-      </div>
+  <!-- ================================================================= -->
+  <!-- 導線②: 【出勤を確認する】セクション -->
+  <!-- ================================================================= -->
+  <div id="section-attendance" class="space-y-6 hidden">
 
-      <div class="flex flex-wrap items-center gap-2">
-        <!-- スタッフ絞り込みフィルター -->
-        <select id="admin-staff-filter" onchange="loadAdminShifts()"
-          class="bg-slate-50 border border-slate-200 text-xs rounded-xl px-3 py-1.5 font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none text-slate-700">
-          <option value="ALL">全スタッフ表示</option>
-        </select>
-
-        <!-- 表示切り替えタブ -->
-        <div class="inline-flex bg-slate-100 p-1 rounded-xl text-xs font-semibold text-slate-600">
-          <button id="admin-tab-calendar" onclick="switchAdminView('calendar')"
-            class="px-3 py-1.5 rounded-lg bg-white text-indigo-700 shadow-xs flex items-center space-x-1 transition">
-            <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
-            <span>カレンダー</span>
-          </button>
-          <button id="admin-tab-list" onclick="switchAdminView('list')"
-            class="px-3 py-1.5 rounded-lg hover:text-slate-900 flex items-center space-x-1 transition">
-            <i data-lucide="list" class="w-3.5 h-3.5"></i>
-            <span>一覧</span>
-          </button>
+    <!-- 薬局長（管理者）本日打刻カード -->
+    <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-100 no-print">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+            <i data-lucide="clock" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <h3 class="font-bold text-slate-900">{{ user.full_name }} 様（薬局長打刻）</h3>
+              <span id="admin-clock-status-badge" class="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">
+                <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+                <span id="admin-clock-status-text">確認中...</span>
+              </span>
+            </div>
+            <p class="text-xs text-slate-500">
+              本日: <span id="admin-today-clock-display" class="font-mono text-slate-700">出勤: 未 / 退勤: 未</span>
+            </p>
+          </div>
         </div>
 
-        <!-- 月送り -->
-        <div class="flex items-center space-x-1 bg-slate-50 p-1 rounded-xl border border-slate-200">
-          <button onclick="changeAdminMonth(-1)" class="p-1.5 rounded-lg hover:bg-slate-200 text-slate-700 transition" title="前月">
-            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+        <!-- 打刻ボタン群 -->
+        <div class="grid grid-cols-2 sm:flex sm:items-center gap-2">
+          <button id="btn-admin-clock-in" onclick="clockAdminAction('IN')"
+            class="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-3.5 py-2 rounded-xl text-xs shadow-xs transition flex items-center justify-center space-x-1.5">
+            <i data-lucide="log-in" class="w-4 h-4"></i>
+            <span>出勤</span>
           </button>
-          <span id="admin-calendar-title" class="text-xs font-bold text-slate-800 min-w-[80px] text-center">----年--月</span>
-          <button onclick="changeAdminMonth(1)" class="p-1.5 rounded-lg hover:bg-slate-200 text-slate-700 transition" title="翌月">
-            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+          <button id="btn-admin-break-start" onclick="clockAdminAction('BREAK_START')"
+            class="bg-amber-500 hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-3.5 py-2 rounded-xl text-xs shadow-xs transition flex items-center justify-center space-x-1.5">
+            <i data-lucide="coffee" class="w-4 h-4"></i>
+            <span>休憩入</span>
           </button>
-          <button onclick="resetAdminToCurrentMonth()" class="text-[11px] font-bold text-indigo-700 hover:bg-indigo-50 px-2 py-1 rounded-lg transition border border-indigo-200">今月</button>
+          <button id="btn-admin-break-end" onclick="clockAdminAction('BREAK_END')"
+            class="bg-amber-600 hover:bg-amber-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-3.5 py-2 rounded-xl text-xs shadow-xs transition flex items-center justify-center space-x-1.5">
+            <i data-lucide="play" class="w-4 h-4"></i>
+            <span>休憩戻</span>
+          </button>
+          <button id="btn-admin-clock-out" onclick="clockAdminAction('OUT')"
+            class="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-3.5 py-2 rounded-xl text-xs shadow-xs transition flex items-center justify-center space-x-1.5">
+            <i data-lucide="log-out" class="w-4 h-4"></i>
+            <span>退勤</span>
+          </button>
         </div>
-
-        <!-- 一括自動生成ボタン -->
-        <button onclick="openAutoGenerateModal()" class="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-xs transition flex items-center space-x-1">
-          <i data-lucide="sparkles" class="w-4 h-4"></i>
-          <span>一括自動生成</span>
-        </button>
-
-        <!-- 印刷ボタン -->
-        <button onclick="printShiftTable()" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-xs transition flex items-center space-x-1">
-          <i data-lucide="printer" class="w-4 h-4"></i>
-          <span>印刷</span>
-        </button>
-
-        <button onclick="openAddShiftModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-2 rounded-xl shadow-xs transition flex items-center space-x-1">
-          <i data-lucide="plus" class="w-4 h-4"></i>
-          <span>シフト追加</span>
-        </button>
       </div>
     </div>
 
-    <!-- A. 管理者用 月間グリッドカレンダー（メイン表示） -->
-    <div id="admin-calendar-grid-view" class="space-y-1">
-      <!-- 7曜日ヘッダー -->
-      <div class="grid grid-cols-7 gap-1 text-center text-xs font-bold py-2 border-b border-slate-100">
-        <div class="text-rose-500">日</div>
-        <div class="text-slate-600">月</div>
-        <div class="text-slate-600">火</div>
-        <div class="text-slate-600">水</div>
-        <div class="text-slate-600">木</div>
-        <div class="text-slate-600">金</div>
-        <div class="text-blue-500">土</div>
+    <!-- 当日の出勤モニタリングテーブル -->
+    <div class="bg-white rounded-3xl p-6 shadow-xs border border-slate-100 no-print">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <i data-lucide="activity" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-900">当日の出勤モニタリング</h3>
+            <p class="text-xs text-slate-500" id="today-monitor-date">本日のリアルタイム稼働状況</p>
+          </div>
+        </div>
+        <button onclick="loadAttendanceSummary()" class="text-xs font-medium text-slate-500 hover:text-emerald-600 p-2 rounded-xl hover:bg-slate-50 transition flex items-center space-x-1">
+          <i data-lucide="rotate-cw" class="w-4 h-4"></i>
+          <span>更新</span>
+        </button>
       </div>
-      <!-- マス目グリッド（動的生成） -->
-      <div id="admin-calendar-grid-cells" class="grid grid-cols-7 gap-1 sm:gap-1.5 pt-1">
-        <!-- JSでセル生成 -->
+
+      <div class="overflow-x-auto rounded-2xl border border-slate-100">
+        <table class="w-full text-left text-xs text-slate-600">
+          <thead class="bg-slate-50 text-slate-700 uppercase font-semibold border-b border-slate-100">
+            <tr>
+              <th class="py-3 px-4">スタッフ名</th>
+              <th class="py-3 px-4">予定シフト</th>
+              <th class="py-3 px-4">現在の状況</th>
+              <th class="py-3 px-4">出勤打刻</th>
+              <th class="py-3 px-4">退勤打刻</th>
+              <th class="py-3 px-4">実労働時間</th>
+              <th class="py-3 px-4">アラート・特記</th>
+            </tr>
+          </thead>
+          <tbody id="attendance-summary-tbody" class="divide-y divide-slate-100">
+            <tr>
+              <td colspan="7" class="py-6 text-center text-slate-400">読込中...</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
-    <!-- B. 管理者用 リスト表示（補助） -->
-    <div id="admin-calendar-list-view" class="hidden overflow-x-auto rounded-2xl border border-slate-100 mt-2">
-      <table class="w-full text-left text-xs text-slate-600">
-        <thead class="bg-slate-50 text-slate-700 uppercase font-semibold border-b border-slate-100">
-          <tr>
-            <th class="py-3 px-4">日付</th>
-            <th class="py-3 px-4">スタッフ名</th>
-            <th class="py-3 px-4">区分</th>
-            <th class="py-3 px-4">時間帯</th>
-            <th class="py-3 px-4">休憩</th>
-            <th class="py-3 px-4">備考</th>
-            <th class="py-3 px-4 text-center">操作</th>
-          </tr>
-        </thead>
-        <tbody id="shifts-tbody" class="divide-y divide-slate-100">
-          <tr>
-            <td colspan="7" class="py-6 text-center text-slate-400">読込中...</td>
-          </tr>
-        </tbody>
-      </table>
+    <!-- 打刻修正申請の審査パネル -->
+    <div class="bg-white rounded-3xl p-6 shadow-xs border border-slate-100 no-print">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+            <i data-lucide="inbox" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-900">打刻修正申請の審査</h3>
+            <p class="text-xs text-slate-500">スタッフからの打刻漏れ・修正依頼</p>
+          </div>
+        </div>
+        <span id="pending-count-badge" class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">
+          保留中: 0件
+        </span>
+      </div>
+
+      <div class="overflow-x-auto rounded-2xl border border-slate-100">
+        <table class="w-full text-left text-xs text-slate-600">
+          <thead class="bg-slate-50 text-slate-700 uppercase font-semibold border-b border-slate-100">
+            <tr>
+              <th class="py-3 px-4">申請者</th>
+              <th class="py-3 px-4">対象日</th>
+              <th class="py-3 px-4">希望出退勤</th>
+              <th class="py-3 px-4">休憩</th>
+              <th class="py-3 px-4">申請理由</th>
+              <th class="py-3 px-4 text-center">状態</th>
+              <th class="py-3 px-4 text-center">審査操作</th>
+            </tr>
+          </thead>
+          <tbody id="correction-requests-tbody" class="divide-y divide-slate-100">
+            <tr>
+              <td colspan="7" class="py-6 text-center text-slate-400">読込中...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
+
+    <!-- 月次勤怠集計 ＆ 給与計算パネル -->
+    <div class="bg-white rounded-3xl p-6 shadow-xs border border-slate-100 no-print">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <i data-lucide="calculator" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-900">月次勤怠集計 ＆ 給与計算</h3>
+            <p class="text-xs text-slate-500">毎月の実労働時間・有休手当・概算支給額の集計</p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- 年月セレクタ -->
+          <div class="flex items-center space-x-1 bg-slate-50 p-1 rounded-xl border border-slate-200">
+            <button onclick="changePayrollMonth(-1)" class="p-1.5 rounded-lg hover:bg-slate-200 text-slate-700 transition" title="前月">
+              <i data-lucide="chevron-left" class="w-4 h-4"></i>
+            </button>
+            <input type="month" id="payroll-target-month" onchange="loadMonthlyPayroll()"
+              class="bg-transparent text-xs font-bold text-slate-800 focus:outline-none px-2 py-0.5">
+            <button onclick="changePayrollMonth(1)" class="p-1.5 rounded-lg hover:bg-slate-200 text-slate-700 transition" title="翌月">
+              <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+          <!-- 勤怠手動入力ボタン -->
+          <button onclick="openTimeRecordModal()"
+            class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-3 py-2 rounded-xl transition flex items-center space-x-1.5 shadow-xs">
+            <i data-lucide="edit-3" class="w-4 h-4 text-slate-600"></i>
+            <span>勤怠実績を手動修正</span>
+          </button>
+
+          <!-- CSVダウンロードボタン -->
+          <button onclick="downloadPayrollCsv()"
+            class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5 shadow-xs">
+            <i data-lucide="download" class="w-4 h-4"></i>
+            <span>給与CSVダウンロード</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 給与サマリーカード -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div class="bg-emerald-50/60 border border-emerald-100 p-4 rounded-2xl flex items-center justify-between">
+          <div>
+            <span class="text-xs font-bold text-emerald-800">当月 総支給概算額</span>
+            <div id="payroll-total-payout" class="text-xl sm:text-2xl font-black text-emerald-700 mt-0.5">¥0</div>
+          </div>
+          <div class="w-10 h-10 rounded-xl bg-emerald-100/70 text-emerald-700 flex items-center justify-center">
+            <i data-lucide="banknote" class="w-5 h-5"></i>
+          </div>
+        </div>
+
+        <div class="bg-indigo-50/60 border border-indigo-100 p-4 rounded-2xl flex items-center justify-between">
+          <div>
+            <span class="text-xs font-bold text-indigo-800">全スタッフ 総実労働時間</span>
+            <div id="payroll-total-hours" class="text-xl sm:text-2xl font-black text-indigo-700 mt-0.5">0.0時間</div>
+          </div>
+          <div class="w-10 h-10 rounded-xl bg-indigo-100/70 text-indigo-700 flex items-center justify-center">
+            <i data-lucide="timer" class="w-5 h-5"></i>
+          </div>
+        </div>
+
+        <div class="bg-amber-50/60 border border-amber-100 p-4 rounded-2xl flex items-center justify-between">
+          <div>
+            <span class="text-xs font-bold text-amber-800">集計対象スタッフ</span>
+            <div id="payroll-total-staff" class="text-xl sm:text-2xl font-black text-amber-700 mt-0.5">0名</div>
+          </div>
+          <div class="w-10 h-10 rounded-xl bg-amber-100/70 text-amber-700 flex items-center justify-center">
+            <i data-lucide="users" class="w-5 h-5"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- 給与集計明細テーブル -->
+      <div class="overflow-x-auto rounded-2xl border border-slate-100">
+        <table class="w-full text-left text-xs text-slate-600">
+          <thead class="bg-slate-50 text-slate-700 uppercase font-semibold border-b border-slate-100">
+            <tr>
+              <th class="py-3 px-4">スタッフ氏名</th>
+              <th class="py-3 px-4">給与形態</th>
+              <th class="py-3 px-4">実働 / 予定</th>
+              <th class="py-3 px-4">総実労働時間</th>
+              <th class="py-3 px-4">有休消化</th>
+              <th class="py-3 px-4">有休手当</th>
+              <th class="py-3 px-4 font-bold text-slate-900">概算支給額</th>
+              <th class="py-3 px-4 text-center">操作</th>
+            </tr>
+          </thead>
+          <tbody id="payroll-tbody" class="divide-y divide-slate-100">
+            <tr>
+              <td colspan="8" class="py-6 text-center text-slate-400">読込中...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
 
-  <!-- 4. 月次勤怠集計 ＆ 給与計算パネル -->
-  <div class="bg-white rounded-3xl p-6 shadow-xs border border-slate-100 no-print">
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-      <div class="flex items-center space-x-2.5">
-        <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-          <i data-lucide="calculator" class="w-5 h-5"></i>
-        </div>
-        <div>
-          <h3 class="font-bold text-slate-900">月次勤怠集計 ＆ 給与計算</h3>
-          <p class="text-xs text-slate-500">毎月の実労働時間・有休手当・概算支給額の集計</p>
-        </div>
-      </div>
-
-      <div class="flex flex-wrap items-center gap-2">
-        <!-- 年月セレクタ -->
-        <div class="flex items-center space-x-1 bg-slate-50 p-1 rounded-xl border border-slate-200">
-          <button onclick="changePayrollMonth(-1)" class="p-1.5 rounded-lg hover:bg-slate-200 text-slate-700 transition" title="前月">
-            <i data-lucide="chevron-left" class="w-4 h-4"></i>
-          </button>
-          <input type="month" id="payroll-target-month" onchange="loadMonthlyPayroll()"
-            class="bg-transparent text-xs font-bold text-slate-800 focus:outline-none px-2 py-0.5">
-          <button onclick="changePayrollMonth(1)" class="p-1.5 rounded-lg hover:bg-slate-200 text-slate-700 transition" title="翌月">
-            <i data-lucide="chevron-right" class="w-4 h-4"></i>
-          </button>
+  <!-- ================================================================= -->
+  <!-- 導線③: 【スタッフを設定する】セクション -->
+  <!-- ================================================================= -->
+  <div id="section-staff" class="space-y-6 hidden">
+    <div class="bg-white rounded-3xl p-6 shadow-xs border border-slate-100">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+            <i data-lucide="users" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-900">スタッフ・雇用条件の一覧と管理</h3>
+            <p class="text-xs text-slate-500">固定出勤曜日、標準時間、時給・月給、カレンダーカラーの管理</p>
+          </div>
         </div>
 
-        <!-- 勤怠手動入力ボタン -->
-        <button onclick="openTimeRecordModal()"
-          class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-3 py-2 rounded-xl transition flex items-center space-x-1.5 shadow-xs">
-          <i data-lucide="edit-3" class="w-4 h-4 text-slate-600"></i>
-          <span>勤怠実績を手動修正</span>
-        </button>
-
-        <!-- CSVダウンロードボタン -->
-        <button onclick="downloadPayrollCsv()"
-          class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5 shadow-xs">
-          <i data-lucide="download" class="w-4 h-4"></i>
-          <span>給与CSVダウンロード</span>
+        <button onclick="openAddStaffModal()"
+          class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs transition flex items-center space-x-1.5 self-start sm:self-auto">
+          <i data-lucide="user-plus" class="w-4 h-4"></i>
+          <span>＋ 新しいスタッフを追加</span>
         </button>
       </div>
-    </div>
 
-    <!-- 給与サマリーカード -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-      <div class="bg-emerald-50/60 border border-emerald-100 p-4 rounded-2xl flex items-center justify-between">
-        <div>
-          <span class="text-xs font-bold text-emerald-800">当月 総支給概算額</span>
-          <div id="payroll-total-payout" class="text-xl sm:text-2xl font-black text-emerald-700 mt-0.5">¥0</div>
-        </div>
-        <div class="w-10 h-10 rounded-xl bg-emerald-100/70 text-emerald-700 flex items-center justify-center">
-          <i data-lucide="banknote" class="w-5 h-5"></i>
-        </div>
+      <!-- スタッフカード一覧グリッド -->
+      <div id="staff-management-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- JSでスタッフカードを動的生成 -->
+        <div class="col-span-full py-8 text-center text-slate-400">読込中...</div>
       </div>
-
-      <div class="bg-indigo-50/60 border border-indigo-100 p-4 rounded-2xl flex items-center justify-between">
-        <div>
-          <span class="text-xs font-bold text-indigo-800">全スタッフ 総実労働時間</span>
-          <div id="payroll-total-hours" class="text-xl sm:text-2xl font-black text-indigo-700 mt-0.5">0.0時間</div>
-        </div>
-        <div class="w-10 h-10 rounded-xl bg-indigo-100/70 text-indigo-700 flex items-center justify-center">
-          <i data-lucide="timer" class="w-5 h-5"></i>
-        </div>
-      </div>
-
-      <div class="bg-amber-50/60 border border-amber-100 p-4 rounded-2xl flex items-center justify-between">
-        <div>
-          <span class="text-xs font-bold text-amber-800">集計対象スタッフ</span>
-          <div id="payroll-total-staff" class="text-xl sm:text-2xl font-black text-amber-700 mt-0.5">0名</div>
-        </div>
-        <div class="w-10 h-10 rounded-xl bg-amber-100/70 text-amber-700 flex items-center justify-center">
-          <i data-lucide="users" class="w-5 h-5"></i>
-        </div>
-      </div>
-    </div>
-
-    <!-- 給与集計明細テーブル -->
-    <div class="overflow-x-auto rounded-2xl border border-slate-100">
-      <table class="w-full text-left text-xs text-slate-600">
-        <thead class="bg-slate-50 text-slate-700 uppercase font-semibold border-b border-slate-100">
-          <tr>
-            <th class="py-3 px-4">スタッフ氏名</th>
-            <th class="py-3 px-4">給与形態</th>
-            <th class="py-3 px-4">実働 / 予定</th>
-            <th class="py-3 px-4">総実労働時間</th>
-            <th class="py-3 px-4">有休消化</th>
-            <th class="py-3 px-4">有休手当</th>
-            <th class="py-3 px-4 font-bold text-slate-900">概算支給額</th>
-            <th class="py-3 px-4 text-center">操作</th>
-          </tr>
-        </thead>
-        <tbody id="payroll-tbody" class="divide-y divide-slate-100">
-          <tr>
-            <td colspan="8" class="py-6 text-center text-slate-400">読込中...</td>
-          </tr>
-        </tbody>
-      </table>
     </div>
   </div>
 
@@ -803,8 +931,57 @@
     </form>
   </div>
 </div>
+
+<!-- LINE・連絡用テキスト生成モーダル (フェーズ4) -->
+<div id="share-text-modal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+  <div class="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+      <div class="flex items-center space-x-2">
+        <span class="text-xl">💬</span>
+        <h3 class="font-extrabold text-slate-900 text-base">シフト確定・LINE/連絡用テキスト</h3>
+      </div>
+      <button onclick="closeShareTextModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <!-- 切り替えタブ（全員分一括 / スタッフ個別） -->
+    <div class="flex items-center justify-between gap-2">
+      <div class="inline-flex bg-slate-100 p-1 rounded-xl text-xs font-semibold text-slate-600">
+        <button id="share-tab-all" onclick="switchShareTab('all')"
+          class="px-3 py-1.5 rounded-lg bg-white text-emerald-700 shadow-xs transition">
+          全員分を一括
+        </button>
+        <button id="share-tab-individual" onclick="switchShareTab('individual')"
+          class="px-3 py-1.5 rounded-lg hover:text-slate-900 transition">
+          スタッフ個別
+        </button>
+      </div>
+
+      <select id="share-staff-select" onchange="onShareStaffSelectChange()" class="hidden bg-slate-50 border border-slate-200 text-xs rounded-xl px-2.5 py-1.5 font-medium focus:ring-2 focus:ring-emerald-500 text-slate-700">
+        <!-- JSでスタッフ一覧生成 -->
+      </select>
+    </div>
+
+    <!-- テキストエリア -->
+    <div class="flex-1 min-h-[240px]">
+      <textarea id="share-text-content" readonly
+        class="w-full h-full min-h-[240px] p-3 text-xs font-mono bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none select-all resize-none text-slate-800 leading-relaxed"></textarea>
+    </div>
+
+    <!-- コピーボタン -->
+    <div class="pt-2 flex items-center justify-between border-t border-slate-100">
+      <span class="text-[11px] text-slate-400">※コピー後、LINEやメールに貼り付けできます</span>
+      <button onclick="copyShareText()"
+        class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-extrabold px-4 py-2.5 rounded-xl shadow-md shadow-emerald-200 flex items-center space-x-1.5 transition">
+        <i data-lucide="copy" class="w-4 h-4"></i>
+        <span>📋 テキストをコピー</span>
+      </button>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="/static/js/admin.js?v=20260918_2"></script>
+<script src="/static/js/admin.js?v=20260919_phase4"></script>
 {% endblock %}

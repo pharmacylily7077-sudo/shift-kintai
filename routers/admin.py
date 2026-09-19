@@ -1,6 +1,7 @@
 import io
 import csv
 import json
+import zipfile
 import calendar
 from datetime import datetime, date, time
 from typing import Optional, List
@@ -252,6 +253,104 @@ def get_all_shifts(
         })
     return result
 
+def calculate_month_staff_balance(db: Session, target_year: int, target_month: int):
+    first_day = date(target_year, target_month, 1)
+    _, last_day_num = calendar.monthrange(target_year, target_month)
+    last_day = date(target_year, target_month, last_day_num)
+
+    shifts = db.query(models.Shift).filter(
+        models.Shift.date >= first_day,
+        models.Shift.date <= last_day,
+        models.Shift.shift_type == "NORMAL"
+    ).all()
+
+    users = db.query(models.User).filter(models.User.is_active == True).all()
+    user_dict = {u.id: u for u in users}
+
+    # 日付ごと集計
+    day_shifts = {}
+    for d_num in range(1, last_day_num + 1):
+        cur_d = date(target_year, target_month, d_num)
+        day_shifts[cur_d] = []
+
+    for s in shifts:
+        if s.date in day_shifts:
+            day_shifts[s.date].append(s)
+
+    days_res = []
+    warning_days_count = 0
+
+    for d_num in range(1, last_day_num + 1):
+        cur_d = date(target_year, target_month, d_num)
+        weekday = cur_d.weekday()  # 0=月..6=日
+        s_list = day_shifts[cur_d]
+
+        total_staff = len(s_list)
+        pharmacist_count = 0
+        clerk_count = 0
+
+        for s in s_list:
+            u = user_dict.get(s.user_id)
+            if u:
+                name_or_role = (u.full_name or "") + (u.role or "")
+                # 管理者または薬剤師の表記があるか
+                if u.role == "admin" or "薬剤師" in name_or_role or "薬局長" in name_or_role:
+                    pharmacist_count += 1
+                else:
+                    clerk_count += 1
+
+        warning_messages = []
+        warning_level = "ok"
+
+        # 判定ルール (月〜土の営業日基準)
+        # 日曜日(6)は定休日として通常カウントしない（シフトが0でも警告なし、ある場合は通常表示）
+        is_sunday = (weekday == 6)
+        if not is_sunday:
+            if total_staff == 0:
+                warning_level = "danger"
+                warning_messages.append("出勤スタッフが0名です（開局不可）")
+            elif pharmacist_count == 0:
+                warning_level = "danger"
+                warning_messages.append("薬剤師が不在です（調剤業務不可）")
+            elif total_staff == 1:
+                # 1名のみの場合
+                warning_level = "warning"
+                warning_messages.append("ワンオペ出勤です（休憩・混雑時の応援に注意）")
+
+        has_warning = len(warning_messages) > 0
+        if has_warning:
+            warning_days_count += 1
+
+        days_res.append(schemas.ShiftDayBalance(
+            date=cur_d,
+            weekday=weekday,
+            total_staff=total_staff,
+            pharmacist_count=pharmacist_count,
+            clerk_count=clerk_count,
+            has_warning=has_warning,
+            warning_level=warning_level,
+            warning_messages=warning_messages
+        ))
+
+    return schemas.ShiftBalanceResponse(
+        year=target_year,
+        month=target_month,
+        days=days_res,
+        warning_days_count=warning_days_count
+    )
+
+@router.get("/shifts/balance", response_model=schemas.ShiftBalanceResponse)
+def get_shifts_balance(
+    year: int = Query(default=None),
+    month: int = Query(default=None),
+    admin: models.User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    today = date.today()
+    target_year = year or today.year
+    target_month = month or today.month
+    return calculate_month_staff_balance(db, target_year, target_month)
+
 @router.post("/shifts/auto-generate")
 def auto_generate_monthly_shifts(
     req: schemas.ShiftAutoGenerateRequest,
@@ -401,11 +500,17 @@ def auto_generate_monthly_shifts(
                     updated_count += 1
 
     db.commit()
+    balance = calculate_month_staff_balance(db, year, month)
     return {
         "message": f"{year}年{month}月のシフトを一括生成しました",
         "generated": generated_count,
         "updated": updated_count,
-        "skipped_requests": skipped_count
+        "skipped_requests": skipped_count,
+        "warning_days_count": balance.warning_days_count,
+        "balance_warnings": [
+            {"date": d.date.isoformat(), "level": d.warning_level, "messages": d.warning_messages}
+            for d in balance.days if d.has_warning
+        ]
     }
 
 @router.post("/shifts")
@@ -898,6 +1003,281 @@ def export_monthly_attendance_csv(
     return Response(
         content=csv_data,
         media_type="text/csv",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
+    )
+
+# --- フェーズ4: LINE・連絡用テキスト生成 ---
+@router.get("/shifts/share-text", response_model=schemas.ShiftShareTextResponse)
+def get_shift_share_text(
+    year: int = Query(default=None),
+    month: int = Query(default=None),
+    admin: models.User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    today = date.today()
+    target_year = year or today.year
+    target_month = month or today.month
+
+    first_day = date(target_year, target_month, 1)
+    _, last_day_num = calendar.monthrange(target_year, target_month)
+    last_day = date(target_year, target_month, last_day_num)
+
+    users = db.query(models.User).filter(
+        models.User.is_active == True
+    ).order_by(models.User.role.asc(), models.User.id.asc()).all()
+
+    weekdays_ja = ["月", "火", "水", "木", "金", "土", "日"]
+
+    staff_texts = []
+    full_text_lines = [
+        f"【ひまわり調剤薬局 {target_year}年{target_month}月度 確定勤務シフト】\n"
+    ]
+
+    for u in users:
+        shifts = db.query(models.Shift).filter(
+            models.Shift.user_id == u.id,
+            models.Shift.date >= first_day,
+            models.Shift.date <= last_day,
+            models.Shift.shift_type == "NORMAL"
+        ).order_by(models.Shift.date.asc()).all()
+
+        days_count = len(shifts)
+        role_title = "（薬局長/管理者）" if u.role == "admin" else ""
+        
+        user_header = f"■ {u.full_name}{role_title} 様（計 {days_count}日）"
+        user_shift_lines = []
+        for s in shifts:
+            weekday_str = weekdays_ja[s.date.weekday()]
+            time_str = ""
+            if s.start_time and s.end_time:
+                time_str = f" {s.start_time.strftime('%H:%M')}〜{s.end_time.strftime('%H:%M')}"
+            note_str = f" ({s.note})" if s.note else ""
+            user_shift_lines.append(f"・{s.date.month}/{s.date.day}({weekday_str}){time_str}{note_str}")
+
+        single_staff_text = (
+            f"【ひまわり調剤薬局 {target_year}年{target_month}月度 シフト案内】\n"
+            f"{u.full_name} 様\n\n"
+            f"■ 今月の出勤予定（計 {days_count}日）\n"
+            + ("\n".join(user_shift_lines) if user_shift_lines else "・今月の出勤予定はありません")
+            + "\n\n※ご確認のうえ、変更希望等がある場合はお早めにご連絡ください。"
+        )
+
+        staff_texts.append(schemas.ShiftShareStaffText(
+            user_id=u.id,
+            user_name=u.full_name,
+            days_count=days_count,
+            text=single_staff_text
+        ))
+
+        full_text_lines.append(user_header)
+        if user_shift_lines:
+            full_text_lines.extend(user_shift_lines)
+        else:
+            full_text_lines.append("・出勤予定なし")
+        full_text_lines.append("")
+
+    full_text_lines.append("※シフト変更・有休希望のご相談はお早めにお知らせください。")
+    full_text = "\n".join(full_text_lines)
+
+    return schemas.ShiftShareTextResponse(
+        year=target_year,
+        month=target_month,
+        full_text=full_text,
+        by_staff=staff_texts
+    )
+
+# --- フェーズ4: 法定有休 年5日取得義務コンプライアンス判定 ---
+@router.get("/compliance/paid-leave", response_model=schemas.PaidLeaveComplianceResponse)
+def get_paid_leave_compliance(
+    year: int = Query(default=None),
+    admin: models.User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    today = date.today()
+    target_year = year or today.year
+    year_start = date(target_year, 1, 1)
+    year_end = date(target_year, 12, 31)
+
+    users = db.query(models.User).filter(
+        models.User.is_active == True
+    ).order_by(models.User.role.asc(), models.User.id.asc()).all()
+
+    staff_compliance = []
+    achieved_count = 0
+    in_progress_count = 0
+    action_required_count = 0
+    target_staff_count = 0
+
+    for u in users:
+        total_granted = (u.paid_leave_granted or 0.0) + (u.paid_leave_carried or 0.0)
+        # 法律上、年10日以上の有給休暇が付与される労働者が「年5日取得義務」の対象
+        is_target = total_granted >= 10.0
+        if is_target:
+            target_staff_count += 1
+
+        used_count = db.query(models.Shift).filter(
+            models.Shift.user_id == u.id,
+            models.Shift.date >= year_start,
+            models.Shift.date <= year_end,
+            models.Shift.shift_type == "PAID_LEAVE"
+        ).count()
+
+        used_days = float(used_count)
+        remaining = max(0.0, total_granted - used_days)
+        progress_pct = int(min(100, round((used_days / 5.0) * 100)))
+
+        if not is_target:
+            status_code = "ACHIEVED"
+            msg = "年10日未満付与のため義務対象外"
+        elif used_days >= 5.0:
+            status_code = "ACHIEVED"
+            msg = "年5日取得義務を達成しています"
+            achieved_count += 1
+        elif used_days >= 3.0:
+            status_code = "IN_PROGRESS"
+            msg = f"計画的取得中（あと{5.0 - used_days:.0f}日の取得が必要）"
+            in_progress_count += 1
+        else:
+            status_code = "ACTION_REQUIRED"
+            msg = f"要取得推進（あと{5.0 - used_days:.0f}日の取得が必要です）"
+            action_required_count += 1
+
+        staff_compliance.append(schemas.PaidLeaveComplianceUser(
+            user_id=u.id,
+            username=u.username,
+            full_name=u.full_name,
+            role=u.role,
+            total_granted=total_granted,
+            used_days=used_days,
+            remaining_days=remaining,
+            legal_progress_percent=progress_pct,
+            status=status_code,
+            warning_message=msg
+        ))
+
+    return schemas.PaidLeaveComplianceResponse(
+        year=target_year,
+        total_target_staff=target_staff_count,
+        achieved_count=achieved_count,
+        in_progress_count=in_progress_count,
+        action_required_count=action_required_count,
+        staff=staff_compliance
+    )
+
+# --- フェーズ4: 全データ一括バックアップ（ZIP/CSV） ---
+@router.get("/backup/export")
+def export_all_data_zip(
+    admin: models.User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    zip_buffer = io.BytesIO()
+
+    with zipfile.ZipFile(zip_buffer, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+        # 1. users.csv
+        u_out = io.StringIO()
+        u_out.write('\ufeff')
+        u_writer = csv.writer(u_out)
+        u_writer.writerow([
+            "ユーザーID", "ログインID", "氏名", "役職", "給与形態",
+            "時給", "月給", "有休付与日数", "有休繰越日数", "有休基準日",
+            "勤務可能曜日", "表示カラー", "有効フラグ", "登録日時"
+        ])
+        users = db.query(models.User).order_by(models.User.id.asc()).all()
+        user_map = {u.id: u.full_name for u in users}
+        for u in users:
+            u_writer.writerow([
+                u.id, u.username, u.full_name, u.role, u.wage_type,
+                u.hourly_wage, u.monthly_salary, u.paid_leave_granted, u.paid_leave_carried,
+                u.paid_leave_base_date.isoformat() if u.paid_leave_base_date else "",
+                u.work_days or "", u.color or "", 1 if u.is_active else 0,
+                u.created_at.isoformat() if u.created_at else ""
+            ])
+        zf.writestr("users.csv", u_out.getvalue().encode("utf-8-sig"))
+
+        # 2. shifts.csv
+        s_out = io.StringIO()
+        s_out.write('\ufeff')
+        s_writer = csv.writer(s_out)
+        s_writer.writerow([
+            "シフトID", "ユーザーID", "スタッフ氏名", "日付",
+            "開始時刻", "終了時刻", "休憩時間(分)", "シフト区分", "備考"
+        ])
+        shifts = db.query(models.Shift).order_by(models.Shift.date.asc(), models.Shift.id.asc()).all()
+        for s in shifts:
+            s_writer.writerow([
+                s.id, s.user_id, user_map.get(s.user_id, ""), s.date.isoformat(),
+                s.start_time.strftime("%H:%M") if s.start_time else "",
+                s.end_time.strftime("%H:%M") if s.end_time else "",
+                s.break_minutes or 0, s.shift_type, s.note or ""
+            ])
+        zf.writestr("shifts.csv", s_out.getvalue().encode("utf-8-sig"))
+
+        # 3. time_records.csv
+        t_out = io.StringIO()
+        t_out.write('\ufeff')
+        t_writer = csv.writer(t_out)
+        t_writer.writerow([
+            "勤怠ID", "ユーザーID", "スタッフ氏名", "日付",
+            "出勤日時", "退勤日時", "休憩開始", "休憩終了",
+            "総休憩時間(分)", "総実労働時間(分)", "ステータス", "修正フラグ", "備考"
+        ])
+        records = db.query(models.TimeRecord).order_by(models.TimeRecord.date.asc(), models.TimeRecord.id.asc()).all()
+        for r in records:
+            t_writer.writerow([
+                r.id, r.user_id, user_map.get(r.user_id, ""), r.date.isoformat(),
+                r.clock_in.strftime("%Y-%m-%d %H:%M:%S") if r.clock_in else "",
+                r.clock_out.strftime("%Y-%m-%d %H:%M:%S") if r.clock_out else "",
+                r.break_start.strftime("%Y-%m-%d %H:%M:%S") if r.break_start else "",
+                r.break_end.strftime("%Y-%m-%d %H:%M:%S") if r.break_end else "",
+                r.total_break_minutes or 0, r.total_work_minutes or 0,
+                r.status, 1 if r.is_corrected else 0, r.note or ""
+            ])
+        zf.writestr("time_records.csv", t_out.getvalue().encode("utf-8-sig"))
+
+        # 4. shift_requests.csv
+        sr_out = io.StringIO()
+        sr_out.write('\ufeff')
+        sr_writer = csv.writer(sr_out)
+        sr_writer.writerow([
+            "希望休ID", "ユーザーID", "スタッフ氏名", "希望日",
+            "区分", "理由", "審査状況", "管理者コメント", "申請日時"
+        ])
+        s_requests = db.query(models.ShiftRequest).order_by(models.ShiftRequest.date.asc()).all()
+        for sr in s_requests:
+            sr_writer.writerow([
+                sr.id, sr.user_id, user_map.get(sr.user_id, ""), sr.date.isoformat(),
+                sr.request_type, sr.reason or "", sr.status, sr.admin_comment or "",
+                sr.created_at.isoformat() if sr.created_at else ""
+            ])
+        zf.writestr("shift_requests.csv", sr_out.getvalue().encode("utf-8-sig"))
+
+        # 5. correction_requests.csv
+        cr_out = io.StringIO()
+        cr_out.write('\ufeff')
+        cr_writer = csv.writer(cr_out)
+        cr_writer.writerow([
+            "打刻修正ID", "ユーザーID", "スタッフ氏名", "対象日",
+            "修正希望出勤", "修正希望退勤", "修正休憩(分)", "理由", "審査状況", "管理者コメント", "申請日時"
+        ])
+        c_requests = db.query(models.CorrectionRequest).order_by(models.CorrectionRequest.target_date.asc()).all()
+        for cr in c_requests:
+            cr_writer.writerow([
+                cr.id, cr.user_id, user_map.get(cr.user_id, ""), cr.target_date.isoformat(),
+                cr.requested_clock_in.strftime("%Y-%m-%d %H:%M:%S") if cr.requested_clock_in else "",
+                cr.requested_clock_out.strftime("%Y-%m-%d %H:%M:%S") if cr.requested_clock_out else "",
+                cr.requested_break_minutes or 0, cr.reason or "", cr.status, cr.admin_comment or "",
+                cr.created_at.isoformat() if cr.created_at else ""
+            ])
+        zf.writestr("correction_requests.csv", cr_out.getvalue().encode("utf-8-sig"))
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"shift_kintai_backup_{timestamp}.zip"
+
+    return Response(
+        content=zip_buffer.getvalue(),
+        media_type="application/zip",
         headers={
             "Content-Disposition": f"attachment; filename={filename}"
         }
