@@ -14,6 +14,7 @@ def seed_data():
         existing_admin = db.query(models.User).filter(models.User.username == "admin").first()
         if existing_admin:
             # 確定仕様に合わせて既存ユーザーの時給・スケジュールを同期
+            existing_admin.full_name = "三宅 智之（管理薬剤師）"
             existing_s1 = db.query(models.User).filter(models.User.username == "staff01").first()
             if existing_s1:
                 existing_s1.hourly_wage = 1500
@@ -21,13 +22,13 @@ def seed_data():
             if existing_s2:
                 existing_s2.hourly_wage = 1200
             db.commit()
-            print("マスターデータは既に存在します。時給設定を同期しました。")
+            print("マスターデータは既に存在します。管理者名（三宅 智之 様）および時給設定を同期しました。")
             return
 
         print("初期マスターデータを作成中...")
 
         # 1. ユーザー作成（三宅様、小林彩乃様、寺内様の3名体制）
-        # 三宅 興之（薬局長）: 月火水金 09:00〜19:00, 木土 09:00〜13:00(半日)
+        # 三宅 智之（管理薬剤師）: 月火水金 09:00〜19:00, 木土 09:00〜13:00(半日)
         miyake_schedule = json.dumps({
             "0": {"work": True, "start": "09:00", "end": "19:00", "break": 60},
             "1": {"work": True, "start": "09:00", "end": "19:00", "break": 60},
@@ -40,7 +41,7 @@ def seed_data():
         admin_user = models.User(
             username="admin",
             password_hash=hash_password("admin123"),
-            full_name="三宅 興之（薬局長）",
+            full_name="三宅 智之（管理薬剤師）",
             role="admin",
             wage_type="MONTHLY",
             monthly_salary=450000,
@@ -138,7 +139,7 @@ def seed_data():
             if weekday == 6:
                 continue
 
-            # 1. 三宅様（薬局長）: 月火水金 9:00〜19:00, 木土 9:00〜13:00
+            # 1. 三宅様（管理薬剤師）: 月火水金 9:00〜19:00, 木土 9:00〜13:00
             m_start = time(9, 0)
             m_end = time(13, 0) if weekday in [3, 5] else time(19, 0)
             m_break = 0 if weekday in [3, 5] else 60
@@ -149,7 +150,7 @@ def seed_data():
                 end_time=m_end,
                 break_minutes=m_break,
                 shift_type="NORMAL",
-                note="薬局長シフト"
+                note="管理薬剤師シフト"
             ))
 
             # 2. 小林 彩乃（薬剤師）: 月火水金 9:00〜18:00, 土 9:00〜13:00, 木曜休み
@@ -266,7 +267,7 @@ def seed_data():
         db.commit()
 
         print("初期マスターデータの作成が完了しました！")
-        print("管理者: admin / admin123 (三宅 興之)")
+        print("管理者: admin / admin123 (三宅 智之)")
         print("スタッフ1: staff01 / staff123 (小林 彩乃)")
         print("スタッフ2: staff02 / staff123 (寺内)")
 

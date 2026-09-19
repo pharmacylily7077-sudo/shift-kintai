@@ -37,7 +37,7 @@ def setup_database():
     admin_user = models.User(
         username="testadmin",
         password_hash=hash_password("adminpass"),
-        full_name="三宅 興之（管理者）",
+        full_name="三宅 智之（管理薬剤師）",
         role="admin",
         wage_type="MONTHLY",
         monthly_salary=450000,
@@ -1031,5 +1031,5 @@ def test_backup_export_zip_api(client, admin_headers):
         # users.csvの内容確認
         users_content = zf.read("users.csv").decode("utf-8-sig")
         assert "ユーザーID" in users_content
-        assert "三宅 興之" in users_content
+        assert "三宅 智之" in users_content
         assert "小林 彩乃" in users_content

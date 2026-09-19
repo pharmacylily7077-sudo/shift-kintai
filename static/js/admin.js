@@ -603,7 +603,7 @@ function renderAdminCalendarGrid(shifts) {
           typeText = '公休';
         }
 
-        // 表示用通称名の抽出（例: 「三宅 興之（薬局長）」→「三宅」、「小林 彩乃（薬剤師）」→「小林彩乃」、「寺内（調剤事務）」→「寺内」）
+        // 表示用通称名の抽出（例: 「三宅 智之（管理薬剤師）」→「三宅」、「小林 彩乃（薬剤師）」→「小林彩乃」、「寺内（調剤事務）」→「寺内」）
         let shortName = s.user_name || 'スタッフ';
         if (shortName.includes('（')) shortName = shortName.split('（')[0].trim();
         else if (shortName.includes('(')) shortName = shortName.split('(')[0].trim();
@@ -1320,7 +1320,7 @@ async function clockAdminAction(action) {
     if (!res.ok) throw new Error(data.detail || '打刻に失敗しました');
 
     const labels = { IN: '出勤', BREAK_START: '休憩入', BREAK_END: '休憩戻', OUT: '退勤' };
-    showToast(`薬局長: ${labels[action]}打刻を記録しました！`);
+    showToast(`管理薬剤師: ${labels[action]}打刻を記録しました！`);
 
     await initAdminClockStatus();
     await loadAttendanceSummary();
@@ -1549,7 +1549,7 @@ function renderStaffManagementCards() {
     const wageDisplay = isMonthly ? `月給 ¥${(u.monthly_salary || 0).toLocaleString()}` : `時給 ¥${(u.hourly_wage || 0).toLocaleString()}`;
 
     const roleBadge = u.role === 'admin'
-      ? '<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-800">管理者 / 薬局長</span>'
+      ? '<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-800">管理者 / 管理薬剤師</span>'
       : '<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">スタッフ</span>';
 
     card.innerHTML = `

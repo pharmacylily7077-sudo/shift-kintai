@@ -1044,7 +1044,7 @@ def get_shift_share_text(
         ).order_by(models.Shift.date.asc()).all()
 
         days_count = len(shifts)
-        role_title = "（薬局長/管理者）" if u.role == "admin" else ""
+        role_title = "（管理薬剤師）" if (u.role == "admin" and "管理薬剤師" not in (u.full_name or "")) else ""
         
         user_header = f"■ {u.full_name}{role_title} 様（計 {days_count}日）"
         user_shift_lines = []
