@@ -57,6 +57,7 @@ class UserSettingsUpdate(BaseModel):
 
 class UserConditionUpdate(BaseModel):
     full_name: Optional[str] = None
+    password: Optional[str] = None
     wage_type: Optional[str] = None  # "HOURLY" or "MONTHLY"
     hourly_wage: Optional[int] = None
     monthly_salary: Optional[int] = None
@@ -94,6 +95,11 @@ class UserConditionUpdate(BaseModel):
         if v is not None and v < 0:
             raise ValueError("時給は0円以上である必要があります")
         return v
+
+class UserPasswordReset(BaseModel):
+    password: Optional[str] = None
+    new_password: Optional[str] = None
+
 
 class UserAdminCreate(BaseModel):
     username: str

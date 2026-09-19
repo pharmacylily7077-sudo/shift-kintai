@@ -999,6 +999,11 @@ function onConditionUserChange() {
     nameInput.value = user.full_name || '';
   }
 
+  const pwdInput = document.getElementById('cond-password');
+  if (pwdInput) {
+    pwdInput.value = '';
+  }
+
   // 給与形態と給与額の反映
   const wageTypeSelect = document.getElementById('cond-wage-type');
   if (wageTypeSelect) {
@@ -1083,19 +1088,26 @@ async function handleConditionSubmit(e) {
   const monthlySalary = parseInt(document.getElementById('cond-monthly-salary').value, 10) || 0;
   const color = document.getElementById('cond-color-picker').value;
 
+  const payload = {
+    full_name: fullName,
+    wage_type: wageType,
+    hourly_wage: hourlyWage,
+    monthly_salary: monthlySalary,
+    work_days: workDaysStr,
+    weekly_schedule: scheduleJson,
+    color: color
+  };
+
+  const newPassword = document.getElementById('cond-password')?.value.trim();
+  if (newPassword) {
+    payload.password = newPassword;
+  }
+
   try {
     const res = await fetch(`/api/admin/users/${userId}/condition`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        full_name: fullName,
-        wage_type: wageType,
-        hourly_wage: hourlyWage,
-        monthly_salary: monthlySalary,
-        work_days: workDaysStr,
-        weekly_schedule: scheduleJson,
-        color: color
-      })
+      body: JSON.stringify(payload)
     });
 
     if (!res.ok) throw new Error('雇用条件の保存に失敗しました');
@@ -1611,13 +1623,19 @@ function renderStaffManagementCards() {
         </div>
       </div>
 
-      <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
-        <button onclick="editStaffSettings(${u.id})" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center space-x-1 py-1 px-2.5 rounded-lg hover:bg-indigo-50 transition">
-          <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
-          <span>条件・名前を編集</span>
-        </button>
+      <div class="pt-2 border-t border-slate-100 flex items-center justify-between gap-1">
+        <div class="flex items-center space-x-1">
+          <button onclick="editStaffSettings(${u.id})" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center space-x-1 py-1 px-2 rounded-lg hover:bg-indigo-50 transition" title="条件や表示名を編集">
+            <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+            <span>編集</span>
+          </button>
+          <button onclick="openPasswordModal(${u.id}, '${u.full_name}')" class="text-xs font-bold text-amber-700 hover:text-amber-900 flex items-center space-x-1 py-1 px-2 rounded-lg hover:bg-amber-50 transition" title="パスワード変更・再設定">
+            <i data-lucide="key" class="w-3.5 h-3.5"></i>
+            <span>PW変更</span>
+          </button>
+        </div>
         ${u.role !== 'admin' ? `
-          <button onclick="directDeleteStaff(${u.id}, '${u.full_name}')" class="text-xs font-semibold text-rose-500 hover:text-rose-700 p-1 rounded-lg hover:bg-rose-50 transition" title="スタッフ退職・削除">
+          <button onclick="directDeleteStaff(${u.id}, '${u.full_name}')" class="text-xs font-semibold text-rose-500 hover:text-rose-700 p-1.5 rounded-lg hover:bg-rose-50 transition" title="スタッフ退職・削除">
             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
           </button>
         ` : ''}
@@ -1773,4 +1791,81 @@ async function copyShareText() {
     showToast('📋 テキストをコピーしました！');
   }
 }
+
+// --- パスワード変更モーダル制御 ---
+function openPasswordModal(userId, fullName) {
+  const modal = document.getElementById('password-modal');
+  if (!modal) return;
+
+  document.getElementById('password-target-user-id').value = userId;
+  document.getElementById('password-modal-user-name').textContent = `${fullName} (ID: ${userId})`;
+  document.getElementById('password-modal-subtitle').textContent = `「${fullName}」のログインパスワードを更新します`;
+  
+  const pwdInput = document.getElementById('new-reset-password');
+  if (pwdInput) {
+    pwdInput.value = '';
+    pwdInput.focus();
+  }
+
+  modal.classList.remove('hidden');
+  lucide.createIcons({ root: modal });
+}
+
+function openAdminPasswordModal() {
+  // 管理者 (admin / ID 1) のパスワード変更
+  const adminUser = staffList.find(u => u.role === 'admin') || { id: 1, full_name: '三宅 智之（管理薬剤師）' };
+  openPasswordModal(adminUser.id, adminUser.full_name);
+}
+
+function closePasswordModal() {
+  const modal = document.getElementById('password-modal');
+  if (modal) {
+    modal.classList.add('hidden');
+  }
+}
+
+function generateRandomPassword(targetInputId) {
+  const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
+  let result = '';
+  for (let i = 0; i < 8; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  const input = document.getElementById(targetInputId);
+  if (input) {
+    input.value = result;
+    input.select();
+    showToast(`パスワード「${result}」を生成しました`);
+  }
+}
+
+async function handlePasswordModalSubmit(e) {
+  e.preventDefault();
+  const userId = parseInt(document.getElementById('password-target-user-id').value, 10);
+  const password = document.getElementById('new-reset-password').value.trim();
+
+  if (!password || password.length < 4) {
+    showToast('パスワードは4文字以上で指定してください', 'error');
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/admin/users/${userId}/password`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'パスワード変更に失敗しました');
+    }
+
+    const data = await res.json();
+    showToast(data.message || 'パスワードを正常に変更しました！');
+    closePasswordModal();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
 

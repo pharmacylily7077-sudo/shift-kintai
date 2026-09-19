@@ -1033,3 +1033,109 @@ def test_backup_export_zip_api(client, admin_headers):
         assert "ユーザーID" in users_content
         assert "三宅 智之" in users_content
         assert "小林 彩乃" in users_content
+
+
+def test_user_password_reset_and_condition_update(client, admin_headers):
+    # 1. パスワード再設定APIのテスト
+    res = client.put(
+        "/api/admin/users/2/password",
+        json={"password": "newpassword123"},
+        headers=admin_headers
+    )
+    assert res.status_code == 200
+    assert "パスワードを更新しました" in res.json()["message"]
+
+    # 新パスワードでログインできること
+    anon_client = TestClient(app)
+    login_res = anon_client.post(
+        "/api/auth/login",
+        json={"username": "teststaff", "password": "newpassword123"}
+    )
+    assert login_res.status_code == 200
+    assert "access_token" in login_res.json()
+
+    # 2. 雇用条件更新モーダル経由でのパスワード更新テスト
+    cond_res = client.put(
+        "/api/admin/users/2/condition",
+        json={
+            "full_name": "小林 彩乃（更新）",
+            "password": "brandnewpassword456",
+            "wage_type": "HOURLY",
+            "hourly_wage": 2200
+        },
+        headers=admin_headers
+    )
+    assert cond_res.status_code == 200
+    assert cond_res.json()["full_name"] == "小林 彩乃（更新）"
+
+    # 新しいパスワードで再ログイン確認
+    anon_client2 = TestClient(app)
+    login_res2 = anon_client2.post(
+        "/api/auth/login",
+        json={"username": "teststaff", "password": "brandnewpassword456"}
+    )
+    assert login_res2.status_code == 200
+
+
+def test_staff_deletion_cleans_shifts_and_login(client, admin_headers):
+    # テスト用スタッフ作成
+    create_res = client.post(
+        "/api/admin/users",
+        json={
+            "username": "temp_delete_user",
+            "password": "password123",
+            "full_name": "削除テストスタッフ",
+            "role": "staff",
+            "wage_type": "HOURLY",
+            "hourly_wage": 1500,
+            "work_days": "0,1,2,3,4"
+        },
+        headers=admin_headers
+    )
+    assert create_res.status_code == 201
+    user_id = create_res.json()["id"]
+
+    # このユーザーのシフトを登録
+    shift_res = client.post(
+        "/api/admin/shifts",
+        json={
+            "user_id": user_id,
+            "date": "2026-06-15",
+            "start_time": "09:00",
+            "end_time": "18:00",
+            "break_minutes": 60,
+            "shift_type": "NORMAL"
+        },
+        headers=admin_headers
+    )
+    assert shift_res.status_code == 200
+
+    # シフト一覧に存在することを確認
+    shifts_before = client.get("/api/admin/shifts?year=2026&month=6", headers=admin_headers).json()
+    assert any(s["user_id"] == user_id for s in shifts_before)
+
+    # ログイン画面のユーザー一覧(/login)に表示されること（未ログインクライアントで確認）
+    anon_client = TestClient(app)
+    login_page_before = anon_client.get("/login")
+    assert "削除テストスタッフ" in login_page_before.text
+
+    # スタッフ削除実行
+    del_res = client.delete(f"/api/admin/users/{user_id}", headers=admin_headers)
+    assert del_res.status_code == 200
+
+    # 1. シフト一覧から完全に消去されていること
+    shifts_after = client.get("/api/admin/shifts?year=2026&month=6", headers=admin_headers).json()
+    assert not any(s["user_id"] == user_id for s in shifts_after)
+
+    # 2. ログイン画面のユーザー一覧(/login)から消去されていること
+    anon_client2 = TestClient(app)
+    login_page_after = anon_client2.get("/login")
+    assert "削除テストスタッフ" not in login_page_after.text
+
+    # 3. ログインできなくなっていること
+    login_attempt = anon_client2.post(
+        "/api/auth/login",
+        json={"username": "temp_delete_user", "password": "password123"}
+    )
+    assert login_attempt.status_code == 401
+

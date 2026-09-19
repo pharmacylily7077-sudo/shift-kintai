@@ -84,9 +84,26 @@ def delete_staff_user(
     if not user:
         raise HTTPException(status_code=404, detail="ユーザーが見つかりません")
 
-    user.is_active = False
+    user_name = user.full_name
+
+    # 1. 該当スタッフのシフト・申請データを完全クリーンアップ（カレンダーや集計から即時抹消）
+    db.query(models.Shift).filter(models.Shift.user_id == user_id).delete()
+    db.query(models.ShiftRequest).filter(models.ShiftRequest.user_id == user_id).delete()
+    db.query(models.CorrectionRequest).filter(models.CorrectionRequest.user_id == user_id).delete()
+
+    # 2. 過去の打刻実績の有無を判定
+    has_time_records = db.query(models.TimeRecord).filter(models.TimeRecord.user_id == user_id).count() > 0
+    if not has_time_records:
+        # 実績が一切ない（テスト登録や追加ミス）場合は完全にDBから削除
+        db.delete(user)
+    else:
+        # 法定保管が必要な実働記録がある場合は無効化＆ログインID競合回避
+        user.is_active = False
+        if not user.username.startswith("deleted_"):
+            user.username = f"deleted_{user.id}_{user.username}"
+
     db.commit()
-    return {"message": "スタッフを削除（無効化）しました"}
+    return {"message": f"スタッフ「{user_name}」およびシフトを完全に削除しました"}
 
 @router.put("/users/{user_id}/condition", response_model=schemas.UserResponse)
 def update_user_condition(
@@ -101,6 +118,10 @@ def update_user_condition(
 
     if cond.full_name is not None and cond.full_name.strip():
         user.full_name = cond.full_name.strip()
+    if cond.password is not None and cond.password.strip():
+        if len(cond.password.strip()) < 4:
+            raise HTTPException(status_code=400, detail="パスワードは4文字以上で入力してください")
+        user.password_hash = hash_password(cond.password.strip())
     if cond.work_days is not None:
         user.work_days = cond.work_days
     if cond.weekly_schedule is not None:
@@ -135,6 +156,23 @@ def update_user_condition(
     db.commit()
     db.refresh(user)
     return user
+
+@router.put("/users/{user_id}/password")
+def reset_user_password(
+    user_id: int,
+    req: schemas.UserPasswordReset,
+    admin: models.User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="ユーザーが見つかりません")
+    pwd = (req.password or req.new_password or "").strip()
+    if not pwd or len(pwd) < 4:
+        raise HTTPException(status_code=400, detail="パスワードは4文字以上で入力してください")
+    user.password_hash = hash_password(pwd)
+    db.commit()
+    return {"message": f"「{user.full_name}」様のパスワードを更新しました"}
 
 @router.get("/attendance/summary")
 def get_attendance_summary(
@@ -228,14 +266,15 @@ def get_all_shifts(
     _, last_day_num = calendar.monthrange(target_year, target_month)
     last_day = date(target_year, target_month, last_day_num)
 
-    shifts = db.query(models.Shift).filter(
+    shifts = db.query(models.Shift).join(models.User).filter(
+        models.User.is_active == True,
         models.Shift.date >= first_day,
         models.Shift.date <= last_day
     ).all()
 
-    all_users = db.query(models.User).all()
-    user_names = {u.id: u.full_name for u in all_users}
-    user_colors = {u.id: u.color or "#059669" for u in all_users}
+    active_users = db.query(models.User).filter(models.User.is_active == True).all()
+    user_names = {u.id: u.full_name for u in active_users}
+    user_colors = {u.id: u.color or "#059669" for u in active_users}
 
     result = []
     for s in shifts:

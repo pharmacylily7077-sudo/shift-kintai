@@ -66,7 +66,10 @@ def login_page(request: Request, db: Session = Depends(get_db)):
         if user.role == "admin":
             return RedirectResponse(url="/admin", status_code=status.HTTP_303_SEE_OTHER)
         return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
-    return templates.TemplateResponse(request=request, name="login.html")
+    active_users = db.query(models.User).filter(
+        models.User.is_active == True
+    ).order_by(models.User.role.asc(), models.User.id.asc()).all()
+    return templates.TemplateResponse(request=request, name="login.html", context={"users": active_users})
 
 @app.get("/admin", response_class=HTMLResponse)
 def admin_page(request: Request, db: Session = Depends(get_db)):
