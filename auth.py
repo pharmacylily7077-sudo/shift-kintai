@@ -9,7 +9,7 @@ import jwt
 from database import get_db
 import models
 
-SECRET_KEY = os.environ.get("SECRET_KEY", "himawari-pharmacy-secret-2026")
+SECRET_KEY = os.environ.get("SECRET_KEY", "lily-pharmacy-secret-2026")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 12  # 12時間
 
