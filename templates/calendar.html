@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% block title %}シフトカレンダー - 薬局スタッフプラットフォーム{% endblock %}
+
+{% block body %}
+<!-- ナビゲーションバー -->
+<header class="bg-white border-b border-slate-100 sticky top-0 z-50 print:hidden">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center space-x-3">
+      <div class="w-8 h-8 rounded-xl bg-emerald-600 flex items-center justify-center">
+        <i data-lucide="heart-pulse" class="w-4 h-4 text-white"></i>
+      </div>
+      <span class="font-black text-slate-900 text-sm">薬局シフト</span>
+    </div>
+    <div class="flex items-center space-x-2">
+      <button onclick="window.print()"
+        class="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition">
+        <i data-lucide="printer" class="w-4 h-4"></i>
+        <span>印刷</span>
+      </button>
+      {% if current_user %}
+        <a href="{{ '/admin' if current_user.is_admin else '/me' }}"
+          class="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition">
+          <i data-lucide="user" class="w-4 h-4"></i>
+          <span>マイルーム</span>
+        </a>
+      {% else %}
+        <a href="/login"
+          class="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition">
+          <i data-lucide="log-in" class="w-4 h-4"></i>
+          <span>ログイン</span>
+        </a>
+      {% endif %}
+    </div>
+  </div>
+</header>
+
+<!-- メインコンテンツ -->
+<main class="max-w-7xl mx-auto px-2 sm:px-4 py-4">
+
+  <!-- 月ナビゲーション -->
+  <div class="flex items-center justify-between mb-4 print:hidden">
+    <button onclick="changeMonth(-1)"
+      class="flex items-center space-x-1 px-4 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-semibold transition shadow-xs">
+      <i data-lucide="chevron-left" class="w-4 h-4"></i>
+      <span>前月</span>
+    </button>
+    <h2 id="month-label" class="text-xl font-black text-slate-900"></h2>
+    <button onclick="changeMonth(1)"
+      class="flex items-center space-x-1 px-4 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-semibold transition shadow-xs">
+      <span>翌月</span>
+      <i data-lucide="chevron-right" class="w-4 h-4"></i>
+    </button>
+  </div>
+
+  <!-- 印刷用ヘッダー（画面では非表示） -->
+  <div class="hidden print:block text-center mb-4">
+    <h1 class="text-2xl font-black" id="print-title"></h1>
+  </div>
+
+  <!-- 凡例 -->
+  <div class="flex flex-wrap items-center gap-3 mb-4 px-1 print:mb-2">
+    <span class="text-xs font-bold text-slate-500">凡例:</span>
+    <span class="flex items-center space-x-1"><span class="w-4 h-4 rounded-md inline-block" style="background:#16a34a"></span><span class="text-xs text-slate-600">薬剤師（正）</span></span>
+    <span class="flex items-center space-x-1"><span class="w-4 h-4 rounded-md inline-block" style="background:#86efac"></span><span class="text-xs text-slate-600">薬剤師（パ）</span></span>
+    <span class="flex items-center space-x-1"><span class="w-4 h-4 rounded-md inline-block" style="background:#2563eb"></span><span class="text-xs text-slate-600">調剤事務（正）</span></span>
+    <span class="flex items-center space-x-1"><span class="w-4 h-4 rounded-md inline-block" style="background:#93c5fd"></span><span class="text-xs text-slate-600">調剤事務（パ）</span></span>
+    <span class="flex items-center space-x-1"><span class="w-4 h-4 rounded-md inline-block" style="background:#dc2626"></span><span class="text-xs text-slate-600">調剤補助（正）</span></span>
+    <span class="flex items-center space-x-1"><span class="w-4 h-4 rounded-md inline-block" style="background:#fca5a5"></span><span class="text-xs text-slate-600">調剤補助（パ）</span></span>
+  </div>
+
+  <!-- カレンダーグリッド -->
+  <div id="calendar-grid" class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden print:rounded-none print:shadow-none print:border-slate-300">
+    <!-- ヘッダー行（曜日） -->
+    <div class="grid grid-cols-7 border-b border-slate-100">
+      {% for day in ['月','火','水','木','金','土','日'] %}
+      <div class="py-2 text-center text-xs font-bold
+        {% if loop.index == 6 %}text-blue-500{% elif loop.index == 7 %}text-rose-500{% else %}text-slate-500{% endif %}">
+        {{ day }}
+      </div>
+      {% endfor %}
+    </div>
+    <!-- 日付セル（JS で描画） -->
+    <div id="calendar-body" class="grid grid-cols-7 divide-x divide-y divide-slate-100"></div>
+  </div>
+
+  <!-- スタッフ一覧（印刷用） -->
+  <div class="hidden print:block mt-6 text-xs text-slate-600">
+    <p class="font-bold mb-1">■ シフト時間</p>
+    <p>全日: 9:00〜19:00 ／ 午前診: 9:00〜13:00 ／ 午後診: 15:00〜19:00 ／ 前半: 9:00〜18:00 ／ 後半: 10:00〜19:00</p>
+  </div>
+
+</main>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  let currentYear = new Date().getFullYear();
+  let currentMonth = new Date().getMonth() + 1;
+  let calendarData = null;
+
+  const SHIFT_ICONS = {
+    FULL: '🌕', AM: '🌅', PM: '🌆', FIRST: '🌤', SECOND: '🌇', OFF: '🌙'
+  };
+
+  async function loadCalendar() {
+    const res = await fetch(`/api/calendar/monthly?year=${currentYear}&month=${currentMonth}`);
+    calendarData = await res.json();
+    renderCalendar(calendarData);
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function renderCalendar(data) {
+    document.getElementById('month-label').textContent = data.month_label;
+    document.getElementById('print-title').textContent = `${data.month_label} シフト表`;
+
+    const body = document.getElementById('calendar-body');
+    body.innerHTML = '';
+
+    // 月初の曜日まで空白セル（月曜=0）
+    for (let i = 0; i < data.first_weekday; i++) {
+      const empty = document.createElement('div');
+      empty.className = 'min-h-[100px] sm:min-h-[120px] p-1 bg-slate-50/50';
+      body.appendChild(empty);
+    }
+
+    data.days.forEach(day => {
+      const cell = document.createElement('div');
+      const isSunOrHol = day.is_sunday || day.is_holiday;
+      cell.className = [
+        'min-h-[100px] sm:min-h-[120px] p-1 sm:p-2 relative',
+        day.is_today ? 'bg-emerald-50/60' : '',
+        isSunOrHol ? 'bg-rose-50/30' : '',
+        !isSunOrHol && day.is_saturday ? 'bg-blue-50/30' : '',
+      ].join(' ');
+
+      // 日付ヘッダー（数字 + 祝日名）
+      const dayHeader = document.createElement('div');
+      dayHeader.className = 'flex items-center justify-between mb-1';
+
+      const dayNum = document.createElement('div');
+      dayNum.className = [
+        'text-xs sm:text-sm font-black w-6 h-6 flex items-center justify-center rounded-full',
+        day.is_today ? 'bg-emerald-600 text-white' : '',
+        !day.is_today && isSunOrHol ? 'text-rose-500' : '',
+        !day.is_today && !isSunOrHol && day.is_saturday ? 'text-blue-500' : '',
+        !day.is_today && !isSunOrHol && !day.is_saturday ? 'text-slate-700' : '',
+      ].join(' ');
+      dayNum.textContent = day.day;
+      dayHeader.appendChild(dayNum);
+
+      if (day.holiday_name) {
+        const holLabel = document.createElement('span');
+        holLabel.className = 'text-[9px] font-bold text-rose-500 truncate max-w-[65px]';
+        holLabel.textContent = day.holiday_name;
+        holLabel.title = day.holiday_name;
+        dayHeader.appendChild(holLabel);
+      }
+      cell.appendChild(dayHeader);
+
+      // シフトバッジ
+      day.shifts.forEach(s => {
+        if (s.shift_type === 'OFF') return;
+        const badge = document.createElement('div');
+        badge.className = 'text-[10px] sm:text-xs font-bold px-1 py-0.5 rounded-lg mb-0.5 truncate text-white leading-tight';
+        badge.style.backgroundColor = s.color;
+        badge.title = `${s.full_name}: ${s.time_range}`;
+        badge.textContent = `${s.full_name} ${SHIFT_ICONS[s.shift_type] || ''}`;
+        cell.appendChild(badge);
+      });
+
+      body.appendChild(cell);
+    });
+  }
+
+  function changeMonth(delta) {
+    currentMonth += delta;
+    if (currentMonth > 12) { currentMonth = 1; currentYear++; }
+    if (currentMonth < 1)  { currentMonth = 12; currentYear--; }
+    loadCalendar();
+  }
+
+  // 初期ロード
+  loadCalendar();
+</script>
+{% endblock %}

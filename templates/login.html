@@ -1,116 +1,249 @@
 {% extends "base.html" %}
+{% block title %}ログイン - 薬局スタッフプラットフォーム{% endblock %}
 
-{% block title %}ログイン - 薬局シフト勤怠・給与管理システム{% endblock %}
+{% block body %}
+<div class="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50/40 to-purple-50/50 flex items-center justify-center p-4 relative overflow-hidden">
+  <!-- 舞い散る背景の装飾ぼかし丸 -->
+  <div class="absolute top-10 left-10 w-72 h-72 bg-pink-200/40 rounded-full blur-3xl pointer-events-none"></div>
+  <div class="absolute bottom-10 right-10 w-80 h-80 bg-purple-200/30 rounded-full blur-3xl pointer-events-none"></div>
 
-{% block content %}
-<div class="max-w-md mx-auto my-8 sm:my-12">
-  <div class="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-100">
+  <div class="w-full max-w-sm relative z-10">
+
+    <!-- ロゴ・タイトル -->
     <div class="text-center mb-8">
-      <div class="w-14 h-14 mx-auto rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3">
-        <i data-lucide="lock" class="w-7 h-7"></i>
+      <div class="w-16 h-16 mx-auto rounded-3xl bg-gradient-to-tr from-pink-500 to-rose-400 flex items-center justify-center mb-4 shadow-lg shadow-pink-200">
+        <span class="text-3xl">🌸</span>
       </div>
-      <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight">ログイン</h2>
-      <p class="text-sm text-slate-500 mt-1">IDとパスワードを入力してください</p>
+      <h1 class="text-2xl font-black text-slate-800 tracking-tight">ひまわり薬局</h1>
+      <p class="text-xs text-pink-600/80 font-bold mt-1 tracking-wider">スタッフ専用マイポータル</p>
     </div>
 
-    <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
-      <div>
-        <label for="username" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">ログインID</label>
-        <div class="relative">
-          <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-            <i data-lucide="user" class="w-5 h-5"></i>
-          </span>
-          <input type="text" id="username" required
-            class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm transition"
-            placeholder="例: staff01">
+    <!-- カード -->
+    <div class="bg-white/90 backdrop-blur-md rounded-3xl shadow-xl shadow-pink-200/30 p-7 space-y-6 border border-pink-100/60">
+
+      <!-- STEP 1: ポジション選択 -->
+      <div id="step1">
+        <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">STEP 1 ― あなたのポジションは？</p>
+        <div class="grid grid-cols-3 gap-2">
+          <button onclick="selectPosition('PHARMACIST')"
+            class="position-btn flex flex-col items-center justify-center p-3 rounded-2xl border-2 border-slate-100 hover:border-emerald-400 hover:bg-emerald-50 transition group"
+            data-pos="PHARMACIST">
+            <span class="text-2xl mb-1">💊</span>
+            <span class="text-xs font-bold text-slate-700 group-hover:text-emerald-700">薬剤師</span>
+          </button>
+          <button onclick="selectPosition('CLERK')"
+            class="position-btn flex flex-col items-center justify-center p-3 rounded-2xl border-2 border-slate-100 hover:border-blue-400 hover:bg-blue-50 transition group"
+            data-pos="CLERK">
+            <span class="text-2xl mb-1">📋</span>
+            <span class="text-xs font-bold text-slate-700 group-hover:text-blue-700">調剤事務</span>
+          </button>
+          <button onclick="selectPosition('ASSISTANT')"
+            class="position-btn flex flex-col items-center justify-center p-3 rounded-2xl border-2 border-slate-100 hover:border-rose-400 hover:bg-rose-50 transition group"
+            data-pos="ASSISTANT">
+            <span class="text-2xl mb-1">🌸</span>
+            <span class="text-xs font-bold text-slate-700 group-hover:text-rose-700">調剤補助</span>
+          </button>
         </div>
       </div>
 
-      <div>
-        <label for="password" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">パスワード</label>
-        <div class="relative">
-          <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-            <i data-lucide="key" class="w-5 h-5"></i>
-          </span>
-          <input type="password" id="password" required
-            class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm transition"
-            placeholder="••••••••">
-        </div>
-      </div>
-
-      <div id="error-message" class="hidden text-xs text-rose-600 bg-rose-50 border border-rose-100 p-3 rounded-xl"></div>
-
-      <button type="submit" id="login-btn"
-        class="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md shadow-emerald-200 hover:shadow-lg transition flex items-center justify-center space-x-2">
-        <span>ログインする</span>
-        <i data-lucide="arrow-right" class="w-4 h-4"></i>
-      </button>
-    </form>
-
-    {% if users %}
-    <!-- 登録中アカウントのクイック入力（お試し・現場サポート用） -->
-    <div class="mt-8 pt-6 border-t border-slate-100">
-      <p class="text-xs text-slate-400 font-medium mb-3 text-center">登録中のアカウント（タップで自動入力）</p>
-      <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
-        {% for u in users %}
-        <button type="button" onclick="fillCredentials('{{ u.username }}', '{{ 'admin123' if u.role == 'admin' else 'staff123' }}')"
-          class="text-left px-3 py-2 rounded-xl bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 transition group">
-          <div class="text-xs font-bold text-slate-700 group-hover:text-indigo-700 truncate">{{ u.full_name }}</div>
-          <div class="text-[10px] text-slate-400 font-mono">ID: {{ u.username }}</div>
+      <!-- STEP 2: 名前選択（ポジション選択後に表示） -->
+      <div id="step2" class="hidden">
+        <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">STEP 2 ― あなたの名前は？</p>
+        <div id="name-buttons" class="grid grid-cols-2 gap-2"></div>
+        <button onclick="resetToStep1()" class="mt-3 text-xs text-slate-400 hover:text-slate-600 flex items-center space-x-1">
+          <i data-lucide="arrow-left" class="w-3 h-3"></i>
+          <span>ポジションを選び直す</span>
         </button>
-        {% endfor %}
       </div>
+
+      <!-- STEP 3: パスワード入力（名前選択後に表示） -->
+      <div id="step3" class="hidden">
+        <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">STEP 3 ― パスワードを入力</p>
+
+        <!-- 選択内容の確認表示 -->
+        <div id="selection-badge" class="mb-3 px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 text-sm font-semibold text-slate-700 flex items-center justify-between">
+          <span id="selection-text"></span>
+          <button onclick="resetToStep2()" class="text-xs text-slate-400 hover:text-slate-600">
+            <i data-lucide="pencil" class="w-3 h-3"></i>
+          </button>
+        </div>
+
+        <div class="relative">
+          <input type="password" id="password-input"
+            placeholder="パスワード"
+            class="w-full px-4 py-3.5 rounded-2xl border-2 border-slate-100 focus:border-emerald-400 focus:outline-none text-sm font-medium transition pr-12"
+            onkeydown="if(event.key==='Enter') doLogin()">
+          <button onclick="togglePassword()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1">
+            <i data-lucide="eye" class="w-4 h-4" id="pw-eye"></i>
+          </button>
+        </div>
+
+        <div id="login-error" class="hidden mt-2 text-xs text-rose-600 bg-rose-50 border border-rose-100 px-3 py-2 rounded-xl"></div>
+
+        <button onclick="doLogin()" id="login-btn"
+          class="mt-4 w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-lg shadow-emerald-200 hover:shadow-xl transition flex items-center justify-center space-x-2 active:scale-[0.98]">
+          <i data-lucide="log-in" class="w-4 h-4"></i>
+          <span>ログインする</span>
+        </button>
+
+        <button onclick="resetToStep1()" class="mt-3 text-xs text-slate-400 hover:text-slate-600 flex items-center space-x-1">
+          <i data-lucide="arrow-left" class="w-3 h-3"></i>
+          <span>最初からやり直す</span>
+        </button>
+      </div>
+
     </div>
-    {% endif %}
+
+    <!-- カレンダーへのリンク -->
+    <div class="text-center mt-6">
+      <a href="/calendar" class="text-xs text-slate-400 hover:text-emerald-600 flex items-center justify-center space-x-1 transition">
+        <i data-lucide="calendar" class="w-3 h-3"></i>
+        <span>シフトカレンダーを見る（ログイン不要）</span>
+      </a>
+    </div>
+
   </div>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-  function fillCredentials(u, p) {
-    document.getElementById('username').value = u;
-    document.getElementById('password').value = p;
+  let selectedPosition = null;
+  let selectedUsername = null;
+  let selectedFullName = null;
+
+  const positionColors = {
+    PHARMACIST: { border: 'border-emerald-400', bg: 'bg-emerald-50', text: 'text-emerald-700', label: '薬剤師 💊' },
+    CLERK:      { border: 'border-blue-400',    bg: 'bg-blue-50',    text: 'text-blue-700',    label: '調剤事務 📋' },
+    ASSISTANT:  { border: 'border-rose-400',    bg: 'bg-rose-50',    text: 'text-rose-700',    label: '調剤補助 🌸' },
+  };
+
+  async function selectPosition(pos) {
+    selectedPosition = pos;
+
+    // ボタンをハイライト
+    document.querySelectorAll('.position-btn').forEach(btn => {
+      btn.classList.remove('border-emerald-400','bg-emerald-50','border-blue-400','bg-blue-50','border-rose-400','bg-rose-50');
+      btn.classList.add('border-slate-100');
+    });
+    const selected = document.querySelector(`[data-pos="${pos}"]`);
+    const c = positionColors[pos];
+    selected.classList.remove('border-slate-100');
+    selected.classList.add(c.border, c.bg);
+
+    // スタッフ一覧取得
+    const res = await fetch(`/api/auth/staff-list?position=${pos}`);
+    const staff = await res.json();
+
+    // STEP2表示
+    const nameButtons = document.getElementById('name-buttons');
+    nameButtons.innerHTML = '';
+    staff.forEach(s => {
+      const btn = document.createElement('button');
+      btn.className = `py-3 px-4 rounded-2xl border-2 border-slate-100 hover:${c.border} hover:${c.bg} transition font-bold text-slate-700 hover:${c.text} text-sm`;
+      btn.textContent = s.full_name;
+      btn.onclick = () => selectName(s.username, s.full_name);
+      nameButtons.appendChild(btn);
+    });
+
+    showStep('step2');
+    if (window.lucide) lucide.createIcons();
   }
 
-  async function handleLogin(e) {
-    e.preventDefault();
-    const btn = document.getElementById('login-btn');
-    const errBox = document.getElementById('error-message');
-    const u = document.getElementById('username').value.trim();
-    const p = document.getElementById('password').value;
+  function selectName(username, fullName) {
+    selectedUsername = username;
+    selectedFullName = fullName;
 
-    errBox.classList.add('hidden');
+    const c = positionColors[selectedPosition];
+    document.getElementById('selection-text').textContent =
+      `${c.label}　${fullName}`;
+
+    showStep('step3');
+    setTimeout(() => document.getElementById('password-input').focus(), 100);
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function resetToStep1() {
+    selectedPosition = null;
+    selectedUsername = null;
+    selectedFullName = null;
+    document.getElementById('password-input').value = '';
+    document.getElementById('login-error').classList.add('hidden');
+    showStep('step1');
+    document.querySelectorAll('.position-btn').forEach(btn => {
+      btn.classList.remove('border-emerald-400','bg-emerald-50','border-blue-400','bg-blue-50','border-rose-400','bg-rose-50');
+      btn.classList.add('border-slate-100');
+    });
+  }
+
+  function resetToStep2() {
+    document.getElementById('password-input').value = '';
+    document.getElementById('login-error').classList.add('hidden');
+    showStep('step2');
+  }
+
+  function showStep(stepId) {
+    ['step1','step2','step3'].forEach(id => {
+      document.getElementById(id).classList.toggle('hidden', id !== stepId);
+    });
+  }
+
+  function togglePassword() {
+    const input = document.getElementById('password-input');
+    const eye = document.getElementById('pw-eye');
+    if (input.type === 'password') {
+      input.type = 'text';
+      eye.setAttribute('data-lucide', 'eye-off');
+    } else {
+      input.type = 'password';
+      eye.setAttribute('data-lucide', 'eye');
+    }
+    if (window.lucide) lucide.createIcons();
+  }
+
+  async function doLogin() {
+    const pw = document.getElementById('password-input').value;
+    const btn = document.getElementById('login-btn');
+    const errBox = document.getElementById('login-error');
+
+    if (!pw) {
+      errBox.textContent = 'パスワードを入力してください';
+      errBox.classList.remove('hidden');
+      return;
+    }
+
     btn.disabled = true;
-    btn.classList.add('opacity-75');
+    btn.innerHTML = '<span class="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></span>確認中...';
+    errBox.classList.add('hidden');
 
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: u, password: p })
+        body: JSON.stringify({
+          position: selectedPosition,
+          username: selectedUsername,
+          password: pw,
+        })
       });
 
       const data = await res.json();
+
       if (!res.ok) {
         throw new Error(data.detail || 'ログインに失敗しました');
       }
 
-      showToast(`ようこそ、${data.full_name} さん！`);
+      showToast(`ようこそ、${data.full_name}さん！`);
       setTimeout(() => {
-        if (data.role === 'admin') {
-          window.location.href = '/admin';
-        } else {
-          window.location.href = '/';
-        }
-      }, 500);
+        window.location.href = data.is_admin ? '/admin' : '/me';
+      }, 600);
 
     } catch (err) {
       errBox.textContent = err.message;
       errBox.classList.remove('hidden');
-    } finally {
       btn.disabled = false;
-      btn.classList.remove('opacity-75');
+      btn.innerHTML = '<i data-lucide="log-in" class="w-4 h-4"></i><span>ログインする</span>';
+      if (window.lucide) lucide.createIcons();
     }
   }
 </script>

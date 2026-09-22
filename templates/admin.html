@@ -1,1071 +1,410 @@
 {% extends "base.html" %}
+{% block title %}管理者ダッシュボード - 薬局シフト勤怠{% endblock %}
 
-{% block title %}管理者ポータル - 薬局シフト勤怠・給与管理システム{% endblock %}
-
-{% block content %}
-<div class="space-y-6">
-
-  <!-- 印刷時専用ヘッダー（画面では非表示） -->
-  <div class="print-only mb-3 pb-2 border-b-2 border-slate-800 flex justify-between items-end">
-    <div>
-      <span class="text-xs font-semibold text-slate-500">ひまわり調剤薬局 貼り出し用シフト表</span>
-      <h1 class="text-xl font-black text-slate-900" id="print-sheet-title">----年--月度 勤務シフト表</h1>
-    </div>
-    <div class="text-[10px] text-slate-500 text-right">
-      作成: 管理者 / 印刷日: <span id="print-timestamp"></span>
-    </div>
-  </div>
-
-  <!-- ヘッダーバナー -->
-  <div class="bg-gradient-to-r from-purple-800 to-indigo-900 text-white rounded-3xl p-6 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 no-print">
-    <div class="space-y-1">
-      <div class="inline-flex items-center space-x-2 bg-purple-700/60 px-3 py-1 rounded-full text-xs font-semibold">
-        <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
-        <span>管理者統括ポータル</span>
-      </div>
-      <h2 class="text-2xl font-black tracking-tight">シフト・勤怠・給与統括</h2>
-      <p class="text-xs text-purple-200">リアルタイム勤怠状況、高度シフト編成、希望休審査、CSV出力</p>
-    </div>
-
-    <!-- 右上クイック情報 -->
-    <div class="flex flex-wrap items-center gap-2">
-      <!-- スタッフ新規追加ボタン -->
-      <button onclick="switchMainTab('staff'); openAddStaffModal()"
-        class="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold px-3 py-2 rounded-xl transition flex items-center space-x-1.5 shadow-xs">
-        <i data-lucide="user-plus" class="w-4 h-4"></i>
-        <span>＋ スタッフ追加</span>
-      </button>
-
-      <!-- 全データZIPバックアップ -->
-      <a href="/api/admin/backup/export" download
-        class="bg-purple-700/70 hover:bg-purple-700 text-white text-xs font-bold px-3 py-2 rounded-xl transition flex items-center space-x-1.5 shadow-xs border border-white/20" title="全データ（スタッフ・シフト・打刻・申請）をZIPで一括保存">
-        <i data-lucide="archive" class="w-4 h-4"></i>
-        <span>全保存(ZIP)</span>
-      </a>
-
-      <!-- 管理者パスワード変更ボタン -->
-      <button onclick="openAdminPasswordModal()"
-        class="bg-purple-700/70 hover:bg-purple-700 text-white text-xs font-bold px-3 py-2 rounded-xl transition flex items-center space-x-1.5 shadow-xs border border-white/20" title="管理者（三宅様）のログインパスワードを変更">
-        <i data-lucide="key-round" class="w-4 h-4"></i>
-        <span>PW変更</span>
-      </button>
-
-      <!-- CSVダウンロードUI -->
-      <div class="bg-white/10 backdrop-blur-xs p-1.5 rounded-2xl border border-white/10 flex items-center space-x-1.5">
-        <input type="month" id="csv-target-month"
-          class="bg-white text-slate-800 text-xs px-2 py-1 rounded-xl font-medium focus:outline-none">
-        <button onclick="downloadCsv()"
-          class="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold px-2.5 py-1 rounded-xl shadow-xs transition flex items-center space-x-1" title="勤怠・給与CSV">
-          <i data-lucide="download" class="w-4 h-4"></i>
-          <span>CSV</span>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 3大導線 ナビゲーションバー (フェーズ3: 最も迷わないUI/UX整理) -->
-  <div class="bg-white rounded-2xl p-2 shadow-xs border border-slate-200 no-print">
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-      <!-- 導線①: シフトを作る -->
-      <button id="nav-tab-shift" onclick="switchMainTab('shift')"
-        class="flex items-center justify-center space-x-2.5 py-3 px-4 rounded-xl text-sm font-extrabold transition-all duration-200 bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-600/20">
-        <i data-lucide="calendar" class="w-5 h-5"></i>
-        <span>① シフトを作る</span>
-      </button>
-
-      <!-- 導線②: 出勤を確認する -->
-      <button id="nav-tab-attendance" onclick="switchMainTab('attendance')"
-        class="flex items-center justify-center space-x-2.5 py-3 px-4 rounded-xl text-sm font-extrabold transition-all duration-200 bg-slate-100 hover:bg-slate-200 text-slate-700">
-        <i data-lucide="clock" class="w-5 h-5"></i>
-        <span>② 出勤を確認する</span>
-        <span id="nav-pending-badge" class="hidden ml-1 px-2 py-0.5 text-xs rounded-full bg-rose-500 text-white font-bold">0</span>
-      </button>
-
-      <!-- 導線③: スタッフを設定する -->
-      <button id="nav-tab-staff" onclick="switchMainTab('staff')"
-        class="flex items-center justify-center space-x-2.5 py-3 px-4 rounded-xl text-sm font-extrabold transition-all duration-200 bg-slate-100 hover:bg-slate-200 text-slate-700">
-        <i data-lucide="users" class="w-5 h-5"></i>
-        <span>③ スタッフを設定する</span>
-      </button>
-    </div>
-  </div>
-
-  <!-- 法定有給休暇 年5日取得義務アラートバナー (フェーズ4: 堅牢化・法改正対応) -->
-  <div id="compliance-alert-banner" class="hidden bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl p-4 no-print flex items-start justify-between gap-3 shadow-xs">
-    <div class="flex items-start space-x-3">
-      <div class="w-9 h-9 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center flex-shrink-0 mt-0.5">
-        <i data-lucide="scale" class="w-5 h-5"></i>
-      </div>
-      <div class="space-y-1">
-        <div class="flex items-center space-x-2">
-          <h4 class="font-extrabold text-sm text-rose-900">労働基準法「年5日有休取得義務」注意アラート</h4>
-          <span id="compliance-alert-count" class="text-[11px] font-black px-2 py-0.5 rounded-full bg-rose-200 text-rose-900">要対応: 0名</span>
-        </div>
-        <p class="text-xs text-rose-700">
-          年10日以上の有給休暇が付与されているスタッフで、今年度の消化ペースが未達（3日未満）のスタッフがいます。計画的な取得を推奨してください。
-        </p>
-        <div id="compliance-alert-staff-list" class="flex flex-wrap gap-2 pt-1 text-xs font-semibold">
-          <!-- JSで未達スタッフ名を挿入 -->
-        </div>
-      </div>
-    </div>
-    <button onclick="document.getElementById('compliance-alert-banner').classList.add('hidden')" class="text-rose-400 hover:text-rose-600 p-1 rounded-lg" title="閉じる">
-      <i data-lucide="x" class="w-4 h-4"></i>
-    </button>
-  </div>
-
-  <!-- ================================================================= -->
-  <!-- 導線①: 【シフトを作る】セクション -->
-  <!-- ================================================================= -->
-  <div id="section-shift" class="space-y-6">
-
-    <!-- 人員バランス・偏り警告バナー（フェーズ2） -->
-    <div id="balance-alert-banner" class="hidden rounded-3xl p-4 sm:p-5 transition-all no-print border">
-      <div class="flex items-start justify-between gap-3">
-        <div class="flex items-start space-x-3">
-          <div id="balance-alert-icon-box" class="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 mt-0.5">
-            <i id="balance-alert-icon" data-lucide="alert-triangle" class="w-5 h-5"></i>
-          </div>
-          <div class="space-y-1">
-            <div class="flex items-center space-x-2">
-              <h4 id="balance-alert-title" class="font-extrabold text-sm sm:text-base tracking-tight">人員配置バランス判定</h4>
-              <span id="balance-alert-badge" class="text-[11px] font-black px-2.5 py-0.5 rounded-full">--</span>
-            </div>
-            <p id="balance-alert-desc" class="text-xs">
-              当月の全出勤シフトから、薬剤師不在日やワンオペ・人手不足の偏りを自動検知しています。
-            </p>
-            <div id="balance-alert-details" class="flex flex-wrap gap-2 pt-1 text-xs font-semibold">
-              <!-- JSで警告日のタグを挿入 -->
-            </div>
-          </div>
-        </div>
-        <button onclick="dismissBalanceAlert()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg flex-shrink-0" title="閉じる">
-          <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
-      </div>
-    </div>
-
-    <!-- 月間シフト管理・カレンダー編成カード -->
-    <div class="bg-white rounded-3xl p-6 shadow-xs border border-slate-100 print:border-none print:shadow-none print:p-0">
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 no-print">
-        <div class="flex items-center space-x-2.5">
-          <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-            <i data-lucide="calendar-range" class="w-5 h-5"></i>
-          </div>
-          <div>
-            <h3 class="font-bold text-slate-900">月間シフトカレンダー編成</h3>
-            <p class="text-xs text-slate-500">全スタッフのシフト（マス目クリックで即時登録・人員状況表示）</p>
-          </div>
-        </div>
-
-        <div class="flex flex-wrap items-center gap-2">
-          <!-- スタッフ絞り込みフィルター -->
-          <select id="admin-staff-filter" onchange="loadAdminShifts()"
-            class="bg-slate-50 border border-slate-200 text-xs rounded-xl px-3 py-1.5 font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none text-slate-700">
-            <option value="ALL">全スタッフ表示</option>
-          </select>
-
-          <!-- 表示切り替えタブ -->
-          <div class="inline-flex bg-slate-100 p-1 rounded-xl text-xs font-semibold text-slate-600">
-            <button id="admin-tab-calendar" onclick="switchAdminView('calendar')"
-              class="px-3 py-1.5 rounded-lg bg-white text-indigo-700 shadow-xs flex items-center space-x-1 transition">
-              <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
-              <span>カレンダー</span>
-            </button>
-            <button id="admin-tab-list" onclick="switchAdminView('list')"
-              class="px-3 py-1.5 rounded-lg hover:text-slate-900 flex items-center space-x-1 transition">
-              <i data-lucide="list" class="w-3.5 h-3.5"></i>
-              <span>一覧</span>
-            </button>
-          </div>
-
-          <!-- 月送り -->
-          <div class="flex items-center space-x-1 bg-slate-50 p-1 rounded-xl border border-slate-200">
-            <button onclick="changeAdminMonth(-1)" class="p-1.5 rounded-lg hover:bg-slate-200 text-slate-700 transition" title="前月">
-              <i data-lucide="chevron-left" class="w-4 h-4"></i>
-            </button>
-            <span id="admin-calendar-title" class="text-xs font-bold text-slate-800 min-w-[80px] text-center">----年--月</span>
-            <button onclick="changeAdminMonth(1)" class="p-1.5 rounded-lg hover:bg-slate-200 text-slate-700 transition" title="翌月">
-              <i data-lucide="chevron-right" class="w-4 h-4"></i>
-            </button>
-            <button onclick="resetAdminToCurrentMonth()" class="text-[11px] font-bold text-indigo-700 hover:bg-indigo-50 px-2 py-1 rounded-lg transition border border-indigo-200">今月</button>
-          </div>
-
-          <!-- 一括自動生成ボタン -->
-          <button onclick="openAutoGenerateModal()" class="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-xs transition flex items-center space-x-1">
-            <i data-lucide="sparkles" class="w-4 h-4"></i>
-            <span>✨ 一括自動生成</span>
-          </button>
-
-          <!-- 印刷ボタン -->
-          <button onclick="printShiftTable()" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-xs transition flex items-center space-x-1">
-            <i data-lucide="printer" class="w-4 h-4"></i>
-            <span>🖨️ A4横印刷</span>
-          </button>
-
-          <!-- LINE・連絡用テキスト共有ボタン (フェーズ4) -->
-          <button onclick="openShareTextModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-xs transition flex items-center space-x-1" title="スタッフへのシフト連絡・LINE共有テキストを生成">
-            <i data-lucide="message-circle" class="w-4 h-4"></i>
-            <span>💬 LINE共有</span>
-          </button>
-
-          <button onclick="openAddShiftModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-2 rounded-xl shadow-xs transition flex items-center space-x-1">
-            <i data-lucide="plus" class="w-4 h-4"></i>
-            <span>シフト追加</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- A. 管理者用 月間グリッドカレンダー（メイン表示） -->
-      <div id="admin-calendar-grid-view" class="space-y-1">
-        <!-- 7曜日ヘッダー -->
-        <div class="grid grid-cols-7 gap-1 text-center text-xs font-bold py-2 border-b border-slate-100">
-          <div class="text-rose-500">日</div>
-          <div class="text-slate-600">月</div>
-          <div class="text-slate-600">火</div>
-          <div class="text-slate-600">水</div>
-          <div class="text-slate-600">木</div>
-          <div class="text-slate-600">金</div>
-          <div class="text-blue-500">土</div>
-        </div>
-        <!-- マス目グリッド（動的生成） -->
-        <div id="admin-calendar-grid-cells" class="grid grid-cols-7 gap-1 sm:gap-1.5 pt-1">
-          <!-- JSでセル生成 -->
-        </div>
-      </div>
-
-      <!-- B. 管理者用 リスト表示（補助） -->
-      <div id="admin-calendar-list-view" class="hidden overflow-x-auto rounded-2xl border border-slate-100 mt-2">
-        <table class="w-full text-left text-xs text-slate-600">
-          <thead class="bg-slate-50 text-slate-700 uppercase font-semibold border-b border-slate-100">
-            <tr>
-              <th class="py-3 px-4">日付</th>
-              <th class="py-3 px-4">スタッフ名</th>
-              <th class="py-3 px-4">区分</th>
-              <th class="py-3 px-4">時間帯</th>
-              <th class="py-3 px-4">休憩</th>
-              <th class="py-3 px-4">備考</th>
-              <th class="py-3 px-4 text-center">操作</th>
-            </tr>
-          </thead>
-          <tbody id="shifts-tbody" class="divide-y divide-slate-100">
-            <tr>
-              <td colspan="7" class="py-6 text-center text-slate-400">読込中...</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- 休み希望（有休・希望休）審査パネル（シフト編成の直下に配置） -->
-    <div class="bg-white rounded-3xl p-6 shadow-xs border border-slate-100 no-print">
-      <div class="flex items-center justify-between mb-4">
-        <div class="flex items-center space-x-2.5">
-          <div class="w-9 h-9 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
-            <i data-lucide="palmtree" class="w-5 h-5"></i>
-          </div>
-          <div>
-            <h3 class="font-bold text-slate-900">従業員のシフト希望（休み希望）審査</h3>
-            <p class="text-xs text-slate-500">スタッフからの希望休・有給休暇申請の承認（承認すると一括生成に自動反映されます）</p>
-          </div>
-        </div>
-        <span id="shift-requests-pending-badge" class="px-2.5 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-800">
-          審査待ち: 0件
-        </span>
-      </div>
-
-      <div class="overflow-x-auto rounded-2xl border border-slate-100">
-        <table class="w-full text-left text-xs text-slate-600">
-          <thead class="bg-slate-50 text-slate-700 uppercase font-semibold border-b border-slate-100">
-            <tr>
-              <th class="py-3 px-4">申請スタッフ</th>
-              <th class="py-3 px-4">希望日</th>
-              <th class="py-3 px-4">区分</th>
-              <th class="py-3 px-4">申請理由</th>
-              <th class="py-3 px-4 text-center">状態</th>
-              <th class="py-3 px-4 text-center">審査操作</th>
-            </tr>
-          </thead>
-          <tbody id="shift-requests-tbody" class="divide-y divide-slate-100">
-            <tr>
-              <td colspan="6" class="py-6 text-center text-slate-400">読込中...</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- ================================================================= -->
-  <!-- 導線②: 【出勤を確認する】セクション -->
-  <!-- ================================================================= -->
-  <div id="section-attendance" class="space-y-6 hidden">
-
-    <!-- 管理薬剤師（管理者）本日打刻カード -->
-    <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-100 no-print">
-      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div class="flex items-center space-x-3">
-          <div class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
-            <i data-lucide="clock" class="w-5 h-5"></i>
-          </div>
-          <div>
-            <div class="flex items-center space-x-2">
-              <h3 class="font-bold text-slate-900">{{ user.full_name }} 様（管理薬剤師打刻）</h3>
-              <span id="admin-clock-status-badge" class="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">
-                <span class="w-2 h-2 rounded-full bg-slate-400"></span>
-                <span id="admin-clock-status-text">確認中...</span>
-              </span>
-            </div>
-            <p class="text-xs text-slate-500">
-              本日: <span id="admin-today-clock-display" class="font-mono text-slate-700">出勤: 未 / 退勤: 未</span>
-            </p>
-          </div>
-        </div>
-
-        <!-- 打刻ボタン群 -->
-        <div class="grid grid-cols-2 sm:flex sm:items-center gap-2">
-          <button id="btn-admin-clock-in" onclick="clockAdminAction('IN')"
-            class="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-3.5 py-2 rounded-xl text-xs shadow-xs transition flex items-center justify-center space-x-1.5">
-            <i data-lucide="log-in" class="w-4 h-4"></i>
-            <span>出勤</span>
-          </button>
-          <button id="btn-admin-break-start" onclick="clockAdminAction('BREAK_START')"
-            class="bg-amber-500 hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-3.5 py-2 rounded-xl text-xs shadow-xs transition flex items-center justify-center space-x-1.5">
-            <i data-lucide="coffee" class="w-4 h-4"></i>
-            <span>休憩入</span>
-          </button>
-          <button id="btn-admin-break-end" onclick="clockAdminAction('BREAK_END')"
-            class="bg-amber-600 hover:bg-amber-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-3.5 py-2 rounded-xl text-xs shadow-xs transition flex items-center justify-center space-x-1.5">
-            <i data-lucide="play" class="w-4 h-4"></i>
-            <span>休憩戻</span>
-          </button>
-          <button id="btn-admin-clock-out" onclick="clockAdminAction('OUT')"
-            class="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-3.5 py-2 rounded-xl text-xs shadow-xs transition flex items-center justify-center space-x-1.5">
-            <i data-lucide="log-out" class="w-4 h-4"></i>
-            <span>退勤</span>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 当日の出勤モニタリングテーブル -->
-    <div class="bg-white rounded-3xl p-6 shadow-xs border border-slate-100 no-print">
-      <div class="flex items-center justify-between mb-4">
-        <div class="flex items-center space-x-2.5">
-          <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-            <i data-lucide="activity" class="w-5 h-5"></i>
-          </div>
-          <div>
-            <h3 class="font-bold text-slate-900">当日の出勤モニタリング</h3>
-            <p class="text-xs text-slate-500" id="today-monitor-date">本日のリアルタイム稼働状況</p>
-          </div>
-        </div>
-        <button onclick="loadAttendanceSummary()" class="text-xs font-medium text-slate-500 hover:text-emerald-600 p-2 rounded-xl hover:bg-slate-50 transition flex items-center space-x-1">
-          <i data-lucide="rotate-cw" class="w-4 h-4"></i>
-          <span>更新</span>
-        </button>
-      </div>
-
-      <div class="overflow-x-auto rounded-2xl border border-slate-100">
-        <table class="w-full text-left text-xs text-slate-600">
-          <thead class="bg-slate-50 text-slate-700 uppercase font-semibold border-b border-slate-100">
-            <tr>
-              <th class="py-3 px-4">スタッフ名</th>
-              <th class="py-3 px-4">予定シフト</th>
-              <th class="py-3 px-4">現在の状況</th>
-              <th class="py-3 px-4">出勤打刻</th>
-              <th class="py-3 px-4">退勤打刻</th>
-              <th class="py-3 px-4">実労働時間</th>
-              <th class="py-3 px-4">アラート・特記</th>
-            </tr>
-          </thead>
-          <tbody id="attendance-summary-tbody" class="divide-y divide-slate-100">
-            <tr>
-              <td colspan="7" class="py-6 text-center text-slate-400">読込中...</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- 打刻修正申請の審査パネル -->
-    <div class="bg-white rounded-3xl p-6 shadow-xs border border-slate-100 no-print">
-      <div class="flex items-center justify-between mb-4">
-        <div class="flex items-center space-x-2.5">
-          <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-            <i data-lucide="inbox" class="w-5 h-5"></i>
-          </div>
-          <div>
-            <h3 class="font-bold text-slate-900">打刻修正申請の審査</h3>
-            <p class="text-xs text-slate-500">スタッフからの打刻漏れ・修正依頼</p>
-          </div>
-        </div>
-        <span id="pending-count-badge" class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">
-          保留中: 0件
-        </span>
-      </div>
-
-      <div class="overflow-x-auto rounded-2xl border border-slate-100">
-        <table class="w-full text-left text-xs text-slate-600">
-          <thead class="bg-slate-50 text-slate-700 uppercase font-semibold border-b border-slate-100">
-            <tr>
-              <th class="py-3 px-4">申請者</th>
-              <th class="py-3 px-4">対象日</th>
-              <th class="py-3 px-4">希望出退勤</th>
-              <th class="py-3 px-4">休憩</th>
-              <th class="py-3 px-4">申請理由</th>
-              <th class="py-3 px-4 text-center">状態</th>
-              <th class="py-3 px-4 text-center">審査操作</th>
-            </tr>
-          </thead>
-          <tbody id="correction-requests-tbody" class="divide-y divide-slate-100">
-            <tr>
-              <td colspan="7" class="py-6 text-center text-slate-400">読込中...</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- 月次勤怠集計 ＆ 給与計算パネル -->
-    <div class="bg-white rounded-3xl p-6 shadow-xs border border-slate-100 no-print">
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div class="flex items-center space-x-2.5">
-          <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-            <i data-lucide="calculator" class="w-5 h-5"></i>
-          </div>
-          <div>
-            <h3 class="font-bold text-slate-900">月次勤怠集計 ＆ 給与計算</h3>
-            <p class="text-xs text-slate-500">毎月の実労働時間・有休手当・概算支給額の集計</p>
-          </div>
-        </div>
-
-        <div class="flex flex-wrap items-center gap-2">
-          <!-- 年月セレクタ -->
-          <div class="flex items-center space-x-1 bg-slate-50 p-1 rounded-xl border border-slate-200">
-            <button onclick="changePayrollMonth(-1)" class="p-1.5 rounded-lg hover:bg-slate-200 text-slate-700 transition" title="前月">
-              <i data-lucide="chevron-left" class="w-4 h-4"></i>
-            </button>
-            <input type="month" id="payroll-target-month" onchange="loadMonthlyPayroll()"
-              class="bg-transparent text-xs font-bold text-slate-800 focus:outline-none px-2 py-0.5">
-            <button onclick="changePayrollMonth(1)" class="p-1.5 rounded-lg hover:bg-slate-200 text-slate-700 transition" title="翌月">
-              <i data-lucide="chevron-right" class="w-4 h-4"></i>
-            </button>
-          </div>
-
-          <!-- 勤怠手動入力ボタン -->
-          <button onclick="openTimeRecordModal()"
-            class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-3 py-2 rounded-xl transition flex items-center space-x-1.5 shadow-xs">
-            <i data-lucide="edit-3" class="w-4 h-4 text-slate-600"></i>
-            <span>勤怠実績を手動修正</span>
-          </button>
-
-          <!-- CSVダウンロードボタン -->
-          <button onclick="downloadPayrollCsv()"
-            class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5 shadow-xs">
-            <i data-lucide="download" class="w-4 h-4"></i>
-            <span>給与CSVダウンロード</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- 給与サマリーカード -->
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div class="bg-emerald-50/60 border border-emerald-100 p-4 rounded-2xl flex items-center justify-between">
-          <div>
-            <span class="text-xs font-bold text-emerald-800">当月 総支給概算額</span>
-            <div id="payroll-total-payout" class="text-xl sm:text-2xl font-black text-emerald-700 mt-0.5">¥0</div>
-          </div>
-          <div class="w-10 h-10 rounded-xl bg-emerald-100/70 text-emerald-700 flex items-center justify-center">
-            <i data-lucide="banknote" class="w-5 h-5"></i>
-          </div>
-        </div>
-
-        <div class="bg-indigo-50/60 border border-indigo-100 p-4 rounded-2xl flex items-center justify-between">
-          <div>
-            <span class="text-xs font-bold text-indigo-800">全スタッフ 総実労働時間</span>
-            <div id="payroll-total-hours" class="text-xl sm:text-2xl font-black text-indigo-700 mt-0.5">0.0時間</div>
-          </div>
-          <div class="w-10 h-10 rounded-xl bg-indigo-100/70 text-indigo-700 flex items-center justify-center">
-            <i data-lucide="timer" class="w-5 h-5"></i>
-          </div>
-        </div>
-
-        <div class="bg-amber-50/60 border border-amber-100 p-4 rounded-2xl flex items-center justify-between">
-          <div>
-            <span class="text-xs font-bold text-amber-800">集計対象スタッフ</span>
-            <div id="payroll-total-staff" class="text-xl sm:text-2xl font-black text-amber-700 mt-0.5">0名</div>
-          </div>
-          <div class="w-10 h-10 rounded-xl bg-amber-100/70 text-amber-700 flex items-center justify-center">
-            <i data-lucide="users" class="w-5 h-5"></i>
-          </div>
-        </div>
-      </div>
-
-      <!-- 給与集計明細テーブル -->
-      <div class="overflow-x-auto rounded-2xl border border-slate-100">
-        <table class="w-full text-left text-xs text-slate-600">
-          <thead class="bg-slate-50 text-slate-700 uppercase font-semibold border-b border-slate-100">
-            <tr>
-              <th class="py-3 px-4">スタッフ氏名</th>
-              <th class="py-3 px-4">給与形態</th>
-              <th class="py-3 px-4">実働 / 予定</th>
-              <th class="py-3 px-4">総実労働時間</th>
-              <th class="py-3 px-4">有休消化</th>
-              <th class="py-3 px-4">有休手当</th>
-              <th class="py-3 px-4 font-bold text-slate-900">概算支給額</th>
-              <th class="py-3 px-4 text-center">操作</th>
-            </tr>
-          </thead>
-          <tbody id="payroll-tbody" class="divide-y divide-slate-100">
-            <tr>
-              <td colspan="8" class="py-6 text-center text-slate-400">読込中...</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- ================================================================= -->
-  <!-- 導線③: 【スタッフを設定する】セクション -->
-  <!-- ================================================================= -->
-  <div id="section-staff" class="space-y-6 hidden">
-    <div class="bg-white rounded-3xl p-6 shadow-xs border border-slate-100">
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div class="flex items-center space-x-2.5">
-          <div class="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
-            <i data-lucide="users" class="w-5 h-5"></i>
-          </div>
-          <div>
-            <h3 class="font-bold text-slate-900">スタッフ・雇用条件の一覧と管理</h3>
-            <p class="text-xs text-slate-500">固定出勤曜日、標準時間、時給・月給、カレンダーカラーの管理</p>
-          </div>
-        </div>
-
-        <div class="flex items-center space-x-2 self-start sm:self-auto">
-          <button onclick="handleResetAllStaffAndShifts()"
-            class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold px-3.5 py-2.5 rounded-xl transition flex items-center space-x-1.5"
-            title="三宅様以外の全スタッフ・シフト・打刻を一括削除して初期化します">
-            <i data-lucide="trash-2" class="w-4 h-4 text-rose-500"></i>
-            <span>全データ初期化(リセット)</span>
-          </button>
-          <button onclick="openAddStaffModal()"
-            class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs transition flex items-center space-x-1.5">
-            <i data-lucide="user-plus" class="w-4 h-4"></i>
-            <span>＋ 新しいスタッフを追加</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- スタッフカード一覧グリッド -->
-      <div id="staff-management-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <!-- JSでスタッフカードを動的生成 -->
-        <div class="col-span-full py-8 text-center text-slate-400">読込中...</div>
-      </div>
-    </div>
-  </div>
-
-</div>
-
-<!-- シフト作成・編集モーダル -->
-<div id="shift-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 hidden">
-  <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
-    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-      <h3 class="font-bold text-slate-900">シフト登録・編集</h3>
-      <button onclick="closeAddShiftModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
-        <i data-lucide="x" class="w-5 h-5"></i>
-      </button>
-    </div>
-
-    <form id="shift-form" onsubmit="handleShiftSubmit(event)" class="space-y-3">
-      <div>
-        <label class="block text-xs font-semibold text-slate-700 mb-1">対象スタッフ</label>
-        <select id="shift-user-select" required
-          class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-        </select>
-      </div>
-      <div>
-        <label class="block text-xs font-semibold text-slate-700 mb-1">日付</label>
-        <input type="date" id="shift-date" required
-          class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-      </div>
-      <div>
-        <label class="block text-xs font-semibold text-slate-700 mb-1">区分</label>
-        <select id="shift-type" onchange="toggleShiftTypeFields()"
-          class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-          <option value="NORMAL">通常勤務</option>
-          <option value="PAID_LEAVE">有給休暇 (年休)</option>
-          <option value="HOLIDAY">公休</option>
-        </select>
-      </div>
-      <div id="shift-time-group" class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">開始予定時刻</label>
-          <input type="time" id="shift-start-time" value="09:00"
-            class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+{% block body %}
+<div class="min-h-screen bg-slate-50 text-slate-900 pb-12">
+  <!-- ヘッダー -->
+  <header class="bg-white border-b border-slate-100 sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold">
+          <i data-lucide="shield" class="w-4 h-4"></i>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">終了予定時刻</label>
-          <input type="time" id="shift-end-time" value="18:00"
-            class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+          <div class="font-black text-slate-900 text-sm">管理者ダッシュボード</div>
+          <div class="text-[11px] text-slate-400">管理者ポータル</div>
         </div>
       </div>
-      <div id="shift-break-group">
-        <label class="block text-xs font-semibold text-slate-700 mb-1">休憩時間 (分)</label>
-        <input type="number" id="shift-break-minutes" value="60" min="0" step="5"
-          class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-      </div>
-      <div>
-        <label class="block text-xs font-semibold text-slate-700 mb-1">備考</label>
-        <input type="text" id="shift-note" placeholder="例: 早番、有休取得"
-          class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-      </div>
-
-      <div class="pt-2 flex items-center justify-end space-x-2">
-        <button type="button" onclick="closeAddShiftModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100">キャンセル</button>
-        <button type="submit" class="px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm">保存する</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- 雇用条件設定モーダル -->
-<div id="condition-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 hidden no-print">
-  <div class="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
       <div class="flex items-center space-x-2">
-        <span class="text-xl">👥</span>
-        <div>
-          <h3 class="font-bold text-slate-900">雇用条件・固定ルール設定</h3>
-          <p class="text-xs text-slate-500">固定勤務曜日・標準時間・スタッフカラーの管理</p>
-        </div>
-      </div>
-      <button onclick="closeConditionModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
-        <i data-lucide="x" class="w-5 h-5"></i>
-      </button>
-    </div>
-
-    <form id="condition-form" onsubmit="handleConditionSubmit(event)" class="space-y-4">
-      <div>
-        <label class="block text-xs font-semibold text-slate-700 mb-1">対象スタッフ</label>
-        <select id="condition-user-select" onchange="onConditionUserChange()" required
-          class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none">
-        </select>
-      </div>
-
-      <div>
-        <label class="block text-xs font-semibold text-slate-700 mb-1">スタッフ氏名（表示名）</label>
-        <input type="text" id="cond-full-name" required
-          class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none"
-          placeholder="例: 佐藤 健（薬剤師）">
-      </div>
-
-      <!-- パスワード変更・再設定 -->
-      <div class="bg-amber-50/80 border border-amber-200 rounded-2xl p-3.5 space-y-1.5">
-        <div class="flex items-center space-x-2 text-amber-900 font-bold text-xs">
-          <i data-lucide="key" class="w-4 h-4 text-amber-600"></i>
-          <span>ログインパスワード変更・再設定</span>
-        </div>
-        <p class="text-[11px] text-amber-700">
-          パスワードを変更・再設定する場合は入力してください（変更しない場合は空欄のまま）。
-        </p>
-        <div class="flex items-center space-x-2 pt-0.5">
-          <input type="text" id="cond-password"
-            class="flex-1 px-3 py-2 rounded-xl border border-amber-300 bg-white text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none font-mono"
-            placeholder="新しいパスワード（空欄時は変更なし）">
-          <button type="button" onclick="generateRandomPassword('cond-password')"
-            class="px-3 py-2 rounded-xl bg-amber-200 hover:bg-amber-300 text-amber-900 font-bold text-xs transition whitespace-nowrap">
-            🎲 自動生成
-          </button>
-        </div>
-      </div>
-
-      <!-- 曜日ごとの勤務時間・休憩設定 -->
-      <div class="space-y-1.5">
-        <div class="flex items-center justify-between">
-          <label class="block text-xs font-bold text-slate-700">曜日ごとの勤務時間・休憩設定</label>
-          <span class="text-[11px] text-slate-400">木曜・土曜の半日なども個別に設定可能</span>
-        </div>
-        <div class="border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
-          <table class="w-full text-left text-xs">
-            <thead class="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
-              <tr>
-                <th class="py-2 px-3 text-center w-14">曜日</th>
-                <th class="py-2 px-2 text-center w-16">出勤</th>
-                <th class="py-2 px-2">勤務開始</th>
-                <th class="py-2 px-2">勤務終了</th>
-                <th class="py-2 px-2 w-20">休憩(分)</th>
-              </tr>
-            </thead>
-            <tbody id="cond-weekday-tbody" class="divide-y divide-slate-100 bg-white">
-              <!-- JSで月〜日（0〜6）の7行を描画 -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">給与形態</label>
-          <select id="cond-wage-type" onchange="onCondWageTypeChange()"
-            class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none">
-            <option value="HOURLY">時給制</option>
-            <option value="MONTHLY">固定月給制</option>
-          </select>
-        </div>
-        <div id="cond-hourly-wage-container">
-          <label class="block text-xs font-semibold text-slate-700 mb-1">設定時給 (円)</label>
-          <input type="number" id="cond-hourly-wage" value="1500" min="0" step="10"
-            class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none"
-            placeholder="例: 1500">
-        </div>
-        <div id="cond-monthly-salary-container" class="hidden">
-          <label class="block text-xs font-semibold text-slate-700 mb-1">設定月給 (円)</label>
-          <input type="number" id="cond-monthly-salary" value="300000" min="0" step="1000"
-            class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none"
-            placeholder="例: 300000">
-        </div>
-      </div>
-
-      <!-- スタッフ固定カラー選択 -->
-      <div>
-        <label class="block text-xs font-semibold text-slate-700 mb-1">スタッフ表示色（カレンダー固定カラー）</label>
-        <div class="flex items-center space-x-3">
-          <input type="color" id="cond-color-picker" value="#059669"
-            class="w-10 h-10 rounded-xl cursor-pointer border border-slate-200 p-0.5">
-          <div class="flex flex-wrap gap-2" id="preset-colors">
-            <button type="button" onclick="setPresetColor('#059669')" class="w-7 h-7 rounded-lg bg-[#059669] border border-white shadow-xs" title="エメラルド"></button>
-            <button type="button" onclick="setPresetColor('#7c3aed')" class="w-7 h-7 rounded-lg bg-[#7c3aed] border border-white shadow-xs" title="パープル"></button>
-            <button type="button" onclick="setPresetColor('#4f46e5')" class="w-7 h-7 rounded-lg bg-[#4f46e5] border border-white shadow-xs" title="インディゴ"></button>
-            <button type="button" onclick="setPresetColor('#d97706')" class="w-7 h-7 rounded-lg bg-[#d97706] border border-white shadow-xs" title="アンバー"></button>
-            <button type="button" onclick="setPresetColor('#e11d48')" class="w-7 h-7 rounded-lg bg-[#e11d48] border border-white shadow-xs" title="ローズ"></button>
-            <button type="button" onclick="setPresetColor('#0d9488')" class="w-7 h-7 rounded-lg bg-[#0d9488] border border-white shadow-xs" title="ティール"></button>
-            <button type="button" onclick="setPresetColor('#0284c7')" class="w-7 h-7 rounded-lg bg-[#0284c7] border border-white shadow-xs" title="スカイ"></button>
-          </div>
-        </div>
-      </div>
-
-      <div class="pt-2 flex items-center justify-between">
-        <button type="button" id="cond-delete-staff-btn" onclick="handleDeleteStaff()"
-          class="px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 border border-rose-200 transition flex items-center space-x-1">
-          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-          <span>このスタッフを削除（退職）</span>
-        </button>
-        <div class="flex items-center space-x-2">
-          <button type="button" onclick="closeConditionModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100">キャンセル</button>
-          <button type="submit" class="px-4 py-2 rounded-xl text-xs font-semibold bg-purple-600 hover:bg-purple-700 text-white shadow-sm">条件・名前を保存</button>
-        </div>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- 新規スタッフ追加モーダル -->
-<div id="add-staff-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 hidden no-print">
-  <div class="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-      <div class="flex items-center space-x-2">
-        <span class="text-xl">👤＋</span>
-        <div>
-          <h3 class="font-bold text-slate-900">新しいスタッフの登録</h3>
-          <p class="text-xs text-slate-500">新しい従業員のアカウントを作成します</p>
-        </div>
-      </div>
-      <button onclick="closeAddStaffModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
-        <i data-lucide="x" class="w-5 h-5"></i>
-      </button>
-    </div>
-
-    <form id="add-staff-form" onsubmit="handleAddStaffSubmit(event)" class="space-y-3">
-      <div>
-        <label class="block text-xs font-semibold text-slate-700 mb-1">お名前（表示名） <span class="text-rose-500">*</span></label>
-        <input type="text" id="new-full-name" required
-          class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-          placeholder="例: 山田 花子（パート薬剤師）">
-      </div>
-
-      <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">ログインID <span class="text-rose-500">*</span></label>
-          <input type="text" id="new-username" required
-            class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-            placeholder="例: yamada">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">初期パスワード <span class="text-rose-500">*</span></label>
-          <input type="text" id="new-password" value="staff123" required
-            class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-            placeholder="例: staff123">
-        </div>
-      </div>
-
-      <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">時給 (円)</label>
-          <input type="number" id="new-hourly-wage" value="2000" min="0" step="10"
-            class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">スタッフ表示色</label>
-          <input type="color" id="new-color-picker" value="#059669"
-            class="w-full h-9 rounded-xl cursor-pointer border border-slate-200 p-0.5">
-        </div>
-      </div>
-
-      <!-- 曜日ごとの勤務時間・休憩設定 -->
-      <div class="space-y-1.5">
-        <div class="flex items-center justify-between">
-          <label class="block text-xs font-bold text-slate-700">基本勤務曜日・標準時間設定</label>
-          <span class="text-[11px] text-slate-400">曜日ごとの時間を設定</span>
-        </div>
-        <div class="border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
-          <table class="w-full text-left text-xs">
-            <thead class="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
-              <tr>
-                <th class="py-2 px-3 text-center w-14">曜日</th>
-                <th class="py-2 px-2 text-center w-16">出勤</th>
-                <th class="py-2 px-2">勤務開始</th>
-                <th class="py-2 px-2">勤務終了</th>
-                <th class="py-2 px-2 w-20">休憩(分)</th>
-              </tr>
-            </thead>
-            <tbody id="new-weekday-tbody" class="divide-y divide-slate-100 bg-white">
-              <!-- JSで月〜日（0〜6）の7行を描画 -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="pt-2 flex items-center justify-end space-x-2">
-        <button type="button" onclick="closeAddStaffModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100">キャンセル</button>
-        <button type="submit" class="px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm flex items-center space-x-1">
-          <i data-lucide="check" class="w-4 h-4"></i>
-          <span>スタッフを登録</span>
+        <a href="/calendar" class="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold hover:bg-slate-50 transition flex items-center space-x-1">
+          <i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-500"></i>
+          <span>シフト表を見る</span>
+        </a>
+        <button onclick="logout()" class="px-3 py-1.5 rounded-xl bg-slate-800 text-white text-xs font-semibold hover:bg-slate-900 transition flex items-center space-x-1">
+          <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+          <span>ログアウト</span>
         </button>
       </div>
-    </form>
-  </div>
-</div>
-
-<!-- 一括自動生成モーダル -->
-<div id="auto-generate-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 hidden no-print">
-  <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
-    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-      <div class="flex items-center space-x-2">
-        <span class="text-xl">✨</span>
-        <div>
-          <h3 class="font-bold text-slate-900">1ヶ月分シフト一括自動生成</h3>
-          <p class="text-xs text-slate-500">雇用条件と希望休から月間シフトを一括編成</p>
-        </div>
-      </div>
-      <button onclick="closeAutoGenerateModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
-        <i data-lucide="x" class="w-5 h-5"></i>
-      </button>
     </div>
+  </header>
 
-    <form id="auto-generate-form" onsubmit="handleAutoGenerateSubmit(event)" class="space-y-4">
-      <div>
-        <label class="block text-xs font-semibold text-slate-700 mb-1">対象年月</label>
-        <input type="month" id="auto-gen-month" required
-          class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+  <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+
+    <!-- 1. 一括シフト生成 ＆ 月ナビバー -->
+    <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="flex items-center space-x-3">
+        <button onclick="changeAdminMonth(-1)" class="p-2 rounded-xl hover:bg-slate-100 border border-slate-200 text-slate-600">
+          <i data-lucide="chevron-left" class="w-4 h-4"></i>
+        </button>
+        <h2 id="admin-month-label" class="text-xl font-black text-slate-900 tracking-tight">2026年9月</h2>
+        <button onclick="changeAdminMonth(1)" class="p-2 rounded-xl hover:bg-slate-100 border border-slate-200 text-slate-600">
+          <i data-lucide="chevron-right" class="w-4 h-4"></i>
+        </button>
       </div>
 
-      <div class="bg-amber-50/70 p-3.5 rounded-2xl border border-amber-100 space-y-2 text-xs text-amber-900">
-        <div class="font-bold flex items-center space-x-1">
-          <i data-lucide="info" class="w-4 h-4 text-amber-600"></i>
-          <span>自動編成の標準ルール</span>
+      <div class="flex flex-wrap items-center gap-2">
+        <div class="text-xs text-slate-500 mr-2">
+          ※ 家田・寺内・山中・本間は火曜・日曜休み自動判定
         </div>
-        <ul class="list-disc list-inside space-y-1 text-[11px] text-amber-800">
-          <li>各スタッフの「固定勤務曜日」と「標準勤務時間」を配置</li>
-          <li>承認済みの希望休（OFF）は<strong>自動スキップ</strong></li>
-          <li>承認済みの有休希望は<strong>有給休暇シフト</strong>として自動登録</li>
-        </ul>
-      </div>
-
-      <div class="flex items-center space-x-2 pt-1">
-        <input type="checkbox" id="auto-gen-overwrite" class="rounded border-slate-300 text-amber-600 focus:ring-amber-500">
-        <label for="auto-gen-overwrite" class="text-xs font-medium text-slate-700">既に登録されている既存シフトを上書き再生成する</label>
-      </div>
-
-      <div class="pt-2 flex items-center justify-end space-x-2">
-        <button type="button" onclick="closeAutoGenerateModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100">キャンセル</button>
-        <button type="submit" class="px-4 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-sm flex items-center space-x-1">
+        <button onclick="runAutoGenerate()" id="btn-auto-gen"
+          class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-xs shadow-md shadow-blue-200 hover:shadow-lg transition flex items-center space-x-1.5">
           <i data-lucide="sparkles" class="w-4 h-4"></i>
-          <span>一括生成を実行</span>
+          <span>この月のシフトを一括自動生成</span>
         </button>
       </div>
-    </form>
-  </div>
-</div>
-
-<!-- 勤怠実績 手動入力・修正モーダル -->
-<div id="admin-time-record-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 hidden no-print">
-  <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
-    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-      <div class="flex items-center space-x-2">
-        <span class="text-xl">⏱️</span>
-        <div>
-          <h3 class="font-bold text-slate-900">勤怠実績の直接入力・修正</h3>
-          <p class="text-xs text-slate-500">打刻忘れや打刻修正を即時反映</p>
-        </div>
-      </div>
-      <button onclick="closeTimeRecordModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
-        <i data-lucide="x" class="w-5 h-5"></i>
-      </button>
     </div>
 
-    <form id="admin-time-record-form" onsubmit="handleTimeRecordSubmit(event)" class="space-y-4">
-      <div>
-        <label class="block text-xs font-semibold text-slate-700 mb-1">対象スタッフ</label>
-        <select id="time-record-user-select" required
-          class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-        </select>
-      </div>
-
-      <div>
-        <label class="block text-xs font-semibold text-slate-700 mb-1">対象日</label>
-        <input type="date" id="time-record-date" required
-          class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-      </div>
-
-      <div class="grid grid-cols-2 gap-3">
+    <!-- 2. 月間シフト編集テーブル（ワンタップ変更） -->
+    <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-100 space-y-4">
+      <div class="flex items-center justify-between">
         <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">出勤時刻</label>
-          <input type="time" id="time-record-clock-in" required
-            class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+          <h3 class="font-bold text-slate-900 text-base">月間シフト編成ボード</h3>
+          <p class="text-xs text-slate-400 mt-0.5">セルをタップしてシフト区分を直接変更できます</p>
         </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">退勤時刻</label>
-          <input type="time" id="time-record-clock-out" required
-            class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+        <!-- 区分凡例 -->
+        <div class="flex items-center space-x-2 text-[11px] text-slate-500">
+          <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">全日 (9-19)</span>
+          <span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-bold">前半 (9-18)</span>
+          <span class="px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 font-bold">後半 (10-19)</span>
+          <span class="px-2 py-0.5 rounded bg-cyan-100 text-cyan-800 font-bold">午前診</span>
+          <span class="px-2 py-0.5 rounded bg-purple-100 text-purple-800 font-bold">午後診</span>
+          <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-400 font-bold">休</span>
         </div>
       </div>
 
-      <div>
-        <label class="block text-xs font-semibold text-slate-700 mb-1">休憩時間 (分)</label>
-        <input type="number" id="time-record-break" value="60" min="0" step="5" required
-          class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+      <div class="overflow-x-auto border border-slate-100 rounded-2xl">
+        <table class="w-full text-left text-xs border-collapse min-w-[900px]">
+          <thead id="admin-table-head" class="bg-slate-50 text-slate-600 font-bold border-b border-slate-100"></thead>
+          <tbody id="admin-table-body" class="divide-y divide-slate-100"></tbody>
+        </table>
       </div>
-
-      <div>
-        <label class="block text-xs font-semibold text-slate-700 mb-1">修正理由・メモ</label>
-        <input type="text" id="time-record-note" placeholder="打刻忘れ、早出対応など"
-          class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-      </div>
-
-      <div class="pt-2 flex items-center justify-end space-x-2">
-        <button type="button" onclick="closeTimeRecordModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100">キャンセル</button>
-        <button type="submit" class="px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm flex items-center space-x-1">
-          <i data-lucide="check" class="w-4 h-4"></i>
-          <span>勤怠を保存</span>
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- LINE・連絡用テキスト生成モーダル (フェーズ4) -->
-<div id="share-text-modal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 hidden">
-  <div class="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
-    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-      <div class="flex items-center space-x-2">
-        <span class="text-xl">💬</span>
-        <h3 class="font-extrabold text-slate-900 text-base">シフト確定・LINE/連絡用テキスト</h3>
-      </div>
-      <button onclick="closeShareTextModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
-        <i data-lucide="x" class="w-5 h-5"></i>
-      </button>
     </div>
 
-    <!-- 切り替えタブ（全員分一括 / スタッフ個別） -->
-    <div class="flex items-center justify-between gap-2">
-      <div class="inline-flex bg-slate-100 p-1 rounded-xl text-xs font-semibold text-slate-600">
-        <button id="share-tab-all" onclick="switchShareTab('all')"
-          class="px-3 py-1.5 rounded-lg bg-white text-emerald-700 shadow-xs transition">
-          全員分を一括
-        </button>
-        <button id="share-tab-individual" onclick="switchShareTab('individual')"
-          class="px-3 py-1.5 rounded-lg hover:text-slate-900 transition">
-          スタッフ個別
-        </button>
-      </div>
-
-      <select id="share-staff-select" onchange="onShareStaffSelectChange()" class="hidden bg-slate-50 border border-slate-200 text-xs rounded-xl px-2.5 py-1.5 font-medium focus:ring-2 focus:ring-emerald-500 text-slate-700">
-        <!-- JSでスタッフ一覧生成 -->
-      </select>
-    </div>
-
-    <!-- テキストエリア -->
-    <div class="flex-1 min-h-[240px]">
-      <textarea id="share-text-content" readonly
-        class="w-full h-full min-h-[240px] p-3 text-xs font-mono bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none select-all resize-none text-slate-800 leading-relaxed"></textarea>
-    </div>
-
-    <!-- コピーボタン -->
-    <div class="pt-2 flex items-center justify-between border-t border-slate-100">
-      <span class="text-[11px] text-slate-400">※コピー後、LINEやメールに貼り付けできます</span>
-      <button onclick="copyShareText()"
-        class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-extrabold px-4 py-2.5 rounded-xl shadow-md shadow-emerald-200 flex items-center space-x-1.5 transition">
-        <i data-lucide="copy" class="w-4 h-4"></i>
-        <span>📋 テキストをコピー</span>
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- パスワード単独変更モーダル -->
-<div id="password-modal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 hidden no-print">
-  <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
-    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-      <div class="flex items-center space-x-2">
-        <span class="text-xl">🔑</span>
-        <div>
-          <h3 class="font-bold text-slate-900">パスワード再設定・変更</h3>
-          <p class="text-xs text-slate-500" id="password-modal-subtitle">スタッフのパスワードを更新します</p>
-        </div>
-      </div>
-      <button onclick="closePasswordModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
-        <i data-lucide="x" class="w-5 h-5"></i>
-      </button>
-    </div>
-
-    <form id="password-form" onsubmit="handlePasswordModalSubmit(event)" class="space-y-4">
-      <input type="hidden" id="password-target-user-id">
-
-      <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-1">
-        <span class="text-[11px] text-slate-500 font-medium">対象アカウント:</span>
-        <div class="font-extrabold text-slate-900 text-sm" id="password-modal-user-name">--</div>
-      </div>
-
-      <div>
-        <label class="block text-xs font-semibold text-slate-700 mb-1">新しいパスワード <span class="text-rose-500">*</span></label>
-        <div class="flex items-center space-x-2">
-          <input type="text" id="new-reset-password" required
-            class="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono"
-            placeholder="4文字以上の英数字">
-          <button type="button" onclick="generateRandomPassword('new-reset-password')"
-            class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition whitespace-nowrap">
-            🎲 自動生成
+    <!-- 3. スタッフへのプライベート個別連絡 & 休暇申請確認 -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      
+      <!-- 休暇申請の確認パネル -->
+      <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-100 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-50 pb-3">
+          <div class="flex items-center space-x-2">
+            <span class="text-lg">🏖️</span>
+            <div>
+              <h3 class="font-bold text-slate-900 text-sm">個別休暇・有休申請の確認</h3>
+              <p class="text-[11px] text-slate-400">他スタッフには見えないプライベート処理</p>
+            </div>
+          </div>
+          <button onclick="loadLeaveRequests()" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400">
+            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
           </button>
         </div>
-        <p class="text-[10px] text-slate-400 mt-1">※変更後、このパスワードで直ちにログイン可能になります。</p>
+
+        <div id="leave-requests-container" class="space-y-2 max-h-80 overflow-y-auto">
+          <div class="text-xs text-slate-400 text-center py-6">申請を読み込み中...</div>
+        </div>
       </div>
 
-      <div class="pt-2 flex items-center justify-end space-x-2">
-        <button type="button" onclick="closePasswordModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100">キャンセル</button>
-        <button type="submit" class="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm flex items-center space-x-1">
-          <i data-lucide="check" class="w-4 h-4"></i>
-          <span>パスワードを更新</span>
-        </button>
+      <!-- 個別メッセージ送信パネル -->
+      <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-100 space-y-4">
+        <div class="flex items-center space-x-2 border-b border-slate-50 pb-3">
+          <span class="text-lg">💬</span>
+          <div>
+            <h3 class="font-bold text-slate-900 text-sm">スタッフへの個別メッセージ送信</h3>
+            <p class="text-[11px] text-slate-400">全体LINEではなく、その人のマイルームだけに届きます</p>
+          </div>
+        </div>
+
+        <form onsubmit="handleSendMessage(event)" class="space-y-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">宛先スタッフ</label>
+            <select id="msg-to-user" required class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none">
+              <option value="">選択してください</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">メッセージ内容</label>
+            <textarea id="msg-content" rows="3" required placeholder="例: お疲れ様です！来週火曜日の調整ありがとうございました。"
+              class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
+          </div>
+          <button type="submit" id="btn-send-msg"
+            class="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition flex items-center justify-center space-x-1">
+            <i data-lucide="send" class="w-3.5 h-3.5"></i>
+            <span>個別メッセージを送信</span>
+          </button>
+        </form>
       </div>
-    </form>
+
+    </div>
+
+  </main>
+</div>
+
+<!-- シフト編集ポップアップモーダル -->
+<div id="shift-edit-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+  <div class="bg-white rounded-3xl max-w-xs w-full p-5 shadow-2xl space-y-4">
+    <div class="text-center">
+      <div id="modal-staff-name" class="font-bold text-slate-900 text-sm"></div>
+      <div id="modal-shift-date" class="text-xs text-slate-400 mt-0.5"></div>
+    </div>
+    <div class="grid grid-cols-2 gap-2">
+      <button onclick="setModalShift('FULL')" class="py-2.5 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs">全日 (9-19)</button>
+      <button onclick="setModalShift('FIRST')" class="py-2.5 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-xs">前半 (9-18)</button>
+      <button onclick="setModalShift('SECOND')" class="py-2.5 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-bold text-xs">後半 (10-19)</button>
+      <button onclick="setModalShift('AM')" class="py-2.5 rounded-xl border border-cyan-200 bg-cyan-50 hover:bg-cyan-100 text-cyan-800 font-bold text-xs">午前診 (9-13)</button>
+      <button onclick="setModalShift('PM')" class="py-2.5 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-800 font-bold text-xs">午後診 (15-19)</button>
+      <button onclick="setModalShift('OFF')" class="py-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold text-xs">休み (OFF)</button>
+    </div>
+    <button onclick="closeModal()" class="w-full py-2 rounded-xl text-xs text-slate-400 hover:text-slate-600">キャンセル</button>
   </div>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="/static/js/admin.js?v=20260919_reset_all"></script>
+<script>
+  let adminYear = new Date().getFullYear();
+  let adminMonth = new Date().getMonth() + 1;
+  let adminData = null;
+  let activeEdit = null;
+
+  const SHIFT_CLASSES = {
+    FULL: 'bg-emerald-100 text-emerald-800',
+    FIRST: 'bg-amber-100 text-amber-800',
+    SECOND: 'bg-indigo-100 text-indigo-800',
+    AM: 'bg-cyan-100 text-cyan-800',
+    PM: 'bg-purple-100 text-purple-800',
+    OFF: 'bg-slate-50 text-slate-300',
+  };
+
+  const SHIFT_TEXT = {
+    FULL: '全日',
+    FIRST: '前半',
+    SECOND: '後半',
+    AM: '午前',
+    PM: '午後',
+    OFF: '休',
+  };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    loadAdminShifts();
+    loadLeaveRequests();
+  });
+
+  async function loadAdminShifts() {
+    try {
+      const res = await fetch(`/api/admin/shifts/monthly?year=${adminYear}&month=${adminMonth}`);
+      if (res.status === 401 || res.status === 403) {
+        window.location.href = '/login';
+        return;
+      }
+      adminData = await res.json();
+      renderAdminTable(adminData);
+      populateStaffSelect(adminData.users);
+    } catch (e) {
+      console.error(e);
+      showToast('シフト読込に失敗しました', 'error');
+    }
+  }
+
+  function renderAdminTable(data) {
+    document.getElementById('admin-month-label').textContent = `${data.year}年${data.month}月`;
+
+    // ヘッダー（日付）
+    const thead = document.getElementById('admin-table-head');
+    let headHtml = '<tr><th class="p-3 w-28 sticky left-0 bg-slate-50 z-10">スタッフ</th>';
+    for (let d = 1; d <= data.days_in_month; d++) {
+      const dateObj = new Date(data.year, data.month - 1, d);
+      const wd = dateObj.getDay();
+      const wdLabel = ['日','月','火','水','木','金','土'][wd];
+      const isSun = wd === 0;
+      const isTue = wd === 2;
+      const colClass = isSun ? 'text-rose-500 bg-rose-50/50' : (isTue ? 'text-amber-600 bg-amber-50/30' : '');
+      headHtml += `<th class="p-2 text-center border-l border-slate-100 ${colClass}"><div class="font-black">${d}</div><div class="text-[10px] font-normal">${wdLabel}</div></th>`;
+    }
+    headHtml += '</tr>';
+    thead.innerHTML = headHtml;
+
+    // ボディ（スタッフ別行）
+    const tbody = document.getElementById('admin-table-body');
+    let bodyHtml = '';
+    data.users.forEach(u => {
+      bodyHtml += `<tr><td class="p-3 font-bold sticky left-0 bg-white z-10 border-r border-slate-100 flex items-center space-x-2">
+        <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${u.color}"></span>
+        <span>${u.full_name}</span>
+      </td>`;
+
+      for (let d = 1; d <= data.days_in_month; d++) {
+        const dateStr = `${data.year}-${String(data.month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const key = `${dateStr}_${u.id}`;
+        const s = data.shifts[key];
+        const sType = s ? s.shift_type : 'OFF';
+        const sClass = SHIFT_CLASSES[sType] || SHIFT_CLASSES.OFF;
+        const sLabel = SHIFT_TEXT[sType] || '休';
+
+        bodyHtml += `<td class="p-1 text-center border-l border-slate-100">
+          <button onclick="openEditModal(${u.id}, '${u.full_name}', '${dateStr}', '${sType}')"
+            class="w-full py-1.5 rounded-lg text-[11px] font-bold ${sClass} hover:opacity-80 transition">
+            ${sLabel}
+          </button>
+        </td>`;
+      }
+      bodyHtml += '</tr>';
+    });
+    tbody.innerHTML = bodyHtml;
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function openEditModal(userId, userName, dateStr, currentType) {
+    activeEdit = { userId, dateStr };
+    document.getElementById('modal-staff-name').textContent = userName;
+    document.getElementById('modal-shift-date').textContent = dateStr;
+    document.getElementById('shift-edit-modal').classList.remove('hidden');
+  }
+
+  function closeModal() {
+    document.getElementById('shift-edit-modal').classList.add('hidden');
+    activeEdit = null;
+  }
+
+  async function setModalShift(shiftType) {
+    if (!activeEdit) return;
+    try {
+      const res = await fetch('/api/admin/shifts/single', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: activeEdit.userId,
+          date: activeEdit.dateStr,
+          shift_type: shiftType,
+        })
+      });
+      if (res.ok) {
+        closeModal();
+        loadAdminShifts();
+        showToast('シフトを更新しました');
+      }
+    } catch (e) {
+      showToast('更新失敗', 'error');
+    }
+  }
+
+  async function runAutoGenerate() {
+    if (!confirm(`${adminYear}年${adminMonth}月のシフトを一括生成しますか？\n（既存シフトは上書きされます）`)) return;
+    const btn = document.getElementById('btn-auto-gen');
+    btn.disabled = true;
+    try {
+      const res = await fetch('/api/admin/shifts/auto-generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ year: adminYear, month: adminMonth, overwrite: true })
+      });
+      const d = await res.json();
+      showToast(d.message || 'シフトを一括生成しました');
+      loadAdminShifts();
+    } catch (e) {
+      showToast('自動生成に失敗しました', 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function changeAdminMonth(delta) {
+    adminMonth += delta;
+    if (adminMonth > 12) { adminMonth = 1; adminYear++; }
+    if (adminMonth < 1) { adminMonth = 12; adminYear--; }
+    loadAdminShifts();
+  }
+
+  function populateStaffSelect(users) {
+    const sel = document.getElementById('msg-to-user');
+    sel.innerHTML = '<option value="">選択してください</option>';
+    users.forEach(u => {
+      if (!u.is_admin) {
+        const opt = document.createElement('option');
+        opt.value = u.id;
+        opt.textContent = `${u.full_name} (${u.position_label})`;
+        sel.appendChild(opt);
+      }
+    });
+  }
+
+  async function handleSendMessage(e) {
+    e.preventDefault();
+    const toId = document.getElementById('msg-to-user').value;
+    const content = document.getElementById('msg-content').value.trim();
+    if (!toId || !content) return;
+
+    try {
+      const res = await fetch('/api/admin/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to_user_id: parseInt(toId), content })
+      });
+      if (res.ok) {
+        showToast('個別メッセージを送信しました');
+        document.getElementById('msg-content').value = '';
+      }
+    } catch (e) {
+      showToast('送信失敗', 'error');
+    }
+  }
+
+  async function loadLeaveRequests() {
+    const box = document.getElementById('leave-requests-container');
+    try {
+      const res = await fetch('/api/admin/leave-requests');
+      const list = await res.json();
+      if (!list || list.length === 0) {
+        box.innerHTML = '<div class="text-xs text-slate-400 text-center py-6">現在届いている申請はありません</div>';
+        return;
+      }
+      box.innerHTML = '';
+      list.forEach(r => {
+        const isPending = r.status === 'PENDING';
+        const card = document.createElement('div');
+        card.className = 'p-3 rounded-2xl border border-slate-100 bg-slate-50 space-y-2';
+        card.innerHTML = `
+          <div class="flex items-center justify-between">
+            <div class="font-bold text-xs text-slate-800">${r.user_name} (${r.position_label})</div>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${isPending ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-600'}">${r.status}</span>
+          </div>
+          <div class="text-xs text-slate-600">
+            <span class="font-bold">${r.date}</span> (${r.leave_type === 'PAID_LEAVE' ? '有給休暇' : '希望休'})
+            ${r.reason ? `<div class="text-slate-500 mt-0.5">理由: ${r.reason}</div>` : ''}
+          </div>
+          ${isPending ? `
+          <div class="flex items-center justify-end space-x-2 pt-1">
+            <button onclick="reviewLeave(${r.id}, 'REJECTED')" class="px-2.5 py-1 rounded-lg bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 text-[11px] font-bold">却下</button>
+            <button onclick="reviewLeave(${r.id}, 'APPROVED')" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold shadow-2xs">承認する</button>
+          </div>` : ''}
+        `;
+        box.appendChild(card);
+      });
+      if (window.lucide) lucide.createIcons();
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function reviewLeave(reqId, status) {
+    const note = prompt(status === 'APPROVED' ? '承認時の個別メッセージ（任意）:' : '却下理由の個別メッセージ（任意）:');
+    try {
+      const res = await fetch(`/api/admin/leave-requests/${reqId}/review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, admin_note: note || '' })
+      });
+      if (res.ok) {
+        showToast(`申請を${status === 'APPROVED' ? '承認' : '却下'}しました`);
+        loadLeaveRequests();
+        loadAdminShifts();
+      }
+    } catch (e) {
+      showToast('処理に失敗しました', 'error');
+    }
+  }
+
+  async function logout() {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = '/login';
+  }
+</script>
 {% endblock %}

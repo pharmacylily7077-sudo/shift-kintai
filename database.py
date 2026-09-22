@@ -1,36 +1,41 @@
 import os
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
-# 永続ストレージ用（/data ディレクトリが存在する場合は自動的にそちらを優先）
-if os.path.exists("/data") and os.path.isdir("/data"):
-    default_db_url = "sqlite:////data/kintai.db"
-else:
-    default_db_url = "sqlite:///./kintai.db"
+DATABASE_URL = os.environ.get(
+    "DATABASE_URL",
+    "sqlite:///./kintai_v2.db"
+)
 
-DATABASE_URL = os.getenv("DATABASE_URL", default_db_url)
+# PostgreSQL の "postgres://" を "postgresql://" に変換（Render対応）
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-# SQLiteの場合、スレッドチェックを無効化しWALモードを設定
-connect_args = {"check_same_thread": False, "timeout": 30} if DATABASE_URL.startswith("sqlite") else {}
+connect_args = {}
+if DATABASE_URL.startswith("sqlite"):
+    connect_args = {
+        "check_same_thread": False,
+        "timeout": 30,
+    }
 
 engine = create_engine(
     DATABASE_URL,
     connect_args=connect_args,
-    echo=False
+    pool_pre_ping=True,
 )
 
+# SQLite WALモードで安定性向上
 if DATABASE_URL.startswith("sqlite"):
+    from sqlalchemy import event
     @event.listens_for(engine, "connect")
-    def set_sqlite_pragma(dbapi_connection, connection_record):
-        cursor = dbapi_connection.cursor()
-        cursor.execute("PRAGMA journal_mode=WAL;")
-        cursor.execute("PRAGMA synchronous=NORMAL;")
+    def set_sqlite_pragma(dbapi_conn, connection_record):
+        cursor = dbapi_conn.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA synchronous=NORMAL")
         cursor.close()
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
 Base = declarative_base()
 
 def get_db():
@@ -39,4 +44,3 @@ def get_db():
         yield db
     finally:
         db.close()
-

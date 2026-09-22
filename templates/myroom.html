@@ -1,0 +1,592 @@
+{% extends "base.html" %}
+{% block title %}マイルーム - {{ current_user.full_name }}{% endblock %}
+
+{% block body %}
+<!-- 舞い散る花びら演出コンテナ（オン/オフ可能） -->
+<div id="petals-layer" class="petal-container"></div>
+
+<div class="min-h-screen text-slate-900 pb-16 relative z-10 transition">
+
+  <!-- ヘッダー -->
+  <header class="bg-white/80 backdrop-blur-md border-b border-pink-100/50 sticky top-0 z-40">
+    <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-pink-400 to-rose-400 flex items-center justify-center text-white font-bold shadow-md shadow-pink-200">
+          <i data-lucide="sparkles" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <div class="font-black text-slate-900 text-sm sm:text-base flex items-center space-x-1.5">
+            <span>{{ current_user.full_name }} さんのマイルーム</span>
+            <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-pink-100/80 text-pink-700 border border-pink-200/50">
+              {{ current_user.position_label }}
+            </span>
+          </div>
+          <div class="text-[11px] text-pink-500/80 font-medium">あなただけの秘密の手帳空間 🌸</div>
+        </div>
+      </div>
+      
+      <!-- テーマ着せ替え & ナビゲーション -->
+      <div class="flex items-center space-x-2">
+        <!-- きせかえパレットボタン -->
+        <div class="relative">
+          <button onclick="toggleThemeMenu()" id="btn-theme-toggle"
+            class="px-3 py-1.5 rounded-xl bg-white/90 border border-pink-200 hover:bg-pink-50 text-pink-700 text-xs font-bold transition flex items-center space-x-1 shadow-2xs">
+            <span>🎨 壁紙きせかえ</span>
+          </button>
+          <!-- 壁紙セレクターポップアップ -->
+          <div id="theme-menu" class="hidden absolute right-0 mt-2 w-52 bg-white/95 backdrop-blur-lg rounded-2xl shadow-xl border border-pink-100 p-2 z-50 space-y-1">
+            <div class="text-[10px] font-bold text-slate-400 px-2 py-1">お好みの壁紙テーマ</div>
+            <button onclick="setTheme('sakura')" class="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-pink-50 text-slate-700 flex items-center space-x-2 transition">
+              <span class="w-3.5 h-3.5 rounded-full bg-pink-300 border border-pink-400"></span>
+              <span>桜チェリー 🌸</span>
+            </button>
+            <button onclick="setTheme('lavender')" class="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-purple-50 text-slate-700 flex items-center space-x-2 transition">
+              <span class="w-3.5 h-3.5 rounded-full bg-purple-300 border border-purple-400"></span>
+              <span>ラベンダー 🪻</span>
+            </button>
+            <button onclick="setTheme('herb')" class="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-emerald-50 text-slate-700 flex items-center space-x-2 transition">
+              <span class="w-3.5 h-3.5 rounded-full bg-emerald-300 border border-emerald-400"></span>
+              <span>癒やしハーブ 🌿</span>
+            </button>
+            <button onclick="setTheme('mimosa')" class="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-amber-50 text-slate-700 flex items-center space-x-2 transition">
+              <span class="w-3.5 h-3.5 rounded-full bg-amber-300 border border-amber-400"></span>
+              <span>ミモザの陽だまり 🌼</span>
+            </button>
+            <button onclick="setTheme('simple')" class="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-slate-100 text-slate-700 flex items-center space-x-2 transition">
+              <span class="w-3.5 h-3.5 rounded-full bg-slate-300 border border-slate-400"></span>
+              <span>ピュアホワイト 🕊️</span>
+            </button>
+          </div>
+        </div>
+
+        <a href="/calendar" class="px-3 py-1.5 rounded-xl border border-slate-200/80 bg-white/80 hover:bg-white text-xs font-semibold text-slate-700 transition flex items-center space-x-1 shadow-2xs">
+          <i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-400"></i>
+          <span class="hidden sm:inline">全体のシフト</span>
+        </a>
+        <button onclick="logout()" class="px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-900 text-white text-xs font-semibold transition flex items-center space-x-1 shadow-2xs">
+          <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">ログアウト</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-4xl mx-auto px-4 py-6 space-y-6">
+
+    <!-- 0. 本日のシフト ＆ 自己申告打刻（心温まるウェルカムカード） -->
+    <div class="glass-card rounded-3xl p-5 sm:p-7 border relative overflow-hidden transition">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        <div>
+          <div class="text-xs font-bold text-pink-600/80 tracking-wider uppercase mb-1" id="live-date">2026年9月20日</div>
+          <div class="text-2xl sm:text-3xl font-black text-slate-900 flex items-center space-x-2 tracking-tight">
+            <span id="greeting-text">おはようございます、{{ current_user.full_name }}さん！</span>
+          </div>
+          <p class="text-xs text-slate-500 mt-1">今日も無理のないペースで、素敵な1日を☕️</p>
+          
+          <div class="mt-4 inline-flex items-center space-x-2 bg-pink-50/80 border border-pink-200/60 px-3.5 py-1.5 rounded-2xl text-xs text-pink-900">
+            <span class="font-bold">本日のシフト:</span>
+            <span id="today-shift-badge" class="font-black px-2 py-0.5 rounded-lg bg-pink-500 text-white shadow-xs">読込中</span>
+            <span id="today-shift-time" class="text-pink-700 font-medium">--:--〜--:--</span>
+          </div>
+        </div>
+
+        <!-- 打刻ボタングループ（丸みと温かみのあるデザイン） -->
+        <div class="flex flex-col gap-2.5 w-full sm:w-80">
+          <div class="grid grid-cols-2 gap-2.5">
+            <button onclick="doClock('IN')" id="btn-clock-in"
+              class="soft-btn py-3.5 px-4 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-black text-sm shadow-md shadow-emerald-200/60 flex items-center justify-center space-x-1.5">
+              <i data-lucide="sun" class="w-4 h-4"></i>
+              <span>出勤する</span>
+            </button>
+            <button onclick="doClock('OUT')" id="btn-clock-out"
+              class="soft-btn py-3.5 px-4 rounded-2xl bg-gradient-to-tr from-slate-700 to-slate-800 hover:from-slate-800 hover:to-slate-900 text-white font-black text-sm shadow-md shadow-slate-300/60 flex items-center justify-center space-x-1.5">
+              <i data-lucide="moon" class="w-4 h-4"></i>
+              <span>退勤する</span>
+            </button>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <button onclick="doClock('BREAK_START')"
+              class="soft-btn py-2 px-3 rounded-xl border border-amber-200/80 bg-amber-50/90 hover:bg-amber-100 text-amber-800 font-bold text-[11px] text-center">
+              ☕️ 休憩に入る
+            </button>
+            <button onclick="doClock('BREAK_END')"
+              class="soft-btn py-2 px-3 rounded-xl border border-teal-200/80 bg-teal-50/90 hover:bg-teal-100 text-teal-800 font-bold text-[11px] text-center">
+              ▶️ 休憩から戻る
+            </button>
+          </div>
+          <div id="clock-status-note" class="text-[11px] text-slate-400 font-medium text-center">
+            出勤・退勤の自己申告目安
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 優先度①：給与シミュレーター（自分専用・完全秘密） -->
+    <div class="glass-card rounded-3xl p-5 sm:p-6 border relative overflow-hidden transition">
+      <div class="flex items-center justify-between border-b border-pink-100/60 pb-3">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-8 h-8 rounded-2xl bg-gradient-to-tr from-pink-500 to-rose-400 text-white flex items-center justify-center text-xs font-black shadow-xs">
+            ¥
+          </div>
+          <div>
+            <h3 class="font-black text-slate-900 text-sm sm:text-base">給与シミュレーター（自分専用）</h3>
+            <p class="text-[11px] text-slate-500">時給を自分で入力して計算。他の人や管理者には一切見えません。</p>
+          </div>
+        </div>
+        <button onclick="editWage()" class="soft-btn px-3 py-1.5 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-white text-xs font-bold shadow-xs hover:opacity-90 transition">
+          時給を変更
+        </button>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+        <div class="p-3.5 bg-white/70 rounded-2xl border border-pink-100/50 shadow-2xs">
+          <div class="text-[10px] font-bold text-slate-400">設定時給</div>
+          <div class="text-xl font-black text-slate-800 mt-1" id="val-hourly-wage">¥0</div>
+        </div>
+        <div class="p-3.5 bg-white/70 rounded-2xl border border-pink-100/50 shadow-2xs">
+          <div class="text-[10px] font-bold text-slate-400">今月の出勤</div>
+          <div class="text-xl font-black text-slate-800 mt-1" id="val-worked-days">0 日</div>
+        </div>
+        <div class="p-3.5 bg-white/70 rounded-2xl border border-pink-100/50 shadow-2xs">
+          <div class="text-[10px] font-bold text-slate-400">総労働時間</div>
+          <div class="text-xl font-black text-slate-800 mt-1" id="val-work-hours">0.0 時間</div>
+        </div>
+        <div class="p-3.5 bg-gradient-to-tr from-pink-50 to-rose-50 rounded-2xl border border-pink-200/80 shadow-2xs">
+          <div class="text-[10px] font-bold text-pink-700">今月の想定給与</div>
+          <div class="text-xl font-black text-pink-900 mt-1" id="val-estimated-salary">¥0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 優先度②：有休管理（自分専用） -->
+    <div class="glass-card rounded-3xl p-5 sm:p-6 border transition">
+      <div class="flex items-center justify-between border-b border-pink-100/60 pb-3">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-8 h-8 rounded-2xl bg-gradient-to-tr from-teal-400 to-emerald-500 text-white flex items-center justify-center text-xs shadow-xs">
+            🌿
+          </div>
+          <div>
+            <h3 class="font-black text-slate-900 text-sm sm:text-base">有給休暇の管理（自分専用）</h3>
+            <p class="text-[11px] text-slate-500">あなたの手帳のように、残日数を自分で入れていつでも確認。</p>
+          </div>
+        </div>
+        <button onclick="editPaidLeave()" class="soft-btn px-3 py-1.5 rounded-xl bg-teal-600 text-white text-xs font-bold shadow-xs hover:bg-teal-700 transition">
+          残日数を設定
+        </button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4 pt-2">
+        <div class="p-4 rounded-2xl bg-gradient-to-tr from-teal-50 to-emerald-50 border border-teal-100/80 flex items-center justify-between">
+          <div>
+            <div class="text-xs font-bold text-teal-800">有休の残り</div>
+            <div class="text-2xl sm:text-3xl font-black text-teal-900 mt-1" id="val-paid-leave-remaining">0.0 <span class="text-sm font-normal">日</span></div>
+          </div>
+          <div class="text-3xl">🏖️</div>
+        </div>
+        <div class="p-4 rounded-2xl bg-white/70 border border-slate-100 flex items-center justify-between">
+          <div>
+            <div class="text-xs font-bold text-slate-500">今月の消化</div>
+            <div class="text-2xl sm:text-3xl font-black text-slate-800 mt-1" id="val-paid-leave-taken">0 <span class="text-sm font-normal">日</span></div>
+          </div>
+          <div class="text-3xl">✨</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 優先度③：体調管理 ＆ 優先度④：家計簿（2カラム） -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+      <!-- 優先度③：体調管理 -->
+      <div class="glass-card rounded-3xl p-5 border space-y-4 transition">
+        <div class="flex items-center space-x-2 border-b border-pink-100/60 pb-3">
+          <div class="w-7 h-7 rounded-xl bg-rose-400 text-white flex items-center justify-center text-xs">❤️</div>
+          <div>
+            <h3 class="font-black text-slate-900 text-sm">今日の体調メモ</h3>
+            <p class="text-[11px] text-slate-400">日々のコンディションをワンタップで記録</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-2">
+          <button onclick="saveHealth('GOOD')" class="soft-btn p-3 rounded-2xl border border-pink-200/60 bg-pink-50/60 hover:bg-pink-100 text-pink-900 text-center transition">
+            <div class="text-2xl">😊</div>
+            <div class="text-xs font-bold mt-1">元気！</div>
+          </button>
+          <button onclick="saveHealth('OK')" class="soft-btn p-3 rounded-2xl border border-amber-200/60 bg-amber-50/60 hover:bg-amber-100 text-amber-900 text-center transition">
+            <div class="text-2xl">😐</div>
+            <div class="text-xs font-bold mt-1">ふつう</div>
+          </button>
+          <button onclick="saveHealth('TIRED')" class="soft-btn p-3 rounded-2xl border border-rose-200/60 bg-rose-50/60 hover:bg-rose-100 text-rose-900 text-center transition">
+            <div class="text-2xl">🥱</div>
+            <div class="text-xs font-bold mt-1">おつかれ</div>
+          </button>
+        </div>
+
+        <!-- ひとことメモ入力 -->
+        <div class="flex gap-2">
+          <input type="text" id="health-note" placeholder="今日の体調・ひとことメモ（任意）"
+            class="w-full px-3 py-2 rounded-xl border border-pink-200/60 text-xs focus:ring-2 focus:ring-pink-400 focus:outline-none bg-white/80">
+          <button onclick="saveHealthWithNote()" class="soft-btn px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold whitespace-nowrap shadow-xs">
+            記録
+          </button>
+        </div>
+      </div>
+
+      <!-- 優先度④：家計簿（お小遣い・やりくりサポート） -->
+      <div class="glass-card rounded-3xl p-5 border space-y-4 transition">
+        <div class="flex items-center justify-between border-b border-pink-100/60 pb-3">
+          <div class="flex items-center space-x-2">
+            <div class="w-7 h-7 rounded-xl bg-indigo-400 text-white flex items-center justify-center text-xs">📒</div>
+            <div>
+              <h3 class="font-black text-slate-900 text-sm">かんたん家計簿</h3>
+              <p class="text-[11px] text-slate-400">お給料日までのやりくりメモ</p>
+            </div>
+          </div>
+          <div class="text-xs font-black text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-100" id="val-budget-balance">残高: ¥0</div>
+        </div>
+
+        <!-- 支出・収入クイック登録 -->
+        <form onsubmit="handleAddBudget(event)" class="space-y-2.5">
+          <div class="grid grid-cols-3 gap-2">
+            <input type="text" id="budget-title" placeholder="項目 (例: お茶・ランチ)" required
+              class="col-span-2 px-3 py-2 rounded-xl border border-indigo-100 text-xs focus:outline-none bg-white/80">
+            <select id="budget-type" class="px-2 py-2 rounded-xl border border-indigo-100 text-xs bg-white/80 font-bold text-slate-700">
+              <option value="EXPENSE">支出 (-)</option>
+              <option value="INCOME">収入 (+)</option>
+            </select>
+          </div>
+          <div class="flex gap-2">
+            <input type="number" id="budget-amount" placeholder="金額 (円)" required min="0" step="10"
+              class="w-full px-3 py-2 rounded-xl border border-indigo-100 text-xs focus:outline-none bg-white/80">
+            <button type="submit" class="soft-btn px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold whitespace-nowrap shadow-xs">
+              追加
+            </button>
+          </div>
+        </form>
+      </div>
+
+    </div>
+
+    <!-- 5. 休暇申請 ＆ 管理者からの個別メッセージ -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+      <!-- 休暇申請（管理者直送・他スタッフ完全遮断） -->
+      <div class="glass-card rounded-3xl p-5 border space-y-4 transition">
+        <div class="flex items-center space-x-2 border-b border-pink-100/60 pb-3">
+          <div class="w-7 h-7 rounded-xl bg-blue-400 text-white flex items-center justify-center text-xs">🏖️</div>
+          <div>
+            <h3 class="font-black text-slate-900 text-sm">お休み・有休の申請</h3>
+            <p class="text-[11px] text-slate-400">管理者に直接届き、他のスタッフには一切見えません</p>
+          </div>
+        </div>
+
+        <form onsubmit="handleApplyLeave(event)" class="space-y-3">
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[10px] font-bold text-slate-500 mb-1">希望日</label>
+              <input type="date" id="leave-date" required class="w-full px-3 py-2 rounded-xl border border-blue-100 text-xs bg-white/80">
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-slate-500 mb-1">種別</label>
+              <select id="leave-type" class="w-full px-2 py-2 rounded-xl border border-blue-100 text-xs bg-white/80 font-bold text-slate-700">
+                <option value="OFF">希望休 (公休)</option>
+                <option value="PAID_LEAVE">有給休暇</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-slate-500 mb-1">理由（ワンタップ選択または自由入力）</label>
+            <div class="flex flex-wrap gap-1.5 mb-1.5">
+              <button type="button" onclick="setReason('私用のため')" class="text-[10px] px-2 py-0.5 rounded-lg bg-white/90 border border-slate-200 text-slate-600 hover:bg-blue-50">私用のため</button>
+              <button type="button" onclick="setReason('体調不良・通院のため')" class="text-[10px] px-2 py-0.5 rounded-lg bg-white/90 border border-slate-200 text-slate-600 hover:bg-blue-50">体調不良・通院</button>
+              <button type="button" onclick="setReason('家族の用事のため')" class="text-[10px] px-2 py-0.5 rounded-lg bg-white/90 border border-slate-200 text-slate-600 hover:bg-blue-50">家族の用事</button>
+            </div>
+            <input type="text" id="leave-reason" placeholder="理由を入力" class="w-full px-3 py-2 rounded-xl border border-blue-100 text-xs bg-white/80">
+          </div>
+          <button type="submit" class="soft-btn w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-xs flex items-center justify-center space-x-1">
+            <i data-lucide="send" class="w-3.5 h-3.5"></i>
+            <span>申請を送信する</span>
+          </button>
+        </form>
+      </div>
+
+      <!-- 管理者からの個別メッセージ -->
+      <div class="glass-card rounded-3xl p-5 border space-y-3 transition">
+        <div class="flex items-center space-x-2 border-b border-pink-100/60 pb-3">
+          <div class="w-7 h-7 rounded-xl bg-amber-400 text-white flex items-center justify-center text-xs">💬</div>
+          <div>
+            <h3 class="font-black text-slate-900 text-sm">個別メッセージ</h3>
+            <p class="text-[11px] text-slate-400">あなた宛てだけに届いた大切なお知らせです</p>
+          </div>
+        </div>
+
+        <div id="messages-list" class="space-y-2.5 max-h-56 overflow-y-auto">
+          <div class="text-xs text-slate-400 text-center py-6">メッセージはありません</div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  let myDashboard = null;
+  let activeTheme = localStorage.getItem('myroom_theme') || 'sakura';
+
+  document.addEventListener('DOMContentLoaded', () => {
+    applyTheme(activeTheme);
+    createPetals();
+    loadMyDashboard();
+    loadMyMessages();
+    initClock();
+  });
+
+  // --- テーマ着せ替えロジック ---
+  function toggleThemeMenu() {
+    const menu = document.getElementById('theme-menu');
+    menu.classList.toggle('hidden');
+  }
+
+  function setTheme(theme) {
+    activeTheme = theme;
+    localStorage.setItem('myroom_theme', theme);
+    applyTheme(theme);
+    toggleThemeMenu();
+    showToast(`壁紙を「${getThemeLabel(theme)}」に変更しました 🌸`);
+  }
+
+  function getThemeLabel(t) {
+    const map = {
+      sakura: '桜チェリー',
+      lavender: 'ラベンダー',
+      herb: '癒やしハーブ',
+      mimosa: 'ミモザの陽だまり',
+      simple: 'ピュアホワイト'
+    };
+    return map[t] || t;
+  }
+
+  function applyTheme(theme) {
+    document.body.className = `h-full theme-${theme}`;
+    const petals = document.getElementById('petals-layer');
+    if (petals) {
+      petals.style.display = (theme === 'sakura' || theme === 'lavender') ? 'block' : 'none';
+    }
+  }
+
+  // 花びら生成
+  function createPetals() {
+    const layer = document.getElementById('petals-layer');
+    if (!layer) return;
+    layer.innerHTML = '';
+    const petalCount = 14;
+    for (let i = 0; i < petalCount; i++) {
+      const p = document.createElement('div');
+      p.className = 'petal';
+      const size = Math.random() * 8 + 8;
+      p.style.width = `${size}px`;
+      p.style.height = `${size * 1.4}px`;
+      p.style.left = `${Math.random() * 100}%`;
+      p.style.animationDuration = `${Math.random() * 6 + 6}s, ${Math.random() * 3 + 2}s`;
+      p.style.animationDelay = `${Math.random() * 5}s, ${Math.random() * 2}s`;
+      layer.appendChild(p);
+    }
+  }
+
+  function initClock() {
+    const d = new Date();
+    const days = ['日','月','火','水','木','金','土'];
+    const el = document.getElementById('live-date');
+    if (el) el.textContent = `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 (${days[d.getDay()]})`;
+  }
+
+  async function loadMyDashboard() {
+    try {
+      const res = await fetch('/api/me/dashboard');
+      if (res.status === 401) {
+        window.location.href = '/login';
+        return;
+      }
+      myDashboard = await res.json();
+      renderDashboard(myDashboard);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  function renderDashboard(d) {
+    // 優先度①：給与シミュレーター
+    const sal = d.salary_simulator;
+    document.getElementById('val-hourly-wage').textContent = `¥${(sal.hourly_wage || 0).toLocaleString()}`;
+    document.getElementById('val-worked-days').textContent = `${sal.worked_days_count} 日`;
+    document.getElementById('val-work-hours').textContent = `${sal.total_work_hours} 時間`;
+    document.getElementById('val-estimated-salary').textContent = `¥${(sal.estimated_salary || 0).toLocaleString()}`;
+
+    // 優先度②：有休管理
+    const pl = d.paid_leave;
+    document.getElementById('val-paid-leave-remaining').textContent = pl.remaining;
+    document.getElementById('val-paid-leave-taken').textContent = pl.taken_this_month;
+
+    // 家計簿残高
+    const bg = d.budget;
+    document.getElementById('val-budget-balance').textContent = `残高: ¥${(bg.balance || 0).toLocaleString()}`;
+
+    // 本日のシフト
+    const ts = d.today_shift;
+    document.getElementById('today-shift-badge').textContent = ts.shift_label;
+    document.getElementById('today-shift-time').textContent = ts.time_range;
+
+    // 打刻ステータス
+    const cs = d.clock.status;
+    if (cs === 'WORKING') {
+      document.getElementById('clock-status-note').textContent = `現在勤務中 (${d.clock.clock_in} 出勤)`;
+    } else if (cs === 'DONE') {
+      document.getElementById('clock-status-note').textContent = `退勤完了 (${d.clock.clock_in}〜${d.clock.clock_out}) お疲れ様でした！`;
+    }
+    if (window.lucide) lucide.createIcons();
+  }
+
+  async function editWage() {
+    const cur = myDashboard?.salary_simulator?.hourly_wage || 0;
+    const input = prompt('あなたの時間給（時給）を入力してください:\n※この設定はあなただけの手帳に保存されます', cur);
+    if (!input || isNaN(input)) return;
+    const wage = parseInt(input);
+    const res = await fetch('/api/me/wage', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hourly_wage: wage })
+    });
+    if (res.ok) {
+      showToast('時給を更新しました 🌸');
+      loadMyDashboard();
+    }
+  }
+
+  async function editPaidLeave() {
+    const cur = myDashboard?.paid_leave?.remaining || 0;
+    const input = prompt('現在の有給休暇の残り日数を入力してください:\n※あなただけの手帳に保存されます', cur);
+    if (!input || isNaN(input)) return;
+    const days = parseFloat(input);
+    const res = await fetch('/api/me/paid-leave', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paid_leave_remaining: days })
+    });
+    if (res.ok) {
+      showToast('有休残日数を更新しました 🌿');
+      loadMyDashboard();
+    }
+  }
+
+  async function doClock(action) {
+    try {
+      const res = await fetch('/api/me/clock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(action === 'IN' ? 'おはようございます！出勤を記録しました ☀️' : '今日も1日お疲れ様でした！退勤を記録しました ☕️');
+        loadMyDashboard();
+      }
+    } catch (e) {
+      showToast('打刻エラー', 'error');
+    }
+  }
+
+  async function saveHealth(status) {
+    const note = document.getElementById('health-note').value;
+    const todayStr = new Date().toISOString().split('T')[0];
+    const res = await fetch('/api/me/health', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date: todayStr, health_status: status, note: note || '' })
+    });
+    if (res.ok) {
+      showToast('体調を記録しました ❤️');
+      document.getElementById('health-note').value = '';
+    }
+  }
+
+  function saveHealthWithNote() {
+    saveHealth('OK');
+  }
+
+  async function handleAddBudget(e) {
+    e.preventDefault();
+    const title = document.getElementById('budget-title').value;
+    const isIncome = document.getElementById('budget-type').value === 'INCOME';
+    const amount = parseInt(document.getElementById('budget-amount').value);
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    const res = await fetch('/api/me/budget', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date: todayStr, title, amount, is_income: isIncome })
+    });
+    if (res.ok) {
+      showToast('家計簿に記録しました 📒');
+      document.getElementById('budget-title').value = '';
+      document.getElementById('budget-amount').value = '';
+      loadMyDashboard();
+    }
+  }
+
+  function setReason(r) {
+    document.getElementById('leave-reason').value = r;
+  }
+
+  async function handleApplyLeave(e) {
+    e.preventDefault();
+    const targetDate = document.getElementById('leave-date').value;
+    const leaveType = document.getElementById('leave-type').value;
+    const reason = document.getElementById('leave-reason').value;
+
+    const res = await fetch('/api/me/leave-requests', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date: targetDate, leave_type: leaveType, reason })
+    });
+    if (res.ok) {
+      showToast('休暇申請を送信しました 🏖️');
+      document.getElementById('leave-date').value = '';
+      document.getElementById('leave-reason').value = '';
+    }
+  }
+
+  async function loadMyMessages() {
+    try {
+      const res = await fetch('/api/me/messages');
+      const list = await res.json();
+      const box = document.getElementById('messages-list');
+      if (!list || list.length === 0) {
+        box.innerHTML = '<div class="text-xs text-slate-400 text-center py-6">メッセージはありません</div>';
+        return;
+      }
+      box.innerHTML = '';
+      list.forEach(m => {
+        const item = document.createElement('div');
+        item.className = 'p-3.5 rounded-2xl bg-amber-50/80 border border-amber-100/80 text-xs space-y-1 shadow-2xs';
+        item.innerHTML = `
+          <div class="flex items-center justify-between font-bold text-amber-900">
+            <span>${m.sender_name} より</span>
+            <span class="text-[10px] text-slate-400 font-normal">${m.created_at}</span>
+          </div>
+          <div class="text-slate-700 whitespace-pre-wrap">${m.content}</div>
+        `;
+        box.appendChild(item);
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function logout() {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = '/login';
+  }
+</script>
+{% endblock %}

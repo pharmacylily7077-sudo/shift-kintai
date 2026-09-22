@@ -1,128 +1,117 @@
-/* 薬局向けクリーンなアニメーションと微調整 */
-
-/* タップハイライトを無効化（スマホアプリ感） */
-* {
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* スクロールバーのカスタマイズ */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: #f1f5f9;
-}
-::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 9999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
-
-/* ボタンのホバー＆アクティブ感 */
-button:active {
-  transform: scale(0.98);
-}
-
-/* カードのアニメーション */
-.card-hover {
-  transition: all 0.2s ease-in-out;
-}
-.card-hover:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
-}
-
-/* スマホ用タッチ最適化 */
-@media (max-width: 640px) {
-  .touch-target {
-    min-height: 44px;
-  }
-}
-
-/* 印刷専用ヘッダー（画面では非表示） */
-.print-only {
-  display: none;
-}
-
-/* =======================================
-   薬局貼り出し用「月間シフト表 印刷機能」
-   A4横向き 1枚完結レイアウト
-   ======================================= */
+/* 印刷用スタイル */
 @media print {
-  @page {
-    size: A4 landscape;
-    margin: 8mm;
-  }
+  header, .print\:hidden, button, a { display: none !important; }
+  @page { size: A4 landscape; margin: 10mm; }
+  body { background: white !important; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  main { max-width: 100% !important; padding: 0 !important; }
+  #calendar-grid { border-radius: 0 !important; box-shadow: none !important; border: 1px solid #cbd5e1 !important; }
+}
 
-  /* 画面用UIの完全非表示 */
-  .no-print,
-  header,
-  #toast-container,
-  button,
-  .btn,
-  select,
-  input {
-    display: none !important;
-  }
+/* スムーズトランジション */
+.transition { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
 
-  .print-only {
-    display: block !important;
-  }
+/* カレンダーセルのホバー */
+#calendar-body > div:hover {
+  background-color: rgba(254, 242, 242, 0.7);
+}
 
-  body {
-    background-color: #ffffff !important;
-    color: #0f172a !important;
-    font-size: 10pt;
-    padding: 0 !important;
-    margin: 0 !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
+/* --- 女性らしく優しい壁紙テーマ & 演出 --- */
 
-  main {
-    max-width: 100% !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    width: 100% !important;
-  }
+/* 1. 桜・チェリーブロッサム（ふんわりピンクと花びらのグラデーション） */
+body.theme-sakura {
+  background: linear-gradient(135deg, #fff5f7 0%, #fff1f2 35%, #ffe4e6 100%) !important;
+  background-attachment: fixed !important;
+}
+.theme-sakura .glass-card {
+  background: rgba(255, 255, 255, 0.88) !important;
+  backdrop-filter: blur(12px);
+  border-color: rgba(254, 205, 211, 0.6) !important;
+  box-shadow: 0 10px 25px -5px rgba(244, 114, 182, 0.08);
+}
 
-  /* カレンダー印刷用コンテナ */
-  .print-calendar-container {
-    border: 2px solid #334155 !important;
-    border-radius: 6px !important;
-    overflow: hidden;
-    page-break-inside: avoid;
-  }
+/* 2. ラベンダーミスト（心安らぐ上品なパープル） */
+body.theme-lavender {
+  background: linear-gradient(135deg, #fbf7ff 0%, #f5f3ff 40%, #ede9fe 100%) !important;
+  background-attachment: fixed !important;
+}
+.theme-lavender .glass-card {
+  background: rgba(255, 255, 255, 0.88) !important;
+  backdrop-filter: blur(12px);
+  border-color: rgba(221, 214, 254, 0.6) !important;
+  box-shadow: 0 10px 25px -5px rgba(167, 139, 250, 0.08);
+}
 
-  /* カレンダーセル印刷スタイル */
-  .admin-cal-cell {
-    border: 1px solid #cbd5e1 !important;
-    min-height: 75px !important;
-    max-height: none !important;
-    height: auto !important;
-    padding: 3px !important;
-    background-color: #ffffff !important;
-    box-shadow: none !important;
-    page-break-inside: avoid;
-  }
+/* 3. ハーブグリーン（清潔感と癒やしのミントフォレスト） */
+body.theme-herb {
+  background: linear-gradient(135deg, #f2fcf5 0%, #ecfdf5 45%, #d1fae5 100%) !important;
+  background-attachment: fixed !important;
+}
+.theme-herb .glass-card {
+  background: rgba(255, 255, 255, 0.88) !important;
+  backdrop-filter: blur(12px);
+  border-color: rgba(167, 243, 208, 0.6) !important;
+  box-shadow: 0 10px 25px -5px rgba(52, 211, 153, 0.08);
+}
 
-  .admin-cal-cell * {
-    overflow: visible !important;
-    max-height: none !important;
-  }
+/* 4. ミモザ・サンシャイン（明るく前向きになれるペールイエロー） */
+body.theme-mimosa {
+  background: linear-gradient(135deg, #fffdf0 0%, #fefce8 40%, #fef9c3 100%) !important;
+  background-attachment: fixed !important;
+}
+.theme-mimosa .glass-card {
+  background: rgba(255, 255, 255, 0.88) !important;
+  backdrop-filter: blur(12px);
+  border-color: rgba(254, 240, 138, 0.6) !important;
+  box-shadow: 0 10px 25px -5px rgba(250, 204, 21, 0.08);
+}
 
-  /* シフトバッジ印刷対応 */
-  .shift-badge-print {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-    border-width: 1px !important;
-  }
+/* 5. ピュアホワイト & ローズゴールド（洗練されたシンプル） */
+body.theme-simple {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+  background-attachment: fixed !important;
+}
+.theme-simple .glass-card {
+  background: #ffffff !important;
+  border-color: #f1f5f9 !important;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03);
+}
 
-  /* 削除ボタン等は印刷時非表示 */
-  .shift-delete-btn {
-    display: none !important;
-  }
+/* --- 花びら舞うアニメーション演出（演出エフェクト用） --- */
+.petal-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.petal {
+  position: absolute;
+  background: radial-gradient(circle, #fbcfe8 20%, #f472b6 90%);
+  border-radius: 150% 0 150% 0;
+  opacity: 0.35;
+  pointer-events: none;
+  animation: fall linear infinite, sway ease-in-out infinite alternate;
+}
+
+@keyframes fall {
+  0% { top: -10%; opacity: 0.5; }
+  100% { top: 110%; opacity: 0; }
+}
+
+@keyframes sway {
+  0% { transform: translateX(0) rotate(0deg); }
+  100% { transform: translateX(35px) rotate(120deg); }
+}
+
+/* ボタンのふんわりリップル & タップ感 */
+.soft-btn {
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.soft-btn:active {
+  transform: scale(0.96);
 }
