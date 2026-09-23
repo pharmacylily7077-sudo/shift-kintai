@@ -90,8 +90,13 @@
   let currentMonth = new Date().getMonth() + 1;
   let calendarData = null;
 
-  const SHIFT_ICONS = {
-    FULL: '🌕', AM: '🌅', PM: '🌆', FIRST: '🌤', SECOND: '🌇', OFF: '🌙'
+  const SHIFT_LABELS = {
+    FULL: '全日',
+    AM: '午前診',
+    PM: '午後診',
+    FIRST: '前半',
+    SECOND: '後半',
+    OFF: '休み'
   };
 
   async function loadCalendar() {
@@ -167,8 +172,9 @@
         const badge = document.createElement('div');
         badge.className = 'text-[10px] sm:text-xs font-bold px-1 py-0.5 rounded-lg mb-0.5 truncate text-white leading-tight';
         badge.style.backgroundColor = s.color;
-        badge.title = `${s.full_name}: ${s.time_range}`;
-        badge.textContent = `${s.full_name} ${SHIFT_ICONS[s.shift_type] || ''}`;
+        const shiftName = s.shift_label || SHIFT_LABELS[s.shift_type] || '';
+        badge.title = `${s.full_name}: ${shiftName} (${s.time_range})`;
+        badge.textContent = `${s.full_name} (${shiftName})`;
         cell.appendChild(badge);
       });
 
