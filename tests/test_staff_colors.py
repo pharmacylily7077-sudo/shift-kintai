@@ -20,7 +20,7 @@ def test_six_staff_evaluation_colors_and_full_names(client):
         "ieda": {"name": "家田 知美", "color": "#10b981", "pos": "PHARMACIST"},
         "terauchi": {"name": "寺内 美和", "color": "#2563eb", "pos": "CLERK"},
         "yamanaka": {"name": "山中 久美", "color": "#1e3a8a", "pos": "CLERK"},
-        "kobayashi": {"name": "小林 綾", "color": "#8b5cf6", "pos": "ASSISTANT"},
+        "kobayashi": {"name": "小林 彩乃", "color": "#8b5cf6", "pos": "ASSISTANT"},
         "honma": {"name": "本間 まや", "color": "#f43f5e", "pos": "ASSISTANT"},
     }
 
@@ -52,4 +52,4 @@ def test_six_staff_evaluation_colors_and_full_names(client):
         "password": "kobayashi1234"
     })
     assert res_kobayashi.status_code == 200
-    assert res_kobayashi.json()["full_name"] == "小林 綾"
+    assert res_kobayashi.json()["full_name"] == "小林 彩乃"

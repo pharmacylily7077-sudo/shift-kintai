@@ -56,7 +56,7 @@ INITIAL_STAFF = [
     },
     # 調剤補助（赤・成長グラデーション系統）
     {
-        "full_name": "小林 綾",
+        "full_name": "小林 彩乃",
         "position": models.Position.ASSISTANT,
         "employment_type": models.EmploymentType.PARTTIME,
         "default_shift": models.ShiftType.SECOND,  # 後半

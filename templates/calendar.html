@@ -105,10 +105,10 @@
     document.getElementById('month-label').textContent = data.month_label;
     document.getElementById('print-title').textContent = `リリー薬局 ${data.month_label} シフト表`;
 
-    // 評価カラー凡例の動的生成
+    // スタッフ凡例の動的生成
     const legendEl = document.getElementById('staff-legend');
     if (legendEl && data.staff) {
-      legendEl.innerHTML = '<div class="w-full flex items-center justify-between text-xs font-bold text-slate-500 mb-1"><span class="flex items-center space-x-1"><span>👥</span><span>スタッフ評価・成長カラー</span></span></div>';
+      legendEl.innerHTML = '';
       data.staff.forEach(s => {
         const tag = document.createElement('span');
         tag.className = 'inline-flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-800 shadow-2xs';

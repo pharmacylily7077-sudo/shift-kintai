@@ -22,7 +22,7 @@ def test_calendar_api_evaluation_colors_and_no_leak(client):
     assert staff_colors["家田 知美"] == "#10b981"
     assert staff_colors["寺内 美和"] == "#2563eb"
     assert staff_colors["山中 久美"] == "#1e3a8a"
-    assert staff_colors["小林 綾"] == "#8b5cf6"
+    assert staff_colors["小林 彩乃"] == "#8b5cf6"
     assert staff_colors["本間 まや"] == "#f43f5e"
 
     # プライバシー検証: 給与・時給・有休残の完全排除
