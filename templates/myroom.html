@@ -85,24 +85,10 @@
       <!-- ② 上段：肖像画・勤務状況概要・アンティーク時計（3列配置） -->
       <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center mb-8 pb-6 border-b border-amber-200/60">
         
-        <!-- 左列：水色リボン付き肖像画 & スタッフ情報 -->
-        <div class="md:col-span-3 text-center">
-          <div class="rococo-portrait-ornate">
-            <span class="rococo-portrait-ribbon">🎀</span>
-            <div class="rococo-portrait-wreath">
-              <span>🌸</span>
-              <span>🌸</span>
-            </div>
-            <div class="rococo-portrait-circle">
-              {% if current_user.username == 'miyake' %}
-                <img src="/static/images/miyake_portrait_gold_frame.png" alt="三宅 興之" class="w-full h-full object-cover">
-              {% else %}
-                <div class="w-full h-full flex items-center justify-center bg-gradient-to-b from-amber-50 to-amber-100 text-3xl font-serif text-amber-900 font-bold shadow-inner">
-                  {{ current_user.full_name[0] }}
-                </div>
-              {% endif %}
-            </div>
-            <span class="rococo-portrait-shell">⚜️</span>
+        <!-- 左列：Camarade（調剤の仲間たち）ロココ紋章銘板 ＆ スタッフ情報 -->
+        <div class="md:col-span-3 text-center flex flex-col items-center justify-center">
+          <div class="relative w-40 sm:w-48 mx-auto hover:scale-105 transition-transform duration-300 mb-1">
+            <img src="/static/images/camarade_transparent.png" alt="Camarade ロココ銘板" class="w-full h-auto drop-shadow-md mx-auto">
           </div>
 
           <div class="mt-3">
