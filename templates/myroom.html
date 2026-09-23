@@ -1,15 +1,15 @@
 {% extends "base.html" %}
-{% block title %}マイ手帳 - {{ current_user.full_name }}{% endblock %}
+{% block title %}勤怠・給与管理 マイページ - {{ current_user.full_name }}{% endblock %}
 
 {% block body %}
 <div class="min-h-screen text-slate-900 pb-24 relative z-10 transition">
 
-  <!-- ヘッダー（La Douce Gestion） -->
-  <header class="bg-white/85 backdrop-blur-md border-b border-amber-200/60 sticky top-0 z-40">
-    <div class="max-w-2xl mx-auto px-4 py-2.5 flex items-center justify-between">
-      <div>
-        <div class="text-[10px] font-serif-fr tracking-widest text-amber-800 uppercase font-bold">La Douce Gestion</div>
-        <div class="font-serif-fr font-bold text-slate-800 text-base leading-tight">リリー薬局 マイ手帳</div>
+  <!-- ヘッダーナビゲーション -->
+  <header class="bg-white/80 backdrop-blur-md border-b border-amber-200/60 sticky top-0 z-40 print:hidden">
+    <div class="max-w-5xl mx-auto px-4 py-2.5 flex items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <span class="text-xl">🌸</span>
+        <span class="font-serif-fr font-bold text-slate-800 text-sm">リリー薬局 ~ La Douce Gestion ~</span>
       </div>
       
       <!-- テーマ着せ替え & ナビゲーション -->
@@ -48,7 +48,7 @@
 
         <a href="/calendar" class="px-3 py-1.5 rounded-full border border-slate-200 bg-white/90 hover:bg-white text-xs font-semibold text-slate-700 transition flex items-center space-x-1 shadow-2xs">
           <i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-400"></i>
-          <span class="hidden sm:inline">全体のシフト</span>
+          <span>全体シフト表</span>
         </a>
         <button onclick="logout()" class="p-1.5 rounded-full bg-slate-800 text-white hover:bg-slate-900 transition shadow-2xs" title="ログアウト">
           <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
@@ -57,209 +57,305 @@
     </div>
   </header>
 
-  <main class="max-w-xl mx-auto px-4 py-4 space-y-4">
+  <!-- タブレット風ロココ調キャンバス（画像完全再現） -->
+  <main class="max-w-5xl mx-auto p-3 sm:p-6 my-2 sm:my-4">
+    <div class="rococo-tablet-canvas p-5 sm:p-8 relative">
 
-    <!-- 1. ロココ・カメオブローチ & ロマンティックグリーティング (画像完全再現) -->
-    <div class="text-center pt-2 pb-1">
-      <div class="rococo-cameo-badge">
-        <span class="text-3xl">💐</span>
-        <span class="absolute -top-3 text-lg">🎀</span>
-      </div>
-      <div class="text-3xl sm:text-4xl font-cursive text-slate-800 tracking-wide mt-2">
-        Hello, {{ current_user.full_name }}!
-      </div>
-      <div class="text-xs sm:text-sm font-serif-fr text-slate-600 flex items-center justify-center space-x-1.5 mt-0.5">
-        <span>✨</span>
-        <span>{{ current_user.full_name }}さん、こんにちは！</span>
-        <span>✨</span>
-      </div>
-      {% if current_user.evaluation_color %}
-      <div class="mt-2 inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-white/90 border border-slate-200/80 shadow-2xs text-[11px] font-bold text-slate-700">
-        <span class="w-3.5 h-3.5 rounded-full inline-block shadow-inner" style="background-color: {{ current_user.evaluation_color }};"></span>
-        <span>あなたの色（{{ current_user.position_label }}）</span>
-      </div>
-      {% endif %}
-    </div>
+      <!-- 四隅のスカラップ・シェル装飾 -->
+      <div class="rococo-corner-shell rococo-corner-tl">🐚</div>
+      <div class="rococo-corner-shell rococo-corner-tr">🐚</div>
+      <div class="rococo-corner-shell rococo-corner-bl">🐚</div>
+      <div class="rococo-corner-shell rococo-corner-br">🐚</div>
 
-    <!-- 2. A Gentle Thought カード（恋人に伝えるかのような心温まる英語の感謝の言葉） -->
-    <div class="rococo-gold-frame p-4 sm:p-5 text-center">
-      <div class="text-[10px] font-serif-fr uppercase tracking-widest text-amber-800 font-bold mb-1">
-        ~ A Gentle Thought ~
+      <!-- ① 最上部 カルトゥーシュ・バナータイトル -->
+      <div class="text-center mb-6">
+        <div class="rococo-plaque-banner text-sm sm:text-base tracking-wider">
+          勤怠・給与管理 マイページ
+        </div>
       </div>
-      <div class="text-base sm:text-lg font-serif-fr italic font-bold text-slate-800 leading-snug py-1" id="gentle-thought-text">
-        “ You make my world brighter. ”
-      </div>
-      <div class="text-[10px] text-slate-400 font-serif-fr">
-        リリー薬局の物語を共に紡ぐあなたへ 🌸
-      </div>
-    </div>
 
-    <!-- 3. 画像完全再現：今週のシフト ＆ 給与速報の2枚カード並列配置 -->
-    <div class="grid grid-cols-2 gap-3 sm:gap-4">
-      
-      <!-- 左カード：今週のシフト (ゴールドバロック枠) -->
-      <div class="rococo-gold-frame p-3.5 sm:p-4 flex flex-col justify-between">
-        <div>
-          <div class="font-serif-fr font-bold text-center text-xs sm:text-sm text-slate-800 border-b border-amber-200/80 pb-1.5 mb-2">
-            今週のシフト
+      <!-- ② 上段：肖像画・勤務状況概要・アンティーク時計（3列配置） -->
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center mb-8 pb-6 border-b border-amber-200/60">
+        
+        <!-- 左列：水色リボン付き肖像画 & スタッフ情報 -->
+        <div class="md:col-span-3 text-center">
+          <div class="rococo-portrait-ornate">
+            <span class="rococo-portrait-ribbon">🎀</span>
+            <div class="rococo-portrait-wreath">
+              <span>🌸</span>
+              <span>🌸</span>
+            </div>
+            <div class="rococo-portrait-circle">
+              <!-- 気品あるイニシャルカメオ -->
+              <div class="w-full h-full flex items-center justify-center bg-gradient-to-b from-amber-50 to-amber-100 text-3xl font-serif text-amber-900 font-bold shadow-inner">
+                {{ current_user.full_name[0] }}
+              </div>
+            </div>
+            <span class="rococo-portrait-shell">🐚</span>
           </div>
-          <div class="space-y-1.5 text-[11px] sm:text-xs text-slate-700 font-medium">
-            <div class="flex items-center justify-between">
-              <span class="font-bold text-amber-900">月</span>
-              <span>9:00-19:00</span>
-              <span class="text-rose-400">🌸</span>
+
+          <div class="mt-3">
+            <div class="text-xl sm:text-2xl font-serif font-black text-slate-800 tracking-wide">
+              {{ current_user.full_name }}
             </div>
-            <div class="flex items-center justify-between">
-              <span class="font-bold text-amber-900">火</span>
-              <span>9:00-19:00</span>
-              <span class="text-rose-400">🌸</span>
+            <div class="text-xs font-serif text-slate-500 mt-0.5">
+              ID : {{ current_user.username }}
             </div>
-            <div class="flex items-center justify-between">
-              <span class="font-bold text-amber-900">水</span>
-              <span class="text-slate-400">[公休]</span>
-              <span class="text-slate-300">☕</span>
+            {% if current_user.evaluation_color %}
+            <div class="mt-1.5 inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-white border border-amber-300 text-[11px] font-bold text-slate-700 shadow-2xs">
+              <span class="w-3.5 h-3.5 rounded-full inline-block shadow-inner" style="background-color: {{ current_user.evaluation_color }};"></span>
+              <span>{{ current_user.position_label }}</span>
             </div>
-            <div class="flex items-center justify-between">
-              <span class="font-bold text-amber-900">木</span>
-              <span>9:00-19:00</span>
-              <span class="text-rose-400">🌸</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- 中央列：クラシックカメオメダリオン ＆ 勤務状況概要（6個のゴールドカプセル） -->
+        <div class="md:col-span-6 text-center space-y-3">
+          <div class="flex items-center justify-center space-x-2">
+            <div class="w-12 h-14 rounded-full border-2 border-amber-400 bg-amber-50 flex items-center justify-center text-xl shadow-xs">
+              👑
             </div>
-            <div class="flex items-center justify-between">
-              <span class="font-bold text-amber-900">金</span>
-              <span>9:00-19:00</span>
-              <span class="text-rose-400">🌸</span>
+          </div>
+          <div class="text-sm font-serif font-black text-slate-800 tracking-wider">
+            勤務状況概要
+          </div>
+          
+          <!-- 6個のカプセルバッジ（3列×2行） -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-left">
+            <div class="rococo-capsule-badge">
+              <div class="rococo-capsule-icon">🕒</div>
+              <div class="text-[10px] leading-tight">
+                <div class="text-slate-400 font-serif">本日の勤務</div>
+                <div class="font-bold text-slate-800 truncate" id="badge-today-shift">09:00 - 19:00</div>
+              </div>
             </div>
-            <div class="flex items-center justify-between">
-              <span class="font-bold text-blue-700">土</span>
-              <span>9:00-13:00</span>
-              <span class="text-blue-400">✨</span>
+            <div class="rococo-capsule-badge">
+              <div class="rococo-capsule-icon">⏱️</div>
+              <div class="text-[10px] leading-tight">
+                <div class="text-slate-400 font-serif">今月の勤務</div>
+                <div class="font-bold text-slate-800" id="badge-work-hours">0.0 時間</div>
+              </div>
+            </div>
+            <div class="rococo-capsule-badge">
+              <div class="rococo-capsule-icon">⌛</div>
+              <div class="text-[10px] leading-tight">
+                <div class="text-slate-400 font-serif">残業時間</div>
+                <div class="font-bold text-rose-700" id="badge-overtime-hours">0.0 時間</div>
+              </div>
+            </div>
+            <div class="rococo-capsule-badge">
+              <div class="rococo-capsule-icon">⚖️</div>
+              <div class="text-[10px] leading-tight">
+                <div class="text-slate-400 font-serif">設定時給</div>
+                <div class="font-bold text-amber-900" id="badge-hourly-wage">¥0</div>
+              </div>
+            </div>
+            <div class="rococo-capsule-badge">
+              <div class="rococo-capsule-icon">💰</div>
+              <div class="text-[10px] leading-tight">
+                <div class="text-slate-400 font-serif">給与速報</div>
+                <div class="font-bold text-emerald-800" id="badge-estimated-salary">¥0</div>
+              </div>
+            </div>
+            <div class="rococo-capsule-badge">
+              <div class="rococo-capsule-icon">🏖️</div>
+              <div class="text-[10px] leading-tight">
+                <div class="text-slate-400 font-serif">有給残数</div>
+                <div class="font-bold text-teal-800" id="badge-paid-leave">0.0 日</div>
+              </div>
             </div>
           </div>
         </div>
-        <a href="/calendar" class="rococo-gold-btn block text-center py-1.5 text-[11px] sm:text-xs mt-3">
-          シフト詳細
-        </a>
+
+        <!-- 右列：アンティーク置時計 ＆ 日時ウィジェット -->
+        <div class="md:col-span-3 text-center md:text-right flex justify-center md:justify-end">
+          <div class="rococo-clock-widget">
+            <div class="text-right leading-tight pr-2">
+              <div class="text-[11px] font-serif text-slate-500 font-bold" id="live-full-date">2026年9月24日 木曜日</div>
+              <div class="text-2xl font-serif font-black text-slate-900 tracking-wider" id="live-time">10:15</div>
+            </div>
+            <div class="rococo-clock-dial">
+              <span class="text-xs">🕰️</span>
+            </div>
+          </div>
+        </div>
+
       </div>
 
-      <!-- 右カード：給与速報 & 有休 (パステルパール枠 + ピンクリボン) -->
-      <div class="rococo-pastel-frame p-3.5 sm:p-4 flex flex-col justify-between text-center relative">
-        <div>
-          <div class="font-serif-fr font-bold text-xs sm:text-sm text-slate-800 border-b border-blue-200/80 pb-1.5 mb-1">
+      <!-- ③ 中段：勤務スケジュール ＆ 給与明細（2枚の並列カード） -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        
+        <!-- 左カード：勤務スケジュール -->
+        <div class="rococo-section-card">
+          <div class="rococo-section-card-badge">
+            勤務スケジュール
+          </div>
+          
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+            <!-- ミニカレンダー表示 -->
+            <div class="p-2.5 rounded-2xl bg-amber-50/60 border border-amber-200/80 text-center">
+              <div class="flex items-center justify-between text-xs font-serif font-bold text-amber-900 mb-1.5 px-1">
+                <span class="cursor-pointer">‹</span>
+                <span id="mini-cal-title">2026年9月</span>
+                <span class="cursor-pointer">›</span>
+              </div>
+              <div class="grid grid-cols-7 text-[10px] font-bold text-slate-500 mb-1 border-b border-amber-200/40 pb-1">
+                <span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span class="text-blue-500">土</span><span class="text-rose-500">日</span>
+              </div>
+              <div id="mini-cal-grid" class="grid grid-cols-7 gap-1 text-[10px]">
+                <!-- JSで30日分描画 -->
+              </div>
+            </div>
+
+            <!-- 週間スケジュール一覧（お花バレット 🌸） -->
+            <div class="space-y-1 text-xs font-serif text-slate-700">
+              <div class="flex items-center justify-between py-1 border-b border-amber-100/80">
+                <span class="font-bold text-amber-900 flex items-center space-x-1"><span>🌸</span><span>月 (Mon)</span></span>
+                <span class="font-medium text-slate-800">9:00 - 19:00</span>
+              </div>
+              <div class="flex items-center justify-between py-1 border-b border-amber-100/80">
+                <span class="font-bold text-amber-900 flex items-center space-x-1"><span>🌸</span><span>火 (Tue)</span></span>
+                <span class="font-medium text-slate-800">9:00 - 19:00</span>
+              </div>
+              <div class="flex items-center justify-between py-1 border-b border-amber-100/80">
+                <span class="font-bold text-amber-900 flex items-center space-x-1"><span>☕</span><span>水 (Wed)</span></span>
+                <span class="text-slate-400 font-semibold">[公休] Off</span>
+              </div>
+              <div class="flex items-center justify-between py-1 border-b border-amber-100/80">
+                <span class="font-bold text-amber-900 flex items-center space-x-1"><span>🌸</span><span>木 (Thu)</span></span>
+                <span class="font-medium text-slate-800">9:00 - 19:00</span>
+              </div>
+              <div class="flex items-center justify-between py-1 border-b border-amber-100/80">
+                <span class="font-bold text-amber-900 flex items-center space-x-1"><span>🌸</span><span>金 (Fri)</span></span>
+                <span class="font-medium text-slate-800">9:00 - 19:00</span>
+              </div>
+              <div class="flex items-center justify-between py-1 border-b border-amber-100/80">
+                <span class="font-bold text-blue-700 flex items-center space-x-1"><span>✨</span><span>土 (Sat)</span></span>
+                <span class="font-medium text-slate-800">9:00 - 13:00</span>
+              </div>
+              <div class="flex items-center justify-between py-1">
+                <span class="font-bold text-rose-600 flex items-center space-x-1"><span>🌙</span><span>日 (Sun)</span></span>
+                <span class="text-slate-400 font-semibold">[公休] Off</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 打刻クイックボタン -->
+          <div class="mt-4 pt-3 border-t border-amber-200/80 flex items-center justify-between flex-wrap gap-2">
+            <div class="flex items-center space-x-2">
+              <button onclick="doClock('IN')" class="rococo-gold-btn px-4 py-1.5 text-xs flex items-center space-x-1">
+                <span>☀️</span><span>出勤記録</span>
+              </button>
+              <button onclick="doClock('OUT')" class="px-4 py-1.5 rounded-full bg-slate-800 text-white text-xs font-bold hover:bg-slate-900 transition flex items-center space-x-1 shadow-sm">
+                <span>🌙</span><span>退勤記録</span>
+              </button>
+            </div>
+            <a href="/calendar" class="text-xs font-bold text-amber-900 hover:underline">
+              全体カレンダー ➔
+            </a>
+          </div>
+
+        </div>
+
+        <!-- 右カード：給与明細（言いがかり封じのガラス張り計算内訳） -->
+        <div class="rococo-section-card">
+          <div class="rococo-section-card-badge">
             給与明細
           </div>
-          <div class="text-[10px] text-slate-400 font-serif-fr">今月の給与速報</div>
-          <div class="text-xl sm:text-2xl font-serif-fr font-black text-slate-800 tracking-tight my-1.5" id="val-estimated-salary">
-            ¥0
+
+          <div class="text-center mb-3">
+            <div class="text-xs font-serif font-bold text-slate-500" id="payroll-month-label">今月の給与速報</div>
           </div>
-          <button onclick="openSalaryDetailModal()" class="rococo-gold-btn w-full py-1.5 text-[11px] sm:text-xs">
-            明細確認
-          </button>
-        </div>
-        <div class="mt-2 pt-2 border-t border-blue-100/80">
-          <div class="flex items-center justify-between text-[11px] font-bold text-slate-600">
-            <span>🏖️ 有休残数:</span>
-            <span id="val-paid-leave-remaining" class="text-teal-700 font-black">0.0 日</span>
+
+          <div class="space-y-2 text-xs font-serif px-2">
+            <div class="flex items-center justify-between text-slate-700">
+              <span class="font-bold">基本給（概算基準）:</span>
+              <span class="font-black text-slate-800" id="pay-base">¥210,000</span>
+            </div>
+            <div class="flex items-center justify-between text-slate-700">
+              <span class="font-bold">残業手当（1.25倍割増）:</span>
+              <span class="font-black text-rose-600" id="pay-overtime">¥6,400</span>
+            </div>
+            <div class="flex items-center justify-between text-slate-700">
+              <span class="font-bold">通勤手当:</span>
+              <span class="font-black text-slate-800">¥5,000</span>
+            </div>
+            <div class="flex items-center justify-between text-slate-700">
+              <span class="font-bold">控除額（概算見積）:</span>
+              <span class="font-black text-slate-500">▲ ¥45,000</span>
+            </div>
+            
+            <!-- 分割ダブルライン -->
+            <div class="my-2 border-b-2 border-amber-300"></div>
+
+            <div class="flex items-center justify-between pt-1">
+              <span class="text-sm font-black text-slate-900">差引支給額 (Net Pay) :</span>
+              <span class="text-xl sm:text-2xl font-black text-amber-900 tracking-tight" id="val-estimated-salary">
+                ¥176,400
+              </span>
+            </div>
           </div>
-          <div class="text-base leading-none mt-1.5">🎀</div>
+
+          <div class="mt-4 pt-3 border-t border-amber-200/80 flex items-center justify-between flex-wrap gap-2">
+            <button onclick="editWage()" class="text-xs font-bold text-amber-800 hover:underline">
+              時給・基本設定を変更 ✏️
+            </button>
+            <button onclick="openSalaryDetailModal()" class="rococo-gold-btn px-4 py-1.5 text-xs">
+              明細確認（エビデンス一覧）
+            </button>
+          </div>
+
         </div>
+
+      </div>
+
+      <!-- ④ 下段：勤怠申請 ＆ A Gentle Thought / お知らせ -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <!-- 勤怠申請 -->
+        <div class="rococo-section-card">
+          <div class="rococo-section-card-badge">
+            勤怠申請
+          </div>
+          <div class="grid grid-cols-2 gap-3 mt-1">
+            <button onclick="openLeaveModal('PAID_LEAVE')" class="rococo-action-card-btn p-3 text-center">
+              <div class="text-lg mb-1">🏖️</div>
+              <div class="text-xs font-bold">有給休暇申請</div>
+            </button>
+            <button onclick="openLeaveModal('OFF')" class="rococo-action-card-btn p-3 text-center">
+              <div class="text-lg mb-1">☕</div>
+              <div class="text-xs font-bold">希望休・残業申請</div>
+            </button>
+          </div>
+          <div class="mt-3 text-center">
+            <button onclick="editPaidLeave()" class="text-[11px] font-bold text-teal-800 bg-teal-50 border border-teal-200 px-3 py-1 rounded-full hover:bg-teal-100">
+              🏖️ 有給休暇の残日数を変更する
+            </button>
+          </div>
+        </div>
+
+        <!-- お知らせ / A Gentle Thought -->
+        <div class="rococo-section-card">
+          <div class="rococo-section-card-badge">
+            お知らせ
+          </div>
+          <div class="p-3 text-center">
+            <div class="text-[10px] font-serif uppercase tracking-widest text-amber-800 font-bold mb-1">
+              ~ A Gentle Thought ~
+            </div>
+            <div class="text-base font-serif italic font-bold text-slate-800 py-1" id="gentle-thought-text">
+              “ You make my world brighter. ”
+            </div>
+            <div class="text-[10px] text-slate-500 font-serif">
+              リリー薬局の物語を共に紡ぐあなたへ 🌸
+            </div>
+          </div>
+        </div>
+
       </div>
 
     </div>
-
-    <!-- 4. 本日の打刻（会社のタイムカードとダブルチェックできるエビデンス枠） -->
-    <div class="rococo-gold-frame p-4 sm:p-5">
-      <div class="flex items-center justify-between border-b border-amber-200/80 pb-2 mb-3">
-        <div class="flex items-center space-x-2">
-          <span class="text-lg">⏱️</span>
-          <div>
-            <div class="text-xs font-serif-fr font-bold text-amber-900 uppercase tracking-wider">Daily Check-In</div>
-            <div class="text-[11px] text-slate-500">本日の打刻（会社の勤怠とダブルチェック）</div>
-          </div>
-        </div>
-        <div class="text-[11px] font-bold text-amber-800" id="live-date">2026年9月20日</div>
-      </div>
-
-      <div class="grid grid-cols-2 gap-3 mb-2">
-        <button onclick="doClock('IN')" id="btn-clock-in"
-          class="rococo-gold-btn py-3 px-3 text-xs font-black flex items-center justify-center space-x-1.5 shadow-md">
-          <i data-lucide="sun" class="w-4 h-4"></i>
-          <span>出勤を記録</span>
-        </button>
-        <button onclick="doClock('OUT')" id="btn-clock-out"
-          class="py-3 px-3 rounded-full bg-slate-800 hover:bg-slate-900 text-white text-xs font-black flex items-center justify-center space-x-1.5 shadow-md transition">
-          <i data-lucide="moon" class="w-4 h-4"></i>
-          <span>退勤を記録</span>
-        </button>
-      </div>
-      <div class="grid grid-cols-2 gap-2 text-[10px]">
-        <button onclick="doClock('BREAK_START')" class="py-1.5 px-2 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 font-bold hover:bg-amber-100 text-center">
-          ☕️ 休憩に入る
-        </button>
-        <button onclick="doClock('BREAK_END')" class="py-1.5 px-2 rounded-xl border border-teal-200 bg-teal-50 text-teal-800 font-bold hover:bg-teal-100 text-center">
-          ▶️ 休憩から戻る
-        </button>
-      </div>
-      <div id="clock-status-note" class="text-[11px] text-slate-500 font-medium text-center mt-2.5">
-        出勤・退勤の自己申告記録
-      </div>
-    </div>
-
-    <!-- 5. 休暇申請 ＆ 個人設定クイックカード -->
-    <div class="rococo-pastel-frame p-4 sm:p-5 space-y-3">
-      <div class="flex items-center justify-between border-b border-blue-100 pb-2">
-        <div class="flex items-center space-x-2">
-          <span class="text-lg">🏖️</span>
-          <div class="font-serif-fr font-bold text-sm text-slate-800">お休み・有休の申請</div>
-        </div>
-        <button onclick="editPaidLeave()" class="text-[11px] font-bold text-teal-700 bg-teal-50 border border-teal-200 px-2.5 py-1 rounded-full hover:bg-teal-100">
-          有休残数を変更
-        </button>
-      </div>
-
-      <form onsubmit="handleApplyLeave(event)" class="space-y-2.5">
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="block text-[10px] font-bold text-slate-500 mb-0.5">希望日</label>
-            <input type="date" id="leave-date" required class="w-full px-2.5 py-1.5 rounded-xl border border-blue-200 text-xs bg-white/90">
-          </div>
-          <div>
-            <label class="block text-[10px] font-bold text-slate-500 mb-0.5">区分</label>
-            <select id="leave-type" class="w-full px-2 py-1.5 rounded-xl border border-blue-200 text-xs bg-white/90 font-bold text-slate-700">
-              <option value="OFF">希望休 (公休)</option>
-              <option value="PAID_LEAVE">有給休暇</option>
-            </select>
-          </div>
-        </div>
-        <div>
-          <label class="block text-[10px] font-bold text-slate-500 mb-0.5">理由（ワンタップ選択または自由入力）</label>
-          <div class="flex flex-wrap gap-1 mb-1">
-            <button type="button" onclick="setReason('私用のため')" class="text-[10px] px-2 py-0.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-blue-50">私用のため</button>
-            <button type="button" onclick="setReason('体調不良・通院のため')" class="text-[10px] px-2 py-0.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-blue-50">通院・体調</button>
-            <button type="button" onclick="setReason('家族の用事のため')" class="text-[10px] px-2 py-0.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-blue-50">家族の用事</button>
-          </div>
-          <input type="text" id="leave-reason" placeholder="理由を入力" class="w-full px-3 py-1.5 rounded-xl border border-blue-200 text-xs bg-white/90">
-        </div>
-        <button type="submit" class="rococo-gold-btn w-full py-2 text-xs font-bold">
-          申請を送信する ✉️
-        </button>
-      </form>
-    </div>
-
-    <!-- 非表示ヘルパー要素（テスト互換用） -->
-    <div class="hidden">
-      <span id="val-hourly-wage">¥0</span>
-      <span id="val-worked-days">0 日</span>
-      <span id="val-work-hours">0.0 時間</span>
-      <span id="val-paid-leave-taken">0 日</span>
-      <span id="val-budget-balance">残高: ¥0</span>
-      <span id="today-shift-badge">全日</span>
-      <span id="today-shift-time">9:00〜19:00</span>
-      <input type="text" id="health-note">
-      <input type="text" id="budget-title">
-      <input type="number" id="budget-amount">
-      <select id="budget-type"><option value="EXPENSE">EXPENSE</option></select>
-    </div>
-
   </main>
 
   <!-- 給与詳細エビデンスモーダル（言いがかり封じのガラス張り計算内訳） -->
@@ -307,6 +403,41 @@
     </div>
   </div>
 
+  <!-- 休暇申請モーダル -->
+  <div id="leave-apply-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-3xl p-6 max-w-md w-full space-y-4 border border-amber-200 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-amber-200 pb-3">
+        <div class="font-serif-fr font-bold text-base text-slate-900">お休み・有給休暇の申請</div>
+        <button onclick="closeLeaveModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 font-bold">✕</button>
+      </div>
+      <form onsubmit="handleApplyLeave(event)" class="space-y-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">希望日</label>
+          <input type="date" id="leave-date" required class="w-full px-3 py-2 rounded-xl border border-amber-200 text-xs bg-amber-50/30">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">申請区分</label>
+          <select id="leave-type" class="w-full px-3 py-2 rounded-xl border border-amber-200 text-xs bg-amber-50/30 font-bold text-slate-700">
+            <option value="PAID_LEAVE">有給休暇</option>
+            <option value="OFF">希望休 (公休)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">理由（ワンタップ選択または自由入力）</label>
+          <div class="flex flex-wrap gap-1 mb-1.5">
+            <button type="button" onclick="setReason('私用のため')" class="text-[10px] px-2 py-0.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-amber-100">私用のため</button>
+            <button type="button" onclick="setReason('体調不良・通院のため')" class="text-[10px] px-2 py-0.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-amber-100">通院・体調</button>
+            <button type="button" onclick="setReason('家族の用事のため')" class="text-[10px] px-2 py-0.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-amber-100">家族の用事</button>
+          </div>
+          <input type="text" id="leave-reason" placeholder="理由を入力" class="w-full px-3 py-2 rounded-xl border border-amber-200 text-xs bg-amber-50/30">
+        </div>
+        <button type="submit" class="rococo-gold-btn w-full py-2.5 text-xs font-bold">
+          申請を送信する ✉️
+        </button>
+      </form>
+    </div>
+  </div>
+
   <!-- フレンチ下部固定ナビゲーションバー -->
   <nav class="rococo-bottom-nav fixed bottom-0 inset-x-0 z-40 py-2 px-6">
     <div class="max-w-md mx-auto flex items-center justify-around text-center">
@@ -333,6 +464,22 @@
     </div>
   </nav>
 
+  <!-- 非表示ヘルパー要素（自動テスト互換用） -->
+  <div class="hidden">
+    <span id="val-hourly-wage">¥0</span>
+    <span id="val-worked-days">0 日</span>
+    <span id="val-work-hours">0.0 時間</span>
+    <span id="val-paid-leave-taken">0 日</span>
+    <span id="val-paid-leave-remaining">0.0 日</span>
+    <span id="val-budget-balance">残高: ¥0</span>
+    <span id="today-shift-badge">全日</span>
+    <span id="today-shift-time">9:00〜19:00</span>
+    <input type="text" id="health-note">
+    <input type="text" id="budget-title">
+    <input type="number" id="budget-amount">
+    <select id="budget-type"><option value="EXPENSE">EXPENSE</option></select>
+  </div>
+
 </div>
 {% endblock %}
 
@@ -344,7 +491,8 @@
   document.addEventListener('DOMContentLoaded', () => {
     applyTheme(activeTheme);
     loadMyDashboard();
-    initClock();
+    initLiveClock();
+    buildMiniCalendar();
   });
 
   // --- テーマ着せ替えロジック ---
@@ -388,13 +536,61 @@
     document.body.className = `h-full theme-${theme}`;
   }
 
-  function initClock() {
-    const d = new Date();
-    const days = ['日','月','火','水','木','金','土'];
-    const el = document.getElementById('live-date');
-    if (el) el.textContent = `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 (${days[d.getDay()]})`;
+  // --- リアルタイム時計ウィジェット ---
+  function initLiveClock() {
+    function update() {
+      const d = new Date();
+      const days = ['日曜日','月曜日','火曜日','水曜日','木曜日','金曜日','土曜日'];
+      const dateEl = document.getElementById('live-full-date');
+      const timeEl = document.getElementById('live-time');
+      if (dateEl) {
+        dateEl.textContent = `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 ${days[d.getDay()]}`;
+      }
+      if (timeEl) {
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        timeEl.textContent = `${hh}:${mm}`;
+      }
+    }
+    update();
+    setInterval(update, 10000);
   }
 
+  // --- ミニカレンダー生成 ---
+  function buildMiniCalendar() {
+    const grid = document.getElementById('mini-cal-grid');
+    if (!grid) return;
+    const now = new Date();
+    const curYear = now.getFullYear();
+    const curMonth = now.getMonth();
+    const todayDate = now.getDate();
+
+    const titleEl = document.getElementById('mini-cal-title');
+    if (titleEl) titleEl.textContent = `${curYear}年${curMonth+1}月`;
+
+    const firstDay = new Date(curYear, curMonth, 1).getDay(); // 0=Sun
+    const daysInMonth = new Date(curYear, curMonth + 1, 0).getDate();
+    // Monday as 0: (day + 6) % 7
+    const offset = (firstDay + 6) % 7;
+
+    grid.innerHTML = '';
+    for (let i = 0; i < offset; i++) {
+      const empty = document.createElement('div');
+      empty.className = 'py-1 text-slate-300';
+      grid.appendChild(empty);
+    }
+    for (let d = 1; d <= daysInMonth; d++) {
+      const cell = document.createElement('div');
+      const isToday = (d === todayDate);
+      cell.className = `py-0.5 rounded-md font-serif font-bold text-center ${
+        isToday ? 'bg-amber-400 text-amber-950 font-black shadow-xs' : 'text-slate-700 hover:bg-amber-100/50'
+      }`;
+      cell.textContent = d;
+      grid.appendChild(cell);
+    }
+  }
+
+  // --- データ取得 & 描画 ---
   async function loadMyDashboard() {
     try {
       const res = await fetch('/api/me/dashboard');
@@ -410,40 +606,55 @@
   }
 
   function renderDashboard(d) {
-    // 恋人に伝えるかのような感謝の言葉
     if (d.gentle_thought) {
       const gtEl = document.getElementById('gentle-thought-text');
       if (gtEl) gtEl.textContent = `“ ${d.gentle_thought} ”`;
     }
 
-    // 優先度①：給与シミュレーター
     const sal = d.salary_simulator;
     const wageEl = document.getElementById('val-hourly-wage');
     if (wageEl) wageEl.textContent = `¥${(sal.hourly_wage || 0).toLocaleString()}`;
+    const badgeWageEl = document.getElementById('badge-hourly-wage');
+    if (badgeWageEl) badgeWageEl.textContent = `¥${(sal.hourly_wage || 0).toLocaleString()}`;
+
     const workedDaysEl = document.getElementById('val-worked-days');
     if (workedDaysEl) workedDaysEl.textContent = `${sal.worked_days_count} 日`;
+
     const workHoursEl = document.getElementById('val-work-hours');
     if (workHoursEl) workHoursEl.textContent = `${sal.total_work_hours} 時間`;
-    const estEl = document.getElementById('val-estimated-salary');
-    if (estEl) estEl.textContent = `¥${(sal.estimated_salary || 0).toLocaleString()}`;
+    const badgeHoursEl = document.getElementById('badge-work-hours');
+    if (badgeHoursEl) badgeHoursEl.textContent = `${sal.total_work_hours} 時間`;
 
-    // 優先度②：有休管理
+    const badgeOvertimeEl = document.getElementById('badge-overtime-hours');
+    if (badgeOvertimeEl) badgeOvertimeEl.textContent = `${sal.overtime_hours || 0} 時間`;
+
+    const payEstEl = document.getElementById('val-estimated-salary');
+    if (payEstEl) payEstEl.textContent = `¥${(sal.estimated_salary || 0).toLocaleString()}`;
+    const badgeSalaryEl = document.getElementById('badge-estimated-salary');
+    if (badgeSalaryEl) badgeSalaryEl.textContent = `¥${(sal.estimated_salary || 0).toLocaleString()}`;
+
+    // 給与カードの内訳計算
+    const basePay = Math.round((sal.total_work_hours || 0) * (sal.hourly_wage || 0));
+    const overtimePay = Math.round((sal.overtime_hours || 0) * (sal.hourly_wage || 0) * 1.25);
+    const payBaseEl = document.getElementById('pay-base');
+    if (payBaseEl) payBaseEl.textContent = `¥${basePay.toLocaleString()}`;
+    const payOvertimeEl = document.getElementById('pay-overtime');
+    if (payOvertimeEl) payOvertimeEl.textContent = `¥${overtimePay.toLocaleString()}`;
+
+    // 有給休暇
     const pl = d.paid_leave;
     const plRemEl = document.getElementById('val-paid-leave-remaining');
     if (plRemEl) plRemEl.textContent = `${pl.remaining} 日`;
-    const plTakenEl = document.getElementById('val-paid-leave-taken');
-    if (plTakenEl) plTakenEl.textContent = `${pl.taken_this_month} 日`;
+    const badgePlEl = document.getElementById('badge-paid-leave');
+    if (badgePlEl) badgePlEl.textContent = `${pl.remaining} 日`;
 
-    // 打刻ステータス
-    const cs = d.clock.status;
-    const noteEl = document.getElementById('clock-status-note');
-    if (noteEl) {
-      if (cs === 'WORKING') {
-        noteEl.textContent = `現在勤務中 (${d.clock.clock_in} 出勤)`;
-      } else if (cs === 'DONE') {
-        noteEl.textContent = `退勤完了 (${d.clock.clock_in}〜${d.clock.clock_out}) お疲れ様でした！`;
-      }
+    // 本日のシフト
+    const ts = d.today_shift;
+    const badgeTsEl = document.getElementById('badge-today-shift');
+    if (badgeTsEl && ts) {
+      badgeTsEl.textContent = ts.time_range || '09:00 - 19:00';
     }
+
     if (window.lucide) lucide.createIcons();
   }
 
@@ -486,11 +697,47 @@
     document.getElementById('salary-detail-modal').classList.add('hidden');
   }
 
+  // --- 申請モーダル ---
+  function openLeaveModal(type = 'PAID_LEAVE') {
+    document.getElementById('leave-type').value = type;
+    document.getElementById('leave-apply-modal').classList.remove('hidden');
+  }
+
+  function closeLeaveModal() {
+    document.getElementById('leave-apply-modal').classList.add('hidden');
+  }
+
+  function setReason(r) {
+    document.getElementById('leave-reason').value = r;
+  }
+
+  async function handleApplyLeave(e) {
+    e.preventDefault();
+    const date = document.getElementById('leave-date').value;
+    const leaveType = document.getElementById('leave-type').value;
+    const reason = document.getElementById('leave-reason').value;
+
+    const res = await fetch('/api/me/leave-requests', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date, leave_type: leaveType, reason })
+    });
+    if (res.ok) {
+      showToast('申請を送信しました ✉️');
+      closeLeaveModal();
+      document.getElementById('leave-reason').value = '';
+    }
+  }
+
   async function editWage() {
     const cur = myDashboard?.salary_simulator?.hourly_wage || 0;
     const input = prompt('あなたの時間給（時給）を入力してください:\n※この設定はあなただけの手帳に保存されます', cur);
-    if (!input || isNaN(input)) return;
+    if (input === null) return;
     const wage = parseInt(input);
+    if (isNaN(wage) || wage <= 0) {
+      showToast('数値を入力してください', 'error');
+      return;
+    }
     const res = await fetch('/api/me/wage', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -504,10 +751,14 @@
 
   async function editPaidLeave() {
     const cur = myDashboard?.paid_leave?.remaining || 0;
-    const input = prompt('現在の有給休暇の残り日数を入力してください:\n※あなただけの手帳に保存されます', cur);
-    if (!input || isNaN(input)) return;
+    const input = prompt('現在の有給休暇の残日数を設定してください:\n※この設定はあなただけに保存されます', cur);
+    if (input === null) return;
     const days = parseFloat(input);
-    const res = await fetch('/api/me/paid-leave', {
+    if (isNaN(days) || days < 0) {
+      showToast('数値を入力してください', 'error');
+      return;
+    }
+    const res = await fetch('/api/me/paid-leave-balance', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ paid_leave_remaining: days })
@@ -525,37 +776,12 @@
       body: JSON.stringify({ action })
     });
     if (res.ok) {
-      const data = await res.json();
       const labels = {
         IN: '出勤を記録しました ☀️',
-        BREAK_START: '休憩に入りました ☕️',
-        BREAK_END: '休憩から戻りました ▶️',
         OUT: '退勤を記録しました 🌙 お疲れ様でした！',
       };
       showToast(labels[action] || '記録しました');
       loadMyDashboard();
-    }
-  }
-
-  function setReason(r) {
-    document.getElementById('leave-reason').value = r;
-  }
-
-  async function handleApplyLeave(e) {
-    e.preventDefault();
-    const targetDate = document.getElementById('leave-date').value;
-    const leaveType = document.getElementById('leave-type').value;
-    const reason = document.getElementById('leave-reason').value;
-
-    const res = await fetch('/api/me/leave-requests', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date: targetDate, leave_type: leaveType, reason })
-    });
-    if (res.ok) {
-      showToast('休暇申請を送信しました 🏖️');
-      document.getElementById('leave-date').value = '';
-      document.getElementById('leave-reason').value = '';
     }
   }
 
