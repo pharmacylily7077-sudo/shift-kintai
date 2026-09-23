@@ -114,12 +114,15 @@
               <span>🌸</span>
             </div>
             <div class="rococo-portrait-circle">
-              <!-- 気品あるイニシャルカメオ -->
-              <div class="w-full h-full flex items-center justify-center bg-gradient-to-b from-amber-50 to-amber-100 text-3xl font-serif text-amber-900 font-bold shadow-inner">
-                {{ current_user.full_name[0] }}
-              </div>
+              {% if current_user.username == 'miyake' %}
+                <img src="/static/images/miyake_portrait_gold_frame.png" alt="三宅 興之" class="w-full h-full object-cover">
+              {% else %}
+                <div class="w-full h-full flex items-center justify-center bg-gradient-to-b from-amber-50 to-amber-100 text-3xl font-serif text-amber-900 font-bold shadow-inner">
+                  {{ current_user.full_name[0] }}
+                </div>
+              {% endif %}
             </div>
-            <span class="rococo-portrait-shell">🐚</span>
+            <span class="rococo-portrait-shell">⚜️</span>
           </div>
 
           <div class="mt-3">

@@ -18,9 +18,13 @@
 
 /* --- フレンチ手帳・ロココ調 5大カラーパレット --- */
 
-/* 1. ローズピンク（華やかで優しいペールローズ） */
+/* 1. ローズピンク（画像の真紅・クリムゾンダマスク宮殿壁紙） */
 body.theme-rose {
-  background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 50%, #fecdd3 100%) !important;
+  background-color: #fff1f2 !important;
+  background-image: 
+    radial-gradient(circle at 50% 50%, rgba(244, 63, 94, 0.08) 0%, transparent 70%),
+    url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23be123c' fill-opacity='0.08' fill-rule='evenodd'%3E%3Cpath d='M40 0 C45 10 55 15 65 15 C55 25 50 35 40 40 C30 35 25 25 15 15 C25 15 35 10 40 0 Z M40 40 C45 50 55 55 65 55 C55 65 50 75 40 80 C30 75 25 65 15 55 C25 55 35 50 40 40 Z'/%3E%3Cpath d='M0 40 C10 45 15 55 15 65 C25 55 35 50 40 40 C35 30 25 25 15 15 C15 25 10 35 0 40 Z M80 40 C70 45 65 55 65 65 C55 55 45 50 40 40 C45 30 55 25 65 15 C65 25 70 35 80 40 Z'/%3E%3Ccircle cx='40' cy='40' r='3.5'/%3E%3C/g%3E%3C/svg%3E"),
+    linear-gradient(135deg, #fff1f2 0%, #ffe4e6 50%, #fecdd3 100%) !important;
   background-attachment: fixed !important;
 }
 body.theme-rose .rococo-gold-frame {
@@ -33,9 +37,13 @@ body.theme-rose .rococo-pastel-frame {
   border-color: #f43f5e;
 }
 
-/* 2. パウダーブルー（澄んだ気品あるフレンチスカイ） */
+/* 2. パウダーブルー（画像のロイヤルネイビー＆金ダマスク宮殿壁紙） */
 body.theme-blue {
-  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #bae6fd 100%) !important;
+  background-color: #f0f9ff !important;
+  background-image: 
+    radial-gradient(circle at 50% 50%, rgba(37, 99, 235, 0.08) 0%, transparent 70%),
+    url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%231d4ed8' fill-opacity='0.08' fill-rule='evenodd'%3E%3Cpath d='M40 0 C45 10 55 15 65 15 C55 25 50 35 40 40 C30 35 25 25 15 15 C25 15 35 10 40 0 Z M40 40 C45 50 55 55 65 55 C55 65 50 75 40 80 C30 75 25 65 15 55 C25 55 35 50 40 40 Z'/%3E%3Cpath d='M0 40 C10 45 15 55 15 65 C25 55 35 50 40 40 C35 30 25 25 15 15 C15 25 10 35 0 40 Z M80 40 C70 45 65 55 65 65 C55 55 45 50 40 40 C45 30 55 25 65 15 C65 25 70 35 80 40 Z'/%3E%3Ccircle cx='40' cy='40' r='3.5'/%3E%3C/g%3E%3C/svg%3E"),
+    linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #bae6fd 100%) !important;
   background-attachment: fixed !important;
 }
 body.theme-blue .rococo-gold-frame {
@@ -48,9 +56,13 @@ body.theme-blue .rococo-pastel-frame {
   border-color: #60a5fa;
 }
 
-/* 3. ミントグリーン（爽やかで落ち着く淡いペールミント） */
+/* 3. ミントグリーン（優雅なエメラルドダマスク宮殿壁紙） */
 body.theme-mint, body.theme-herb {
-  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 50%, #bbf7d0 100%) !important;
+  background-color: #f0fdf4 !important;
+  background-image: 
+    radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.08) 0%, transparent 70%),
+    url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23059669' fill-opacity='0.08' fill-rule='evenodd'%3E%3Cpath d='M40 0 C45 10 55 15 65 15 C55 25 50 35 40 40 C30 35 25 25 15 15 C25 15 35 10 40 0 Z M40 40 C45 50 55 55 65 55 C55 65 50 75 40 80 C30 75 25 65 15 55 C25 55 35 50 40 40 Z'/%3E%3Cpath d='M0 40 C10 45 15 55 15 65 C25 55 35 50 40 40 C35 30 25 25 15 15 C15 25 10 35 0 40 Z M80 40 C70 45 65 55 65 65 C55 55 45 50 40 40 C45 30 55 25 65 15 C65 25 70 35 80 40 Z'/%3E%3Ccircle cx='40' cy='40' r='3.5'/%3E%3C/g%3E%3C/svg%3E"),
+    linear-gradient(135deg, #f0fdf4 0%, #dcfce7 50%, #bbf7d0 100%) !important;
   background-attachment: fixed !important;
 }
 body.theme-mint .rococo-gold-frame, body.theme-herb .rococo-gold-frame {
@@ -63,9 +75,13 @@ body.theme-mint .rococo-pastel-frame, body.theme-herb .rococo-pastel-frame {
   border-color: #4ade80;
 }
 
-/* 4. シャンパンアイボリー（温もりとクラシックな気品） */
+/* 4. シャンパンアイボリー（黄金のヴェルサイユ宮殿ダマスク壁紙） */
 body.theme-champagne, body.theme-warm {
-  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 50%, #fde68a 100%) !important;
+  background-color: #fffbeb !important;
+  background-image: 
+    radial-gradient(circle at 50% 50%, rgba(202, 138, 4, 0.12) 0%, transparent 70%),
+    url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23b48c14' fill-opacity='0.1' fill-rule='evenodd'%3E%3Cpath d='M40 0 C45 10 55 15 65 15 C55 25 50 35 40 40 C30 35 25 25 15 15 C25 15 35 10 40 0 Z M40 40 C45 50 55 55 65 55 C55 65 50 75 40 80 C30 75 25 65 15 55 C25 55 35 50 40 40 Z'/%3E%3Cpath d='M0 40 C10 45 15 55 15 65 C25 55 35 50 40 40 C35 30 25 25 15 15 C15 25 10 35 0 40 Z M80 40 C70 45 65 55 65 65 C55 55 45 50 40 40 C45 30 55 25 65 15 C65 25 70 35 80 40 Z'/%3E%3Ccircle cx='40' cy='40' r='3.5'/%3E%3C/g%3E%3C/svg%3E"),
+    linear-gradient(135deg, #fffbeb 0%, #fef3c7 50%, #fde68a 100%) !important;
   background-attachment: fixed !important;
 }
 body.theme-champagne .rococo-gold-frame, body.theme-warm .rococo-gold-frame {
@@ -78,9 +94,13 @@ body.theme-champagne .rococo-pastel-frame, body.theme-warm .rococo-pastel-frame 
   border-color: #eab308;
 }
 
-/* 5. ラベンダーミスト（心安らぐ上品なペールパープル） */
+/* 5. ラベンダーミスト（優美なパープルダマスク宮殿壁紙） */
 body.theme-lavender {
-  background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 50%, #e9d5ff 100%) !important;
+  background-color: #faf5ff !important;
+  background-image: 
+    radial-gradient(circle at 50% 50%, rgba(168, 85, 247, 0.08) 0%, transparent 70%),
+    url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%239333ea' fill-opacity='0.08' fill-rule='evenodd'%3E%3Cpath d='M40 0 C45 10 55 15 65 15 C55 25 50 35 40 40 C30 35 25 25 15 15 C25 15 35 10 40 0 Z M40 40 C45 50 55 55 65 55 C55 65 50 75 40 80 C30 75 25 65 15 55 C25 55 35 50 40 40 Z'/%3E%3Cpath d='M0 40 C10 45 15 55 15 65 C25 55 35 50 40 40 C35 30 25 25 15 15 C15 25 10 35 0 40 Z M80 40 C70 45 65 55 65 65 C55 55 45 50 40 40 C45 30 55 25 65 15 C65 25 70 35 80 40 Z'/%3E%3Ccircle cx='40' cy='40' r='3.5'/%3E%3C/g%3E%3C/svg%3E"),
+    linear-gradient(135deg, #faf5ff 0%, #f3e8ff 50%, #e9d5ff 100%) !important;
   background-attachment: fixed !important;
 }
 body.theme-lavender .rococo-gold-frame {
