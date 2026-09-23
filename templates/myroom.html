@@ -2,26 +2,23 @@
 {% block title %}マイルーム - {{ current_user.full_name }}{% endblock %}
 
 {% block body %}
-<!-- 舞い散る花びら演出コンテナ（オン/オフ可能） -->
-<div id="petals-layer" class="petal-container"></div>
-
 <div class="min-h-screen text-slate-900 pb-16 relative z-10 transition">
 
   <!-- ヘッダー -->
-  <header class="bg-white/80 backdrop-blur-md border-b border-teal-100/50 sticky top-0 z-40">
+  <header class="bg-white/90 backdrop-blur-md border-b border-slate-200/60 sticky top-0 z-40">
     <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
       <div class="flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 via-teal-400 to-cyan-300 flex items-center justify-center text-white font-bold shadow-md shadow-teal-200">
-          <span class="text-xl">🪷</span>
+        <div class="w-10 h-10 rounded-2xl bg-emerald-600 flex items-center justify-center text-white font-bold shadow-md shadow-emerald-200">
+          <i data-lucide="sparkles" class="w-5 h-5"></i>
         </div>
         <div>
           <div class="font-black text-slate-900 text-sm sm:text-base flex items-center space-x-1.5">
             <span>{{ current_user.full_name }} さんのマイルーム</span>
-            <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200/50">
+            <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
               {{ current_user.position_label }}
             </span>
           </div>
-          <div class="text-[11px] text-teal-600/80 font-medium">あなただけの秘密の手帳空間 🪷</div>
+          <div class="text-[11px] text-slate-400 font-medium">あなた専用のマイ手帳空間</div>
         </div>
       </div>
       
@@ -30,31 +27,31 @@
         <!-- きせかえパレットボタン -->
         <div class="relative">
           <button onclick="toggleThemeMenu()" id="btn-theme-toggle"
-            class="px-3 py-1.5 rounded-xl bg-white/90 border border-teal-200 hover:bg-teal-50 text-teal-700 text-xs font-bold transition flex items-center space-x-1 shadow-2xs">
-            <span>🎨 壁紙きせかえ</span>
+            class="px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center space-x-1 shadow-2xs">
+            <span>🎨 カラー設定</span>
           </button>
           <!-- 壁紙セレクターポップアップ -->
-          <div id="theme-menu" class="hidden absolute right-0 mt-2 w-52 bg-white/95 backdrop-blur-lg rounded-2xl shadow-xl border border-teal-100 p-2 z-50 space-y-1">
-            <div class="text-[10px] font-bold text-slate-400 px-2 py-1">お好みの壁紙テーマ</div>
-            <button onclick="setTheme('lily')" class="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-teal-50 text-slate-700 flex items-center space-x-2 transition">
-              <span class="w-3.5 h-3.5 rounded-full bg-emerald-200 border border-emerald-400"></span>
-              <span>白百合リリー 🪷</span>
+          <div id="theme-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-200 p-2 z-50 space-y-1">
+            <div class="text-[10px] font-bold text-slate-400 px-2 py-1">背景カラー</div>
+            <button onclick="setTheme('mint')" class="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-emerald-50 text-slate-700 flex items-center space-x-2 transition">
+              <span class="w-3.5 h-3.5 rounded-full bg-emerald-300 border border-emerald-400"></span>
+              <span>ペールミント</span>
             </button>
             <button onclick="setTheme('lavender')" class="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-purple-50 text-slate-700 flex items-center space-x-2 transition">
               <span class="w-3.5 h-3.5 rounded-full bg-purple-300 border border-purple-400"></span>
-              <span>ラベンダー 🪻</span>
+              <span>ラベンダー</span>
             </button>
-            <button onclick="setTheme('herb')" class="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-emerald-50 text-slate-700 flex items-center space-x-2 transition">
-              <span class="w-3.5 h-3.5 rounded-full bg-emerald-300 border border-emerald-400"></span>
-              <span>癒やしハーブ 🌿</span>
+            <button onclick="setTheme('herb')" class="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-teal-50 text-slate-700 flex items-center space-x-2 transition">
+              <span class="w-3.5 h-3.5 rounded-full bg-teal-300 border border-teal-400"></span>
+              <span>ソフトティール</span>
             </button>
-            <button onclick="setTheme('mimosa')" class="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-amber-50 text-slate-700 flex items-center space-x-2 transition">
+            <button onclick="setTheme('warm')" class="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-amber-50 text-slate-700 flex items-center space-x-2 transition">
               <span class="w-3.5 h-3.5 rounded-full bg-amber-300 border border-amber-400"></span>
-              <span>ミモザの陽だまり 🌼</span>
+              <span>ウォームアイボリー</span>
             </button>
             <button onclick="setTheme('simple')" class="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-slate-100 text-slate-700 flex items-center space-x-2 transition">
               <span class="w-3.5 h-3.5 rounded-full bg-slate-300 border border-slate-400"></span>
-              <span>ピュアホワイト 🕊️</span>
+              <span>ピュアホワイト</span>
             </button>
           </div>
         </div>
@@ -333,11 +330,10 @@
 {% block extra_scripts %}
 <script>
   let myDashboard = null;
-  let activeTheme = localStorage.getItem('myroom_theme') || 'lily';
+  let activeTheme = localStorage.getItem('myroom_theme') || 'mint';
 
   document.addEventListener('DOMContentLoaded', () => {
     applyTheme(activeTheme);
-    createPetals();
     loadMyDashboard();
     loadMyMessages();
     initClock();
@@ -354,15 +350,15 @@
     localStorage.setItem('myroom_theme', theme);
     applyTheme(theme);
     toggleThemeMenu();
-    showToast(`壁紙を「${getThemeLabel(theme)}」に変更しました 🪷`);
+    showToast(`カラーを「${getThemeLabel(theme)}」に変更しました`);
   }
 
   function getThemeLabel(t) {
     const map = {
-      lily: '白百合リリー',
+      mint: 'ペールミント',
       lavender: 'ラベンダー',
-      herb: '癒やしハーブ',
-      mimosa: 'ミモザの陽だまり',
+      herb: 'ソフトティール',
+      warm: 'ウォームアイボリー',
       simple: 'ピュアホワイト'
     };
     return map[t] || t;
@@ -370,29 +366,6 @@
 
   function applyTheme(theme) {
     document.body.className = `h-full theme-${theme}`;
-    const petals = document.getElementById('petals-layer');
-    if (petals) {
-      petals.style.display = (theme === 'lily' || theme === 'lavender') ? 'block' : 'none';
-    }
-  }
-
-  // 花びら生成
-  function createPetals() {
-    const layer = document.getElementById('petals-layer');
-    if (!layer) return;
-    layer.innerHTML = '';
-    const petalCount = 14;
-    for (let i = 0; i < petalCount; i++) {
-      const p = document.createElement('div');
-      p.className = 'petal';
-      const size = Math.random() * 8 + 8;
-      p.style.width = `${size}px`;
-      p.style.height = `${size * 1.4}px`;
-      p.style.left = `${Math.random() * 100}%`;
-      p.style.animationDuration = `${Math.random() * 6 + 6}s, ${Math.random() * 3 + 2}s`;
-      p.style.animationDelay = `${Math.random() * 5}s, ${Math.random() * 2}s`;
-      layer.appendChild(p);
-    }
   }
 
   function initClock() {
@@ -459,7 +432,7 @@
       body: JSON.stringify({ hourly_wage: wage })
     });
     if (res.ok) {
-      showToast('時給を更新しました 🪷');
+      showToast('時給を更新しました');
       loadMyDashboard();
     }
   }
@@ -475,7 +448,7 @@
       body: JSON.stringify({ paid_leave_remaining: days })
     });
     if (res.ok) {
-      showToast('有休残日数を更新しました 🌿');
+      showToast('有休残日数を更新しました');
       loadMyDashboard();
     }
   }
