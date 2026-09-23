@@ -12,5 +12,5 @@
 - [x] 4. 共通シフトカレンダーの清潔な白ベース化・評価カラーバッジ・A4横印刷レイアウトの実装
   - 検証: `PYTHONPATH=. ./venv/bin/pytest tests/test_calendar_view.py`
 
-- [ ] 5. 「正社員」「パート」表記の完全排除および総合自動テストの全件通過
+- [x] 5. 「正社員」「パート」表記の完全排除および総合自動テストの全件通過
   - 検証: `PYTHONPATH=. ./venv/bin/pytest tests/test_no_discriminatory_labels.py tests/test_app.py`
