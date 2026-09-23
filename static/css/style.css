@@ -96,3 +96,95 @@ body.theme-simple {
 .soft-btn:active {
   transform: scale(0.97);
 }
+
+/* --- ロココ調・フレンチヴィンテージ 手帳専用スタイル --- */
+.font-cursive {
+  font-family: 'Alex Brush', cursive;
+}
+.font-serif-fr {
+  font-family: 'Cormorant Garamond', 'Shippori Mincho', 'Hiragino Mincho ProN', serif;
+}
+
+/* 金装飾・ロココフレーム枠 */
+.rococo-gold-frame {
+  background: #fffdfa;
+  border: 3px double #d4af37;
+  border-radius: 28px;
+  box-shadow: 
+    0 4px 20px -2px rgba(212, 175, 55, 0.25),
+    inset 0 0 16px rgba(254, 240, 138, 0.35);
+  position: relative;
+}
+
+.rococo-gold-frame::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px dashed rgba(212, 175, 55, 0.45);
+  border-radius: 22px;
+  pointer-events: none;
+}
+
+/* パステル装飾フレーム（給与カード等） */
+.rococo-pastel-frame {
+  background: #fdfcff;
+  border: 3px double #93c5fd;
+  border-radius: 28px;
+  box-shadow: 
+    0 4px 20px -2px rgba(147, 197, 253, 0.3),
+    inset 0 0 16px rgba(224, 242, 254, 0.4);
+  position: relative;
+}
+
+.rococo-pastel-frame::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px dashed rgba(147, 197, 253, 0.5);
+  border-radius: 22px;
+  pointer-events: none;
+}
+
+/* 額縁カメオブローチ（お花・リボンの楕円枠） */
+.rococo-cameo-badge {
+  width: 78px;
+  height: 94px;
+  border-radius: 50%;
+  border: 3px solid #d4af37;
+  background: radial-gradient(circle, #fffdf8 30%, #fef3c7 100%);
+  box-shadow: 
+    0 4px 12px rgba(212, 175, 55, 0.35),
+    inset 0 0 10px rgba(212, 175, 55, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin: 0 auto;
+}
+
+/* 金箔押しオーバルボタン */
+.rococo-gold-btn {
+  background: linear-gradient(180deg, #fef9c3 0%, #eab308 50%, #ca8a04 100%);
+  border: 1px solid #fef08a;
+  color: #713f12;
+  font-weight: 800;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.8);
+  box-shadow: 0 3px 8px rgba(202, 138, 4, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.6);
+  border-radius: 9999px;
+  transition: all 0.2s ease;
+}
+.rococo-gold-btn:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+.rococo-gold-btn:active {
+  transform: translateY(1px);
+}
+
+/* フレンチ下部ナビゲーションバー */
+.rococo-bottom-nav {
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(16px);
+  border-top: 2px solid #fef08a;
+  box-shadow: 0 -4px 20px rgba(212, 175, 55, 0.15);
+}

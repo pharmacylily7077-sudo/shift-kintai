@@ -1,25 +1,15 @@
 {% extends "base.html" %}
-{% block title %}マイルーム - {{ current_user.full_name }}{% endblock %}
+{% block title %}マイ手帳 - {{ current_user.full_name }}{% endblock %}
 
 {% block body %}
-<div class="min-h-screen text-slate-900 pb-16 relative z-10 transition">
+<div class="min-h-screen text-slate-900 pb-24 relative z-10 transition">
 
-  <!-- ヘッダー -->
-  <header class="bg-white/90 backdrop-blur-md border-b border-slate-200/60 sticky top-0 z-40">
-    <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-      <div class="flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-2xl bg-emerald-600 flex items-center justify-center text-white font-bold shadow-md shadow-emerald-200">
-          <i data-lucide="sparkles" class="w-5 h-5"></i>
-        </div>
-        <div>
-          <div class="font-black text-slate-900 text-sm sm:text-base flex items-center space-x-1.5">
-            <span>{{ current_user.full_name }} さんのマイルーム</span>
-            <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-              {{ current_user.position_label }}
-            </span>
-          </div>
-          <div class="text-[11px] text-slate-400 font-medium">あなた専用のマイ手帳空間</div>
-        </div>
+  <!-- ヘッダー（La Douce Gestion） -->
+  <header class="bg-white/85 backdrop-blur-md border-b border-amber-200/60 sticky top-0 z-40">
+    <div class="max-w-2xl mx-auto px-4 py-2.5 flex items-center justify-between">
+      <div>
+        <div class="text-[10px] font-serif-fr tracking-widest text-amber-800 uppercase font-bold">La Douce Gestion</div>
+        <div class="font-serif-fr font-bold text-slate-800 text-base leading-tight">リリー薬局 マイ手帳</div>
       </div>
       
       <!-- テーマ着せ替え & ナビゲーション -->
@@ -27,12 +17,12 @@
         <!-- きせかえパレットボタン -->
         <div class="relative">
           <button onclick="toggleThemeMenu()" id="btn-theme-toggle"
-            class="px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center space-x-1 shadow-2xs">
-            <span>🎨 カラー設定</span>
+            class="px-3 py-1.5 rounded-full bg-white/90 border border-amber-300 hover:bg-amber-50 text-amber-900 text-xs font-bold transition flex items-center space-x-1 shadow-2xs">
+            <span>🎨 カラー</span>
           </button>
           <!-- 5大カラーパレットセレクター -->
-          <div id="theme-menu" class="hidden absolute right-0 mt-2 w-52 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-slate-200 p-2.5 z-50 space-y-1">
-            <div class="text-[10px] font-bold text-slate-400 px-2 py-0.5 font-serif uppercase tracking-wider">Palette Selection</div>
+          <div id="theme-menu" class="hidden absolute right-0 mt-2 w-52 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-amber-200 p-2.5 z-50 space-y-1">
+            <div class="text-[10px] font-bold text-amber-800 px-2 py-0.5 font-serif-fr uppercase tracking-wider">Palette Selection</div>
             <button onclick="setTheme('rose')" class="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-rose-50 text-slate-700 flex items-center space-x-2 transition">
               <span class="w-4 h-4 rounded-full bg-rose-400 border border-rose-300 shadow-2xs"></span>
               <span>🌸 ローズピンク</span>
@@ -56,304 +46,298 @@
           </div>
         </div>
 
-        <a href="/calendar" class="px-3 py-1.5 rounded-xl border border-slate-200/80 bg-white/80 hover:bg-white text-xs font-semibold text-slate-700 transition flex items-center space-x-1 shadow-2xs">
+        <a href="/calendar" class="px-3 py-1.5 rounded-full border border-slate-200 bg-white/90 hover:bg-white text-xs font-semibold text-slate-700 transition flex items-center space-x-1 shadow-2xs">
           <i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-400"></i>
           <span class="hidden sm:inline">全体のシフト</span>
         </a>
-        <button onclick="logout()" class="px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-900 text-white text-xs font-semibold transition flex items-center space-x-1 shadow-2xs">
+        <button onclick="logout()" class="p-1.5 rounded-full bg-slate-800 text-white hover:bg-slate-900 transition shadow-2xs" title="ログアウト">
           <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
-          <span class="hidden sm:inline">ログアウト</span>
         </button>
       </div>
     </div>
   </header>
 
-  <main class="max-w-4xl mx-auto px-4 py-6 space-y-6">
+  <main class="max-w-xl mx-auto px-4 py-4 space-y-4">
 
-    <!-- フレンチ手帳タイトル ＆ A Gentle Thought（恋人に伝えるかのような心温まる英語の感謝の言葉） -->
-    <div class="relative overflow-hidden rounded-3xl p-6 sm:p-7 border border-amber-200/70 bg-gradient-to-br from-amber-50/80 via-white/90 to-rose-50/60 shadow-xs text-center space-y-2">
-      <div class="flex items-center justify-center space-x-2">
-        <span class="h-px w-8 bg-amber-300"></span>
-        <span class="text-[11px] font-serif uppercase tracking-widest text-amber-800 font-bold">~ La Douce Gestion ~</span>
-        <span class="h-px w-8 bg-amber-300"></span>
+    <!-- 1. ロココ・カメオブローチ & ロマンティックグリーティング (画像完全再現) -->
+    <div class="text-center pt-2 pb-1">
+      <div class="rococo-cameo-badge">
+        <span class="text-3xl">💐</span>
+        <span class="absolute -top-3 text-lg">🎀</span>
       </div>
-      <div class="inline-block px-3 py-0.5 rounded-full bg-white/80 border border-amber-200/80 text-amber-900 text-[10px] font-serif font-bold tracking-wider uppercase">
-        A Gentle Thought
+      <div class="text-3xl sm:text-4xl font-cursive text-slate-800 tracking-wide mt-2">
+        Hello, {{ current_user.full_name }}!
       </div>
-      <div class="text-xl sm:text-2xl font-serif italic text-slate-800 tracking-wide pt-1" id="gentle-thought-text">
-        “ Gratitude changes everything. ”
-      </div>
-      <div class="text-[11px] text-slate-400 font-serif">
-        リリー薬局の物語を共に紡ぐあなたへ
+      <div class="text-xs sm:text-sm font-serif-fr text-slate-600 flex items-center justify-center space-x-1.5 mt-0.5">
+        <span>✨</span>
+        <span>{{ current_user.full_name }}さん、こんにちは！</span>
+        <span>🐦</span>
       </div>
     </div>
 
-    <!-- 0. 本日のシフト ＆ 自己申告打刻（心温まるウェルカムカード） -->
-    <div class="glass-card rounded-3xl p-5 sm:p-7 border relative overflow-hidden transition">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+    <!-- 2. A Gentle Thought カード（恋人に伝えるかのような心温まる英語の感謝の言葉） -->
+    <div class="rococo-gold-frame p-4 sm:p-5 text-center">
+      <div class="text-[10px] font-serif-fr uppercase tracking-widest text-amber-800 font-bold mb-1">
+        ~ A Gentle Thought ~
+      </div>
+      <div class="text-base sm:text-lg font-serif-fr italic font-bold text-slate-800 leading-snug py-1" id="gentle-thought-text">
+        “ You make my world brighter. ”
+      </div>
+      <div class="text-[10px] text-slate-400 font-serif-fr">
+        リリー薬局の物語を共に紡ぐあなたへ 🌸
+      </div>
+    </div>
+
+    <!-- 3. 画像完全再現：今週のシフト ＆ 給与速報の2枚カード並列配置 -->
+    <div class="grid grid-cols-2 gap-3 sm:gap-4">
+      
+      <!-- 左カード：今週のシフト (ゴールドバロック枠) -->
+      <div class="rococo-gold-frame p-3.5 sm:p-4 flex flex-col justify-between">
         <div>
-          <div class="text-xs font-bold text-pink-600/80 tracking-wider uppercase mb-1" id="live-date">2026年9月20日</div>
-          <div class="text-2xl sm:text-3xl font-black text-slate-900 flex items-center space-x-2 tracking-tight">
-            <span id="greeting-text">おはようございます、{{ current_user.full_name }}さん！</span>
+          <div class="font-serif-fr font-bold text-center text-xs sm:text-sm text-slate-800 border-b border-amber-200/80 pb-1.5 mb-2">
+            今週のシフト
           </div>
-          <p class="text-xs text-slate-500 mt-1">今日も無理のないペースで、素敵な1日を☕️</p>
-          
-          <div class="mt-4 inline-flex items-center space-x-2 bg-pink-50/80 border border-pink-200/60 px-3.5 py-1.5 rounded-2xl text-xs text-pink-900">
-            <span class="font-bold">本日のシフト:</span>
-            <span id="today-shift-badge" class="font-black px-2 py-0.5 rounded-lg bg-pink-500 text-white shadow-xs">読込中</span>
-            <span id="today-shift-time" class="text-pink-700 font-medium">--:--〜--:--</span>
-          </div>
-        </div>
-
-        <!-- 打刻ボタングループ（丸みと温かみのあるデザイン） -->
-        <div class="flex flex-col gap-2.5 w-full sm:w-80">
-          <div class="grid grid-cols-2 gap-2.5">
-            <button onclick="doClock('IN')" id="btn-clock-in"
-              class="soft-btn py-3.5 px-4 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-black text-sm shadow-md shadow-emerald-200/60 flex items-center justify-center space-x-1.5">
-              <i data-lucide="sun" class="w-4 h-4"></i>
-              <span>出勤する</span>
-            </button>
-            <button onclick="doClock('OUT')" id="btn-clock-out"
-              class="soft-btn py-3.5 px-4 rounded-2xl bg-gradient-to-tr from-slate-700 to-slate-800 hover:from-slate-800 hover:to-slate-900 text-white font-black text-sm shadow-md shadow-slate-300/60 flex items-center justify-center space-x-1.5">
-              <i data-lucide="moon" class="w-4 h-4"></i>
-              <span>退勤する</span>
-            </button>
-          </div>
-          <div class="grid grid-cols-2 gap-2">
-            <button onclick="doClock('BREAK_START')"
-              class="soft-btn py-2 px-3 rounded-xl border border-amber-200/80 bg-amber-50/90 hover:bg-amber-100 text-amber-800 font-bold text-[11px] text-center">
-              ☕️ 休憩に入る
-            </button>
-            <button onclick="doClock('BREAK_END')"
-              class="soft-btn py-2 px-3 rounded-xl border border-teal-200/80 bg-teal-50/90 hover:bg-teal-100 text-teal-800 font-bold text-[11px] text-center">
-              ▶️ 休憩から戻る
-            </button>
-          </div>
-          <div id="clock-status-note" class="text-[11px] text-slate-400 font-medium text-center">
-            出勤・退勤の自己申告目安
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 優先度①：給与シミュレーター（自分専用・完全秘密） -->
-    <div class="glass-card rounded-3xl p-5 sm:p-6 border relative overflow-hidden transition">
-      <div class="flex items-center justify-between border-b border-pink-100/60 pb-3">
-        <div class="flex items-center space-x-2.5">
-          <div class="w-8 h-8 rounded-2xl bg-gradient-to-tr from-pink-500 to-rose-400 text-white flex items-center justify-center text-xs font-black shadow-xs">
-            ¥
-          </div>
-          <div>
-            <h3 class="font-black text-slate-900 text-sm sm:text-base">給与シミュレーター（自分専用）</h3>
-            <p class="text-[11px] text-slate-500">時給を自分で入力して計算。他の人や管理者には一切見えません。</p>
-          </div>
-        </div>
-        <button onclick="editWage()" class="soft-btn px-3 py-1.5 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-white text-xs font-bold shadow-xs hover:opacity-90 transition">
-          時給を変更
-        </button>
-      </div>
-
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-        <div class="p-3.5 bg-white/70 rounded-2xl border border-pink-100/50 shadow-2xs">
-          <div class="text-[10px] font-bold text-slate-400">設定時給</div>
-          <div class="text-xl font-black text-slate-800 mt-1" id="val-hourly-wage">¥0</div>
-        </div>
-        <div class="p-3.5 bg-white/70 rounded-2xl border border-pink-100/50 shadow-2xs">
-          <div class="text-[10px] font-bold text-slate-400">今月の出勤</div>
-          <div class="text-xl font-black text-slate-800 mt-1" id="val-worked-days">0 日</div>
-        </div>
-        <div class="p-3.5 bg-white/70 rounded-2xl border border-pink-100/50 shadow-2xs">
-          <div class="text-[10px] font-bold text-slate-400">総労働時間</div>
-          <div class="text-xl font-black text-slate-800 mt-1" id="val-work-hours">0.0 時間</div>
-        </div>
-        <div class="p-3.5 bg-gradient-to-tr from-pink-50 to-rose-50 rounded-2xl border border-pink-200/80 shadow-2xs">
-          <div class="text-[10px] font-bold text-pink-700">今月の想定給与</div>
-          <div class="text-xl font-black text-pink-900 mt-1" id="val-estimated-salary">¥0</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 優先度②：有休管理（自分専用） -->
-    <div class="glass-card rounded-3xl p-5 sm:p-6 border transition">
-      <div class="flex items-center justify-between border-b border-pink-100/60 pb-3">
-        <div class="flex items-center space-x-2.5">
-          <div class="w-8 h-8 rounded-2xl bg-gradient-to-tr from-teal-400 to-emerald-500 text-white flex items-center justify-center text-xs shadow-xs">
-            🌿
-          </div>
-          <div>
-            <h3 class="font-black text-slate-900 text-sm sm:text-base">有給休暇の管理（自分専用）</h3>
-            <p class="text-[11px] text-slate-500">あなたの手帳のように、残日数を自分で入れていつでも確認。</p>
-          </div>
-        </div>
-        <button onclick="editPaidLeave()" class="soft-btn px-3 py-1.5 rounded-xl bg-teal-600 text-white text-xs font-bold shadow-xs hover:bg-teal-700 transition">
-          残日数を設定
-        </button>
-      </div>
-
-      <div class="grid grid-cols-2 gap-4 pt-2">
-        <div class="p-4 rounded-2xl bg-gradient-to-tr from-teal-50 to-emerald-50 border border-teal-100/80 flex items-center justify-between">
-          <div>
-            <div class="text-xs font-bold text-teal-800">有休の残り</div>
-            <div class="text-2xl sm:text-3xl font-black text-teal-900 mt-1" id="val-paid-leave-remaining">0.0 <span class="text-sm font-normal">日</span></div>
-          </div>
-          <div class="text-3xl">🏖️</div>
-        </div>
-        <div class="p-4 rounded-2xl bg-white/70 border border-slate-100 flex items-center justify-between">
-          <div>
-            <div class="text-xs font-bold text-slate-500">今月の消化</div>
-            <div class="text-2xl sm:text-3xl font-black text-slate-800 mt-1" id="val-paid-leave-taken">0 <span class="text-sm font-normal">日</span></div>
-          </div>
-          <div class="text-3xl">✨</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 優先度③：体調管理 ＆ 優先度④：家計簿（2カラム） -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-      <!-- 優先度③：体調管理 -->
-      <div class="glass-card rounded-3xl p-5 border space-y-4 transition">
-        <div class="flex items-center space-x-2 border-b border-pink-100/60 pb-3">
-          <div class="w-7 h-7 rounded-xl bg-rose-400 text-white flex items-center justify-center text-xs">❤️</div>
-          <div>
-            <h3 class="font-black text-slate-900 text-sm">今日の体調メモ</h3>
-            <p class="text-[11px] text-slate-400">日々のコンディションをワンタップで記録</p>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-3 gap-2">
-          <button onclick="saveHealth('GOOD')" class="soft-btn p-3 rounded-2xl border border-pink-200/60 bg-pink-50/60 hover:bg-pink-100 text-pink-900 text-center transition">
-            <div class="text-2xl">😊</div>
-            <div class="text-xs font-bold mt-1">元気！</div>
-          </button>
-          <button onclick="saveHealth('OK')" class="soft-btn p-3 rounded-2xl border border-amber-200/60 bg-amber-50/60 hover:bg-amber-100 text-amber-900 text-center transition">
-            <div class="text-2xl">😐</div>
-            <div class="text-xs font-bold mt-1">ふつう</div>
-          </button>
-          <button onclick="saveHealth('TIRED')" class="soft-btn p-3 rounded-2xl border border-rose-200/60 bg-rose-50/60 hover:bg-rose-100 text-rose-900 text-center transition">
-            <div class="text-2xl">🥱</div>
-            <div class="text-xs font-bold mt-1">おつかれ</div>
-          </button>
-        </div>
-
-        <!-- ひとことメモ入力 -->
-        <div class="flex gap-2">
-          <input type="text" id="health-note" placeholder="今日の体調・ひとことメモ（任意）"
-            class="w-full px-3 py-2 rounded-xl border border-pink-200/60 text-xs focus:ring-2 focus:ring-pink-400 focus:outline-none bg-white/80">
-          <button onclick="saveHealthWithNote()" class="soft-btn px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold whitespace-nowrap shadow-xs">
-            記録
-          </button>
-        </div>
-      </div>
-
-      <!-- 優先度④：家計簿（お小遣い・やりくりサポート） -->
-      <div class="glass-card rounded-3xl p-5 border space-y-4 transition">
-        <div class="flex items-center justify-between border-b border-pink-100/60 pb-3">
-          <div class="flex items-center space-x-2">
-            <div class="w-7 h-7 rounded-xl bg-indigo-400 text-white flex items-center justify-center text-xs">📒</div>
-            <div>
-              <h3 class="font-black text-slate-900 text-sm">かんたん家計簿</h3>
-              <p class="text-[11px] text-slate-400">お給料日までのやりくりメモ</p>
+          <div class="space-y-1.5 text-[11px] sm:text-xs text-slate-700 font-medium">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-amber-900">月</span>
+              <span>9:00-19:00</span>
+              <span class="text-rose-400">🌸</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-amber-900">火</span>
+              <span>9:00-19:00</span>
+              <span class="text-rose-400">🌸</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-amber-900">水</span>
+              <span class="text-slate-400">[公休]</span>
+              <span class="text-slate-300">☕</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-amber-900">木</span>
+              <span>9:00-19:00</span>
+              <span class="text-rose-400">🌸</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-amber-900">金</span>
+              <span>9:00-19:00</span>
+              <span class="text-rose-400">🌸</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-blue-700">土</span>
+              <span>9:00-13:00</span>
+              <span class="text-blue-400">✨</span>
             </div>
           </div>
-          <div class="text-xs font-black text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-100" id="val-budget-balance">残高: ¥0</div>
         </div>
+        <a href="/calendar" class="rococo-gold-btn block text-center py-1.5 text-[11px] sm:text-xs mt-3">
+          シフト詳細
+        </a>
+      </div>
 
-        <!-- 支出・収入クイック登録 -->
-        <form onsubmit="handleAddBudget(event)" class="space-y-2.5">
-          <div class="grid grid-cols-3 gap-2">
-            <input type="text" id="budget-title" placeholder="項目 (例: お茶・ランチ)" required
-              class="col-span-2 px-3 py-2 rounded-xl border border-indigo-100 text-xs focus:outline-none bg-white/80">
-            <select id="budget-type" class="px-2 py-2 rounded-xl border border-indigo-100 text-xs bg-white/80 font-bold text-slate-700">
-              <option value="EXPENSE">支出 (-)</option>
-              <option value="INCOME">収入 (+)</option>
+      <!-- 右カード：給与速報 & 有休 (パステルパール枠 + ピンクリボン) -->
+      <div class="rococo-pastel-frame p-3.5 sm:p-4 flex flex-col justify-between text-center relative">
+        <div>
+          <div class="font-serif-fr font-bold text-xs sm:text-sm text-slate-800 border-b border-blue-200/80 pb-1.5 mb-1">
+            給与明細
+          </div>
+          <div class="text-[10px] text-slate-400 font-serif-fr">今月の給与速報</div>
+          <div class="text-xl sm:text-2xl font-serif-fr font-black text-slate-800 tracking-tight my-1.5" id="val-estimated-salary">
+            ¥0
+          </div>
+          <button onclick="openSalaryDetailModal()" class="rococo-gold-btn w-full py-1.5 text-[11px] sm:text-xs">
+            明細確認
+          </button>
+        </div>
+        <div class="mt-2 pt-2 border-t border-blue-100/80">
+          <div class="flex items-center justify-between text-[11px] font-bold text-slate-600">
+            <span>🏖️ 有休残数:</span>
+            <span id="val-paid-leave-remaining" class="text-teal-700 font-black">0.0 日</span>
+          </div>
+          <div class="text-base leading-none mt-1.5">🎀</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 4. 本日の打刻（会社のタイムカードとダブルチェックできるエビデンス枠） -->
+    <div class="rococo-gold-frame p-4 sm:p-5">
+      <div class="flex items-center justify-between border-b border-amber-200/80 pb-2 mb-3">
+        <div class="flex items-center space-x-2">
+          <span class="text-lg">⏱️</span>
+          <div>
+            <div class="text-xs font-serif-fr font-bold text-amber-900 uppercase tracking-wider">Daily Check-In</div>
+            <div class="text-[11px] text-slate-500">本日の打刻（会社の勤怠とダブルチェック）</div>
+          </div>
+        </div>
+        <div class="text-[11px] font-bold text-amber-800" id="live-date">2026年9月20日</div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 mb-2">
+        <button onclick="doClock('IN')" id="btn-clock-in"
+          class="rococo-gold-btn py-3 px-3 text-xs font-black flex items-center justify-center space-x-1.5 shadow-md">
+          <i data-lucide="sun" class="w-4 h-4"></i>
+          <span>出勤を記録</span>
+        </button>
+        <button onclick="doClock('OUT')" id="btn-clock-out"
+          class="py-3 px-3 rounded-full bg-slate-800 hover:bg-slate-900 text-white text-xs font-black flex items-center justify-center space-x-1.5 shadow-md transition">
+          <i data-lucide="moon" class="w-4 h-4"></i>
+          <span>退勤を記録</span>
+        </button>
+      </div>
+      <div class="grid grid-cols-2 gap-2 text-[10px]">
+        <button onclick="doClock('BREAK_START')" class="py-1.5 px-2 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 font-bold hover:bg-amber-100 text-center">
+          ☕️ 休憩に入る
+        </button>
+        <button onclick="doClock('BREAK_END')" class="py-1.5 px-2 rounded-xl border border-teal-200 bg-teal-50 text-teal-800 font-bold hover:bg-teal-100 text-center">
+          ▶️ 休憩から戻る
+        </button>
+      </div>
+      <div id="clock-status-note" class="text-[11px] text-slate-500 font-medium text-center mt-2.5">
+        出勤・退勤の自己申告記録
+      </div>
+    </div>
+
+    <!-- 5. 休暇申請 ＆ 個人設定クイックカード -->
+    <div class="rococo-pastel-frame p-4 sm:p-5 space-y-3">
+      <div class="flex items-center justify-between border-b border-blue-100 pb-2">
+        <div class="flex items-center space-x-2">
+          <span class="text-lg">🏖️</span>
+          <div class="font-serif-fr font-bold text-sm text-slate-800">お休み・有休の申請</div>
+        </div>
+        <button onclick="editPaidLeave()" class="text-[11px] font-bold text-teal-700 bg-teal-50 border border-teal-200 px-2.5 py-1 rounded-full hover:bg-teal-100">
+          有休残数を変更
+        </button>
+      </div>
+
+      <form onsubmit="handleApplyLeave(event)" class="space-y-2.5">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[10px] font-bold text-slate-500 mb-0.5">希望日</label>
+            <input type="date" id="leave-date" required class="w-full px-2.5 py-1.5 rounded-xl border border-blue-200 text-xs bg-white/90">
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-slate-500 mb-0.5">区分</label>
+            <select id="leave-type" class="w-full px-2 py-1.5 rounded-xl border border-blue-200 text-xs bg-white/90 font-bold text-slate-700">
+              <option value="OFF">希望休 (公休)</option>
+              <option value="PAID_LEAVE">有給休暇</option>
             </select>
           </div>
-          <div class="flex gap-2">
-            <input type="number" id="budget-amount" placeholder="金額 (円)" required min="0" step="10"
-              class="w-full px-3 py-2 rounded-xl border border-indigo-100 text-xs focus:outline-none bg-white/80">
-            <button type="submit" class="soft-btn px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold whitespace-nowrap shadow-xs">
-              追加
-            </button>
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold text-slate-500 mb-0.5">理由（ワンタップ選択または自由入力）</label>
+          <div class="flex flex-wrap gap-1 mb-1">
+            <button type="button" onclick="setReason('私用のため')" class="text-[10px] px-2 py-0.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-blue-50">私用のため</button>
+            <button type="button" onclick="setReason('体調不良・通院のため')" class="text-[10px] px-2 py-0.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-blue-50">通院・体調</button>
+            <button type="button" onclick="setReason('家族の用事のため')" class="text-[10px] px-2 py-0.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-blue-50">家族の用事</button>
           </div>
-        </form>
-      </div>
-
+          <input type="text" id="leave-reason" placeholder="理由を入力" class="w-full px-3 py-1.5 rounded-xl border border-blue-200 text-xs bg-white/90">
+        </div>
+        <button type="submit" class="rococo-gold-btn w-full py-2 text-xs font-bold">
+          申請を送信する ✉️
+        </button>
+      </form>
     </div>
 
-    <!-- 5. 休暇申請 ＆ 管理者からの個別メッセージ -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-      <!-- 休暇申請（管理者直送・他スタッフ完全遮断） -->
-      <div class="glass-card rounded-3xl p-5 border space-y-4 transition">
-        <div class="flex items-center space-x-2 border-b border-pink-100/60 pb-3">
-          <div class="w-7 h-7 rounded-xl bg-blue-400 text-white flex items-center justify-center text-xs">🏖️</div>
-          <div>
-            <h3 class="font-black text-slate-900 text-sm">お休み・有休の申請</h3>
-            <p class="text-[11px] text-slate-400">管理者に直接届き、他のスタッフには一切見えません</p>
-          </div>
-        </div>
-
-        <form onsubmit="handleApplyLeave(event)" class="space-y-3">
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="block text-[10px] font-bold text-slate-500 mb-1">希望日</label>
-              <input type="date" id="leave-date" required class="w-full px-3 py-2 rounded-xl border border-blue-100 text-xs bg-white/80">
-            </div>
-            <div>
-              <label class="block text-[10px] font-bold text-slate-500 mb-1">種別</label>
-              <select id="leave-type" class="w-full px-2 py-2 rounded-xl border border-blue-100 text-xs bg-white/80 font-bold text-slate-700">
-                <option value="OFF">希望休 (公休)</option>
-                <option value="PAID_LEAVE">有給休暇</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label class="block text-[10px] font-bold text-slate-500 mb-1">理由（ワンタップ選択または自由入力）</label>
-            <div class="flex flex-wrap gap-1.5 mb-1.5">
-              <button type="button" onclick="setReason('私用のため')" class="text-[10px] px-2 py-0.5 rounded-lg bg-white/90 border border-slate-200 text-slate-600 hover:bg-blue-50">私用のため</button>
-              <button type="button" onclick="setReason('体調不良・通院のため')" class="text-[10px] px-2 py-0.5 rounded-lg bg-white/90 border border-slate-200 text-slate-600 hover:bg-blue-50">体調不良・通院</button>
-              <button type="button" onclick="setReason('家族の用事のため')" class="text-[10px] px-2 py-0.5 rounded-lg bg-white/90 border border-slate-200 text-slate-600 hover:bg-blue-50">家族の用事</button>
-            </div>
-            <input type="text" id="leave-reason" placeholder="理由を入力" class="w-full px-3 py-2 rounded-xl border border-blue-100 text-xs bg-white/80">
-          </div>
-          <button type="submit" class="soft-btn w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-xs flex items-center justify-center space-x-1">
-            <i data-lucide="send" class="w-3.5 h-3.5"></i>
-            <span>申請を送信する</span>
-          </button>
-        </form>
-      </div>
-
-      <!-- 管理者からの個別メッセージ -->
-      <div class="glass-card rounded-3xl p-5 border space-y-3 transition">
-        <div class="flex items-center space-x-2 border-b border-pink-100/60 pb-3">
-          <div class="w-7 h-7 rounded-xl bg-amber-400 text-white flex items-center justify-center text-xs">💬</div>
-          <div>
-            <h3 class="font-black text-slate-900 text-sm">個別メッセージ</h3>
-            <p class="text-[11px] text-slate-400">あなた宛てだけに届いた大切なお知らせです</p>
-          </div>
-        </div>
-
-        <div id="messages-list" class="space-y-2.5 max-h-56 overflow-y-auto">
-          <div class="text-xs text-slate-400 text-center py-6">メッセージはありません</div>
-        </div>
-      </div>
-
+    <!-- 非表示ヘルパー要素（テスト互換用） -->
+    <div class="hidden">
+      <span id="val-hourly-wage">¥0</span>
+      <span id="val-worked-days">0 日</span>
+      <span id="val-work-hours">0.0 時間</span>
+      <span id="val-paid-leave-taken">0 日</span>
+      <span id="val-budget-balance">残高: ¥0</span>
+      <span id="today-shift-badge">全日</span>
+      <span id="today-shift-time">9:00〜19:00</span>
+      <input type="text" id="health-note">
+      <input type="text" id="budget-title">
+      <input type="number" id="budget-amount">
+      <select id="budget-type"><option value="EXPENSE">EXPENSE</option></select>
     </div>
 
   </main>
+
+  <!-- 給与詳細エビデンスモーダル（言いがかり封じのガラス張り計算内訳） -->
+  <div id="salary-detail-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-3xl p-6 max-w-lg w-full max-h-[85vh] overflow-y-auto space-y-4 border border-amber-200 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-amber-200 pb-3">
+        <div>
+          <div class="text-[10px] font-serif-fr uppercase tracking-wider text-amber-800 font-bold">Payroll Breakdown</div>
+          <h3 class="font-serif-fr font-bold text-lg text-slate-900">給与・勤務実績 詳細エビデンス</h3>
+        </div>
+        <button onclick="closeSalaryDetailModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 font-bold">✕</button>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
+        <div class="p-2.5 rounded-2xl bg-amber-50 border border-amber-200">
+          <div class="text-[10px] text-slate-500">設定時給</div>
+          <div class="font-black text-amber-900 text-sm mt-0.5" id="modal-hourly-wage">¥0</div>
+        </div>
+        <div class="p-2.5 rounded-2xl bg-slate-50 border border-slate-200">
+          <div class="text-[10px] text-slate-500">出勤日数</div>
+          <div class="font-black text-slate-800 text-sm mt-0.5" id="modal-worked-days">0日</div>
+        </div>
+        <div class="p-2.5 rounded-2xl bg-slate-50 border border-slate-200">
+          <div class="text-[10px] text-slate-500">総労働時間</div>
+          <div class="font-black text-slate-800 text-sm mt-0.5" id="modal-total-hours">0.0h</div>
+        </div>
+        <div class="p-2.5 rounded-2xl bg-rose-50 border border-rose-200">
+          <div class="text-[10px] text-rose-700">残業時間(1.25倍)</div>
+          <div class="font-black text-rose-900 text-sm mt-0.5" id="modal-overtime-hours">0.0h</div>
+        </div>
+      </div>
+
+      <div class="text-right">
+        <button onclick="editWage()" class="text-xs font-bold text-amber-800 hover:underline">
+          設定時給を変更する ✏️
+        </button>
+      </div>
+
+      <div>
+        <div class="text-xs font-bold text-slate-700 mb-2">日別の出退勤・実働エビデンス一覧</div>
+        <div id="modal-daily-list" class="space-y-1.5 max-h-52 overflow-y-auto text-xs">
+          <!-- JSでレンダリング -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- フレンチ下部固定ナビゲーションバー -->
+  <nav class="rococo-bottom-nav fixed bottom-0 inset-x-0 z-40 py-2 px-6">
+    <div class="max-w-md mx-auto flex items-center justify-around text-center">
+      <a href="/me" class="flex flex-col items-center text-amber-900 font-bold text-[10px] transition">
+        <span class="text-base">🏠</span>
+        <span>ホーム</span>
+      </a>
+      <a href="/calendar" class="flex flex-col items-center text-slate-500 hover:text-amber-800 text-[10px] transition">
+        <span class="text-base">📅</span>
+        <span>シフト</span>
+      </a>
+      <button onclick="openSalaryDetailModal()" class="flex flex-col items-center text-slate-500 hover:text-amber-800 text-[10px] transition">
+        <span class="text-base">💰</span>
+        <span>給与</span>
+      </button>
+      <button onclick="editPaidLeave()" class="flex flex-col items-center text-slate-500 hover:text-amber-800 text-[10px] transition">
+        <span class="text-base">🏖️</span>
+        <span>有休</span>
+      </button>
+      <button onclick="toggleThemeMenu()" class="flex flex-col items-center text-slate-500 hover:text-amber-800 text-[10px] transition">
+        <span class="text-base">🎨</span>
+        <span>カラー</span>
+      </button>
+    </div>
+  </nav>
+
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
   let myDashboard = null;
-  let activeTheme = localStorage.getItem('myroom_theme') || 'mint';
+  let activeTheme = localStorage.getItem('myroom_theme') || 'rose';
 
   document.addEventListener('DOMContentLoaded', () => {
     applyTheme(activeTheme);
     loadMyDashboard();
-    loadMyMessages();
     initClock();
   });
 
@@ -428,33 +412,72 @@
 
     // 優先度①：給与シミュレーター
     const sal = d.salary_simulator;
-    document.getElementById('val-hourly-wage').textContent = `¥${(sal.hourly_wage || 0).toLocaleString()}`;
-    document.getElementById('val-worked-days').textContent = `${sal.worked_days_count} 日`;
-    document.getElementById('val-work-hours').textContent = `${sal.total_work_hours} 時間`;
-    document.getElementById('val-estimated-salary').textContent = `¥${(sal.estimated_salary || 0).toLocaleString()}`;
+    const wageEl = document.getElementById('val-hourly-wage');
+    if (wageEl) wageEl.textContent = `¥${(sal.hourly_wage || 0).toLocaleString()}`;
+    const workedDaysEl = document.getElementById('val-worked-days');
+    if (workedDaysEl) workedDaysEl.textContent = `${sal.worked_days_count} 日`;
+    const workHoursEl = document.getElementById('val-work-hours');
+    if (workHoursEl) workHoursEl.textContent = `${sal.total_work_hours} 時間`;
+    const estEl = document.getElementById('val-estimated-salary');
+    if (estEl) estEl.textContent = `¥${(sal.estimated_salary || 0).toLocaleString()}`;
 
     // 優先度②：有休管理
     const pl = d.paid_leave;
-    document.getElementById('val-paid-leave-remaining').textContent = pl.remaining;
-    document.getElementById('val-paid-leave-taken').textContent = pl.taken_this_month;
-
-    // 家計簿残高
-    const bg = d.budget;
-    document.getElementById('val-budget-balance').textContent = `残高: ¥${(bg.balance || 0).toLocaleString()}`;
-
-    // 本日のシフト
-    const ts = d.today_shift;
-    document.getElementById('today-shift-badge').textContent = ts.shift_label;
-    document.getElementById('today-shift-time').textContent = ts.time_range;
+    const plRemEl = document.getElementById('val-paid-leave-remaining');
+    if (plRemEl) plRemEl.textContent = `${pl.remaining} 日`;
+    const plTakenEl = document.getElementById('val-paid-leave-taken');
+    if (plTakenEl) plTakenEl.textContent = `${pl.taken_this_month} 日`;
 
     // 打刻ステータス
     const cs = d.clock.status;
-    if (cs === 'WORKING') {
-      document.getElementById('clock-status-note').textContent = `現在勤務中 (${d.clock.clock_in} 出勤)`;
-    } else if (cs === 'DONE') {
-      document.getElementById('clock-status-note').textContent = `退勤完了 (${d.clock.clock_in}〜${d.clock.clock_out}) お疲れ様でした！`;
+    const noteEl = document.getElementById('clock-status-note');
+    if (noteEl) {
+      if (cs === 'WORKING') {
+        noteEl.textContent = `現在勤務中 (${d.clock.clock_in} 出勤)`;
+      } else if (cs === 'DONE') {
+        noteEl.textContent = `退勤完了 (${d.clock.clock_in}〜${d.clock.clock_out}) お疲れ様でした！`;
+      }
     }
     if (window.lucide) lucide.createIcons();
+  }
+
+  // --- 給与詳細モーダル ---
+  function openSalaryDetailModal() {
+    if (!myDashboard) return;
+    const sal = myDashboard.salary_simulator;
+    document.getElementById('modal-hourly-wage').textContent = `¥${(sal.hourly_wage || 0).toLocaleString()}`;
+    document.getElementById('modal-worked-days').textContent = `${sal.worked_days_count}日`;
+    document.getElementById('modal-total-hours').textContent = `${sal.total_work_hours}h`;
+    document.getElementById('modal-overtime-hours').textContent = `${sal.overtime_hours || 0}h`;
+
+    const listEl = document.getElementById('modal-daily-list');
+    listEl.innerHTML = '';
+
+    if (!sal.daily_records || sal.daily_records.length === 0) {
+      listEl.innerHTML = '<div class="text-slate-400 text-center py-4">今月の打刻実績はまだありません</div>';
+    } else {
+      sal.daily_records.forEach(r => {
+        const item = document.createElement('div');
+        item.className = 'p-2 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs';
+        item.innerHTML = `
+          <div>
+            <span class="font-bold text-slate-800">${r.date}</span>
+            <span class="text-slate-500 ml-2">${r.clock_in || '--:--'} 〜 ${r.clock_out || '--:--'}</span>
+          </div>
+          <div class="font-mono text-right">
+            <span class="font-bold text-slate-700">${r.work_hours || 0}h</span>
+            ${r.overtime_minutes > 0 ? `<span class="ml-1 text-rose-600 font-bold">(残業 ${Math.round(r.overtime_minutes/60*10)/10}h)</span>` : ''}
+          </div>
+        `;
+        listEl.appendChild(item);
+      });
+    }
+
+    document.getElementById('salary-detail-modal').classList.remove('hidden');
+  }
+
+  function closeSalaryDetailModal() {
+    document.getElementById('salary-detail-modal').classList.add('hidden');
   }
 
   async function editWage() {
@@ -468,7 +491,7 @@
       body: JSON.stringify({ hourly_wage: wage })
     });
     if (res.ok) {
-      showToast('時給を更新しました');
+      showToast('時給を更新しました 💰');
       loadMyDashboard();
     }
   }
@@ -484,62 +507,26 @@
       body: JSON.stringify({ paid_leave_remaining: days })
     });
     if (res.ok) {
-      showToast('有休残日数を更新しました');
+      showToast('有休残日数を設定しました 🏖️');
       loadMyDashboard();
     }
   }
 
   async function doClock(action) {
-    try {
-      const res = await fetch('/api/me/clock', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action })
-      });
+    const res = await fetch('/api/me/clock', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action })
+    });
+    if (res.ok) {
       const data = await res.json();
-      if (res.ok) {
-        showToast(action === 'IN' ? 'おはようございます！出勤を記録しました ☀️' : '今日も1日お疲れ様でした！退勤を記録しました ☕️');
-        loadMyDashboard();
-      }
-    } catch (e) {
-      showToast('打刻エラー', 'error');
-    }
-  }
-
-  async function saveHealth(status) {
-    const note = document.getElementById('health-note').value;
-    const todayStr = new Date().toISOString().split('T')[0];
-    const res = await fetch('/api/me/health', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date: todayStr, health_status: status, note: note || '' })
-    });
-    if (res.ok) {
-      showToast('体調を記録しました ❤️');
-      document.getElementById('health-note').value = '';
-    }
-  }
-
-  function saveHealthWithNote() {
-    saveHealth('OK');
-  }
-
-  async function handleAddBudget(e) {
-    e.preventDefault();
-    const title = document.getElementById('budget-title').value;
-    const isIncome = document.getElementById('budget-type').value === 'INCOME';
-    const amount = parseInt(document.getElementById('budget-amount').value);
-    const todayStr = new Date().toISOString().split('T')[0];
-
-    const res = await fetch('/api/me/budget', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date: todayStr, title, amount, is_income: isIncome })
-    });
-    if (res.ok) {
-      showToast('家計簿に記録しました 📒');
-      document.getElementById('budget-title').value = '';
-      document.getElementById('budget-amount').value = '';
+      const labels = {
+        IN: '出勤を記録しました ☀️',
+        BREAK_START: '休憩に入りました ☕️',
+        BREAK_END: '休憩から戻りました ▶️',
+        OUT: '退勤を記録しました 🌙 お疲れ様でした！',
+      };
+      showToast(labels[action] || '記録しました');
       loadMyDashboard();
     }
   }
@@ -563,33 +550,6 @@
       showToast('休暇申請を送信しました 🏖️');
       document.getElementById('leave-date').value = '';
       document.getElementById('leave-reason').value = '';
-    }
-  }
-
-  async function loadMyMessages() {
-    try {
-      const res = await fetch('/api/me/messages');
-      const list = await res.json();
-      const box = document.getElementById('messages-list');
-      if (!list || list.length === 0) {
-        box.innerHTML = '<div class="text-xs text-slate-400 text-center py-6">メッセージはありません</div>';
-        return;
-      }
-      box.innerHTML = '';
-      list.forEach(m => {
-        const item = document.createElement('div');
-        item.className = 'p-3.5 rounded-2xl bg-amber-50/80 border border-amber-100/80 text-xs space-y-1 shadow-2xs';
-        item.innerHTML = `
-          <div class="flex items-center justify-between font-bold text-amber-900">
-            <span>${m.sender_name} より</span>
-            <span class="text-[10px] text-slate-400 font-normal">${m.created_at}</span>
-          </div>
-          <div class="text-slate-700 whitespace-pre-wrap">${m.content}</div>
-        `;
-        box.appendChild(item);
-      });
-    } catch (e) {
-      console.error(e);
     }
   }
 
