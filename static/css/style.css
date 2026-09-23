@@ -13,21 +13,21 @@
 
 /* カレンダーセルのホバー */
 #calendar-body > div:hover {
-  background-color: rgba(254, 242, 242, 0.7);
+  background-color: rgba(240, 253, 250, 0.7);
 }
 
-/* --- 女性らしく優しい壁紙テーマ & 演出 --- */
+/* --- リリー薬局の上品で優しい壁紙テーマ & 演出 --- */
 
-/* 1. 桜・チェリーブロッサム（ふんわりピンクと花びらのグラデーション） */
-body.theme-sakura {
-  background: linear-gradient(135deg, #fff5f7 0%, #fff1f2 35%, #ffe4e6 100%) !important;
+/* 1. リリーホワイト & エメラルド（清楚な白百合と癒やしのグリーン） */
+body.theme-lily {
+  background: linear-gradient(135deg, #f0fdf4 0%, #f7fee7 40%, #ecfdf5 100%) !important;
   background-attachment: fixed !important;
 }
-.theme-sakura .glass-card {
-  background: rgba(255, 255, 255, 0.88) !important;
+.theme-lily .glass-card {
+  background: rgba(255, 255, 255, 0.90) !important;
   backdrop-filter: blur(12px);
-  border-color: rgba(254, 205, 211, 0.6) !important;
-  box-shadow: 0 10px 25px -5px rgba(244, 114, 182, 0.08);
+  border-color: rgba(167, 243, 208, 0.7) !important;
+  box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.08);
 }
 
 /* 2. ラベンダーミスト（心安らぐ上品なパープル） */
@@ -36,21 +36,21 @@ body.theme-lavender {
   background-attachment: fixed !important;
 }
 .theme-lavender .glass-card {
-  background: rgba(255, 255, 255, 0.88) !important;
+  background: rgba(255, 255, 255, 0.90) !important;
   backdrop-filter: blur(12px);
-  border-color: rgba(221, 214, 254, 0.6) !important;
+  border-color: rgba(221, 214, 254, 0.7) !important;
   box-shadow: 0 10px 25px -5px rgba(167, 139, 250, 0.08);
 }
 
-/* 3. ハーブグリーン（清潔感と癒やしのミントフォレスト） */
+/* 3. ハーブグリーン（清潔感と爽快感のミントフォレスト） */
 body.theme-herb {
   background: linear-gradient(135deg, #f2fcf5 0%, #ecfdf5 45%, #d1fae5 100%) !important;
   background-attachment: fixed !important;
 }
 .theme-herb .glass-card {
-  background: rgba(255, 255, 255, 0.88) !important;
+  background: rgba(255, 255, 255, 0.90) !important;
   backdrop-filter: blur(12px);
-  border-color: rgba(167, 243, 208, 0.6) !important;
+  border-color: rgba(167, 243, 208, 0.7) !important;
   box-shadow: 0 10px 25px -5px rgba(52, 211, 153, 0.08);
 }
 
@@ -60,13 +60,13 @@ body.theme-mimosa {
   background-attachment: fixed !important;
 }
 .theme-mimosa .glass-card {
-  background: rgba(255, 255, 255, 0.88) !important;
+  background: rgba(255, 255, 255, 0.90) !important;
   backdrop-filter: blur(12px);
-  border-color: rgba(254, 240, 138, 0.6) !important;
+  border-color: rgba(254, 240, 138, 0.7) !important;
   box-shadow: 0 10px 25px -5px rgba(250, 204, 21, 0.08);
 }
 
-/* 5. ピュアホワイト & ローズゴールド（洗練されたシンプル） */
+/* 5. ピュアホワイト（洗練されたシンプルモダン） */
 body.theme-simple {
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
   background-attachment: fixed !important;
@@ -77,7 +77,7 @@ body.theme-simple {
   box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03);
 }
 
-/* --- 花びら舞うアニメーション演出（演出エフェクト用） --- */
+/* --- 白百合の花びら（純白のピュアペタル）舞い散るアニメーション --- */
 .petal-container {
   position: fixed;
   top: 0;
@@ -91,21 +91,23 @@ body.theme-simple {
 
 .petal {
   position: absolute;
-  background: radial-gradient(circle, #fbcfe8 20%, #f472b6 90%);
-  border-radius: 150% 0 150% 0;
-  opacity: 0.35;
+  /* 白百合の上品で透き通るホワイト＆淡いエメラルドの花びら */
+  background: radial-gradient(circle, #ffffff 40%, #d1fae5 95%);
+  border-radius: 180% 0 180% 0;
+  opacity: 0.45;
   pointer-events: none;
+  filter: drop-shadow(0 2px 4px rgba(16, 185, 129, 0.15));
   animation: fall linear infinite, sway ease-in-out infinite alternate;
 }
 
 @keyframes fall {
-  0% { top: -10%; opacity: 0.5; }
+  0% { top: -10%; opacity: 0.6; }
   100% { top: 110%; opacity: 0; }
 }
 
 @keyframes sway {
   0% { transform: translateX(0) rotate(0deg); }
-  100% { transform: translateX(35px) rotate(120deg); }
+  100% { transform: translateX(30px) rotate(140deg); }
 }
 
 /* ボタンのふんわりリップル & タップ感 */
