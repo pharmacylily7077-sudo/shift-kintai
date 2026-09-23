@@ -131,10 +131,14 @@ def get_my_dashboard(
 
     total_work_minutes = sum(r.work_minutes for r in month_records)
     worked_days_count = sum(1 for r in month_records if r.clock_in is not None)
+    total_overtime_minutes = sum(max(0, r.work_minutes - 480) for r in month_records)
 
-    # 自己入力の時給に基づく推定給与計算
+    # 自己入力の時給に基づく推定給与計算（通常時給＋残業割増1.25倍）
     hourly_rate = current_user.hourly_wage or 0
-    estimated_salary = int(round((total_work_minutes / 60.0) * hourly_rate)) if hourly_rate > 0 else 0
+    regular_minutes = total_work_minutes - total_overtime_minutes
+    regular_pay = (regular_minutes / 60.0) * hourly_rate
+    overtime_pay = (total_overtime_minutes / 60.0) * hourly_rate * 1.25
+    estimated_salary = int(round(regular_pay + overtime_pay)) if hourly_rate > 0 else 0
 
     # 4. 有休消化数（当月分）
     paid_leaves_taken = db.query(models.Shift).filter(
@@ -207,7 +211,20 @@ def get_my_dashboard(
             "total_work_minutes": total_work_minutes,
             "total_work_hours": round(total_work_minutes / 60.0, 1),
             "worked_days_count": worked_days_count,
+            "overtime_minutes": total_overtime_minutes,
+            "overtime_hours": round(total_overtime_minutes / 60.0, 1),
             "estimated_salary": estimated_salary,
+            "daily_records": [
+                {
+                    "date": r.date.isoformat(),
+                    "clock_in": r.clock_in.strftime("%H:%M") if r.clock_in else None,
+                    "clock_out": r.clock_out.strftime("%H:%M") if r.clock_out else None,
+                    "work_minutes": r.work_minutes,
+                    "work_hours": round(r.work_minutes / 60.0, 1),
+                    "overtime_minutes": max(0, r.work_minutes - 480),
+                }
+                for r in month_records
+            ]
         },
         "paid_leave": {
             "remaining": current_user.paid_leave_remaining,
