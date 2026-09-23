@@ -73,6 +73,12 @@
         <span>{{ current_user.full_name }}さん、こんにちは！</span>
         <span>🐦</span>
       </div>
+      {% if current_user.evaluation_color %}
+      <div class="mt-2 inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-white/90 border border-slate-200/80 shadow-2xs text-[11px] font-bold text-slate-700">
+        <span class="w-3.5 h-3.5 rounded-full inline-block shadow-inner" style="background-color: {{ current_user.evaluation_color }};"></span>
+        <span>あなたの色（{{ current_user.position_label }}）</span>
+      </div>
+      {% endif %}
     </div>
 
     <!-- 2. A Gentle Thought カード（恋人に伝えるかのような心温まる英語の感謝の言葉） -->

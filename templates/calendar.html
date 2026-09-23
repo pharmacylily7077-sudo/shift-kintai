@@ -108,11 +108,11 @@
     // 評価カラー凡例の動的生成
     const legendEl = document.getElementById('staff-legend');
     if (legendEl && data.staff) {
-      legendEl.innerHTML = '<span class="text-xs font-bold text-slate-400 mr-1 uppercase tracking-wider text-[11px]">Staff:</span>';
+      legendEl.innerHTML = '<div class="w-full flex items-center justify-between text-xs font-bold text-slate-500 mb-1"><span class="flex items-center space-x-1"><span>👥</span><span>スタッフ評価・成長カラー</span></span></div>';
       data.staff.forEach(s => {
         const tag = document.createElement('span');
-        tag.className = 'inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-800 shadow-2xs';
-        tag.innerHTML = `<span class="w-3.5 h-3.5 rounded-md inline-block shadow-2xs" style="background:${s.color}"></span><span>${s.full_name}</span><span class="text-[10px] text-slate-400 font-normal">(${s.position_label})</span>`;
+        tag.className = 'inline-flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-800 shadow-2xs';
+        tag.innerHTML = `<span class="w-4 h-4 rounded-md inline-block shadow-2xs flex-shrink-0" style="background:${s.color}"></span><span>${s.full_name}</span><span class="text-[10px] text-slate-400 font-normal">(${s.position_label})</span>`;
         legendEl.appendChild(tag);
       });
     }

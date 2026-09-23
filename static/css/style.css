@@ -20,62 +20,77 @@
 
 /* 1. ローズピンク（華やかで優しいペールローズ） */
 body.theme-rose {
-  background: linear-gradient(135deg, #fff1f2 0%, #fff5f5 50%, #ffe4e6 100%) !important;
+  background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 50%, #fecdd3 100%) !important;
   background-attachment: fixed !important;
 }
-.theme-rose .glass-card {
-  background: rgba(255, 255, 255, 0.94) !important;
-  backdrop-filter: blur(12px);
-  border-color: rgba(254, 205, 211, 0.8) !important;
-  box-shadow: 0 4px 20px -2px rgba(244, 63, 94, 0.05);
+body.theme-rose .rococo-gold-frame {
+  background: #fff8f8;
+  border-color: #fb7185;
+  box-shadow: 0 4px 20px -2px rgba(244, 63, 94, 0.2), inset 0 0 16px rgba(254, 205, 211, 0.35);
+}
+body.theme-rose .rococo-pastel-frame {
+  background: #fff1f2;
+  border-color: #f43f5e;
 }
 
 /* 2. パウダーブルー（澄んだ気品あるフレンチスカイ） */
 body.theme-blue {
-  background: linear-gradient(135deg, #f0f9ff 0%, #f8fafc 50%, #e0f2fe 100%) !important;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #bae6fd 100%) !important;
   background-attachment: fixed !important;
 }
-.theme-blue .glass-card {
-  background: rgba(255, 255, 255, 0.94) !important;
-  backdrop-filter: blur(12px);
-  border-color: rgba(186, 230, 253, 0.8) !important;
-  box-shadow: 0 4px 20px -2px rgba(2, 132, 199, 0.05);
+body.theme-blue .rococo-gold-frame {
+  background: #f8fbff;
+  border-color: #38bdf8;
+  box-shadow: 0 4px 20px -2px rgba(56, 189, 248, 0.25), inset 0 0 16px rgba(186, 230, 253, 0.4);
+}
+body.theme-blue .rococo-pastel-frame {
+  background: #eff6ff;
+  border-color: #60a5fa;
 }
 
 /* 3. ミントグリーン（爽やかで落ち着く淡いペールミント） */
 body.theme-mint, body.theme-herb {
-  background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 50%, #dcfce7 100%) !important;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 50%, #bbf7d0 100%) !important;
   background-attachment: fixed !important;
 }
-.theme-mint .glass-card, .theme-herb .glass-card {
-  background: rgba(255, 255, 255, 0.94) !important;
-  backdrop-filter: blur(12px);
-  border-color: rgba(187, 247, 208, 0.8) !important;
-  box-shadow: 0 4px 20px -2px rgba(5, 150, 105, 0.05);
+body.theme-mint .rococo-gold-frame, body.theme-herb .rococo-gold-frame {
+  background: #f7fef9;
+  border-color: #34d399;
+  box-shadow: 0 4px 20px -2px rgba(52, 211, 153, 0.25), inset 0 0 16px rgba(187, 247, 208, 0.4);
+}
+body.theme-mint .rococo-pastel-frame, body.theme-herb .rococo-pastel-frame {
+  background: #ecfdf5;
+  border-color: #4ade80;
 }
 
 /* 4. シャンパンアイボリー（温もりとクラシックな気品） */
 body.theme-champagne, body.theme-warm {
-  background: linear-gradient(135deg, #fffbeb 0%, #fefce8 50%, #fef3c7 100%) !important;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 50%, #fde68a 100%) !important;
   background-attachment: fixed !important;
 }
-.theme-champagne .glass-card, .theme-warm .glass-card {
-  background: rgba(255, 255, 255, 0.94) !important;
-  backdrop-filter: blur(12px);
-  border-color: rgba(254, 240, 138, 0.8) !important;
-  box-shadow: 0 4px 20px -2px rgba(217, 119, 6, 0.05);
+body.theme-champagne .rococo-gold-frame, body.theme-warm .rococo-gold-frame {
+  background: #fffdfa;
+  border-color: #d4af37;
+  box-shadow: 0 4px 20px -2px rgba(212, 175, 55, 0.25), inset 0 0 16px rgba(254, 240, 138, 0.35);
+}
+body.theme-champagne .rococo-pastel-frame, body.theme-warm .rococo-pastel-frame {
+  background: #fefce8;
+  border-color: #eab308;
 }
 
 /* 5. ラベンダーミスト（心安らぐ上品なペールパープル） */
 body.theme-lavender {
-  background: linear-gradient(135deg, #faf5ff 0%, #f8fafc 50%, #f3e8ff 100%) !important;
+  background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 50%, #e9d5ff 100%) !important;
   background-attachment: fixed !important;
 }
-.theme-lavender .glass-card {
-  background: rgba(255, 255, 255, 0.94) !important;
-  backdrop-filter: blur(12px);
-  border-color: rgba(233, 213, 255, 0.8) !important;
-  box-shadow: 0 4px 20px -2px rgba(124, 58, 237, 0.05);
+body.theme-lavender .rococo-gold-frame {
+  background: #fdfaff;
+  border-color: #a855f7;
+  box-shadow: 0 4px 20px -2px rgba(168, 85, 247, 0.25), inset 0 0 16px rgba(233, 213, 255, 0.4);
+}
+body.theme-lavender .rococo-pastel-frame {
+  background: #faf5ff;
+  border-color: #c084fc;
 }
 
 /* ピュアホワイト（シンプルで美しいミニマル） */

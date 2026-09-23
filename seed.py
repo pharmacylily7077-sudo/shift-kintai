@@ -109,6 +109,42 @@ def seed_data():
                 existing.fixed_off_weekdays = staff.get("fixed_off_weekdays", "6")
         db.commit()
         print("✅ 初期データ投入完了（評価カラー同期済み）")
+
+        # 月間シフトが未生成の場合、今月と翌月のシフトを自動初期生成
+        from datetime import date
+        import calendar
+        from holidays import is_sunday_or_holiday
+
+        today = date.today()
+        target_months = [(today.year, today.month)]
+        if today.month == 12:
+            target_months.append((today.year + 1, 1))
+        else:
+            target_months.append((today.year, today.month + 1))
+
+        all_users = db.query(models.User).filter(models.User.is_active == True).all()
+        for y, m in target_months:
+            _, days_in_month = calendar.monthrange(y, m)
+            shift_count = db.query(models.Shift).filter(
+                models.Shift.date >= date(y, m, 1),
+                models.Shift.date <= date(y, m, days_in_month)
+            ).count()
+            if shift_count == 0:
+                for day in range(1, days_in_month + 1):
+                    d = date(y, m, day)
+                    weekday_str = str(d.weekday())
+                    if is_sunday_or_holiday(d):
+                        continue
+                    for u in all_users:
+                        off_days = [x.strip() for x in (u.fixed_off_weekdays or "6").split(",")]
+                        if weekday_str in off_days:
+                            continue
+                        st = u.default_shift
+                        if d.weekday() == 5 and st == models.ShiftType.SECOND:
+                            st = models.ShiftType.AM
+                        db.add(models.Shift(user_id=u.id, date=d, shift_type=st, note=""))
+                db.commit()
+                print(f"✅ {y}年{m}月の初期シフト自動生成完了（スタッフカラー反映）")
     except Exception as e:
         db.rollback()
         print(f"❌ シードエラー: {e}")
