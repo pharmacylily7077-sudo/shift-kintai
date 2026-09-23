@@ -206,34 +206,37 @@ body.theme-simple {
 
 /* === 洗練されたロココ調 勤怠・給与管理 マイページ専用スタイル === */
 
-/* アンティークキャンバス外枠 */
+/* アンティークキャンバス外枠（3Dゴールド立体レリーフ額縁） */
 .rococo-tablet-canvas {
   background: #fcf9f2;
-  border: 4px double #d4af37;
-  border-radius: 32px;
+  border: 5px solid #d4af37;
+  border-radius: 36px;
   box-shadow: 
-    0 12px 36px -8px rgba(180, 140, 20, 0.25),
-    inset 0 0 24px rgba(254, 240, 138, 0.35);
+    0 0 0 3px #854d0e,
+    0 0 0 6px #fef08a,
+    0 0 0 9px #ca8a04,
+    0 20px 48px -10px rgba(180, 140, 20, 0.4),
+    inset 0 0 32px rgba(254, 240, 138, 0.45);
   position: relative;
 }
 
-/* 四隅のスカラップ・シェル装飾 */
-.rococo-corner-shell {
+.rococo-tablet-canvas::before {
+  content: "";
   position: absolute;
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  color: #ca8a04;
+  inset: 7px;
+  border: 1.5px solid #d4af37;
+  border-radius: 30px;
   pointer-events: none;
-  z-index: 20;
 }
-.rococo-corner-tl { top: 8px; left: 8px; }
-.rococo-corner-tr { top: 8px; right: 8px; }
-.rococo-corner-bl { bottom: 8px; left: 8px; }
-.rococo-corner-br { bottom: 8px; right: 8px; }
+
+.rococo-tablet-canvas::after {
+  content: "";
+  position: absolute;
+  inset: 12px;
+  border: 1px dashed rgba(202, 138, 4, 0.4);
+  border-radius: 25px;
+  pointer-events: none;
+}
 
 /* ロココ調バナー・カルトゥーシュ */
 .rococo-plaque-banner {
@@ -381,59 +384,99 @@ body.theme-simple {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
 }
 
-/* ロココ調カード額縁枠（勤務スケジュール ＆ 給与明細） */
+/* 本格ロココ調 黄金立体モールディング枠（画像3の金細工レリーフ完全再現） */
+.rococo-gold-molding-frame,
 .rococo-section-card {
-  background: #fffdf9;
-  border: 2px solid #d4af37;
-  border-radius: 24px;
+  background: #fdfbf7;
+  border: 4px solid #d4af37;
+  border-radius: 28px;
   box-shadow: 
-    0 6px 18px rgba(180, 140, 20, 0.18),
-    inset 0 0 16px rgba(254, 240, 138, 0.25);
+    0 0 0 2px #b48c14,
+    0 0 0 5px #fef08a,
+    0 0 0 7px #ca8a04,
+    0 8px 28px -4px rgba(180, 140, 20, 0.35),
+    inset 0 0 24px rgba(254, 240, 138, 0.4);
   position: relative;
-  padding: 24px 18px 18px 18px;
+  padding: 26px 20px 20px 20px;
 }
+
+.rococo-gold-molding-frame::before,
 .rococo-section-card::before {
   content: "";
   position: absolute;
-  inset: 4px;
-  border: 1px dashed rgba(212, 175, 55, 0.45);
-  border-radius: 20px;
+  inset: 6px;
+  border: 1.5px solid #d4af37;
+  border-radius: 22px;
   pointer-events: none;
 }
+
+.rococo-gold-molding-frame::after,
+.rococo-section-card::after {
+  content: "";
+  position: absolute;
+  inset: 11px;
+  border: 1px dashed rgba(202, 138, 4, 0.45);
+  border-radius: 18px;
+  pointer-events: none;
+}
+
+/* ロココ調コーナー装飾（画像1＆2のアカンサス唐草・薔薇装飾） */
+.rococo-corner-filigree {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  pointer-events: none;
+  z-index: 15;
+  filter: drop-shadow(0 1px 2px rgba(180, 140, 20, 0.4));
+}
+.rococo-cf-tl { top: 6px; left: 6px; }
+.rococo-cf-tr { top: 6px; right: 6px; transform: scaleX(-1); }
+.rococo-cf-bl { bottom: 6px; left: 6px; transform: scaleY(-1); }
+.rococo-cf-br { bottom: 6px; right: 6px; transform: scale(-1); }
+
 .rococo-section-card-badge {
   position: absolute;
-  top: -14px;
+  top: -15px;
   left: 50%;
   transform: translateX(-50%);
-  background: linear-gradient(180deg, #fef9c3 0%, #eab308 60%, #ca8a04 100%);
-  border: 1.5px solid #fef08a;
-  box-shadow: 0 3px 8px rgba(180, 140, 20, 0.35);
+  background: linear-gradient(180deg, #fffbeb 0%, #fef08a 30%, #eab308 70%, #ca8a04 100%);
+  border: 2px solid #fef08a;
+  box-shadow: 
+    0 4px 10px rgba(180, 140, 20, 0.4),
+    0 0 0 1px #b48c14;
   border-radius: 9999px;
-  padding: 3px 20px;
-  font-size: 12px;
+  padding: 4px 24px;
+  font-size: 13px;
   font-weight: 800;
   color: #713f12;
   font-family: 'Shippori Mincho', serif;
   white-space: nowrap;
-  z-index: 10;
+  z-index: 20;
 }
 
 /* 申請系プラークボタン */
 .rococo-action-card-btn {
   background: linear-gradient(180deg, #fffefb 0%, #fef3c7 100%);
-  border: 1.5px solid #d4af37;
-  border-radius: 18px;
+  border: 2px solid #d4af37;
+  border-radius: 20px;
   box-shadow: 
-    0 3px 8px rgba(180, 140, 20, 0.15),
-    inset 0 0 8px rgba(255, 255, 255, 0.8);
+    0 0 0 1px #ca8a04,
+    0 4px 10px rgba(180, 140, 20, 0.2),
+    inset 0 0 10px rgba(255, 255, 255, 0.9);
   font-family: 'Shippori Mincho', serif;
   font-weight: 700;
   color: #78350f;
   transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
 }
 .rococo-action-card-btn:hover {
   background: linear-gradient(180deg, #fef9c3 0%, #fde68a 100%);
   border-color: #b48c14;
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 
+    0 0 0 1px #854d0e,
+    0 6px 14px rgba(180, 140, 20, 0.3),
+    inset 0 0 12px rgba(255, 255, 255, 0.9);
 }
 

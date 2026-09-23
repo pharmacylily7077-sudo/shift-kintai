@@ -57,15 +57,37 @@
     </div>
   </header>
 
+{% macro rococo_corners() %}
+<svg class="rococo-corner-filigree rococo-cf-tl" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M 4 4 L 32 4 C 32 10 26 14 22 18 C 18 22 20 28 24 30 C 28 32 34 26 34 20 C 34 14 30 10 32 6 C 34 2 40 2 48 2" stroke="#d4af37" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M 4 4 L 4 32 C 10 32 14 26 18 22 C 22 18 28 20 30 24 C 32 28 26 34 20 34 C 14 34 10 30 6 32 C 2 34 2 40 2 48" stroke="#d4af37" stroke-width="2.2" stroke-linecap="round"/>
+  <circle cx="16" cy="16" r="3.5" fill="#ca8a04"/>
+  <path d="M 8 8 Q 22 8 22 22 Q 8 22 8 8" stroke="#ca8a04" stroke-width="1.2" fill="#fef08a" fill-opacity="0.35"/>
+</svg>
+<svg class="rococo-corner-filigree rococo-cf-tr" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M 4 4 L 32 4 C 32 10 26 14 22 18 C 18 22 20 28 24 30 C 28 32 34 26 34 20 C 34 14 30 10 32 6 C 34 2 40 2 48 2" stroke="#d4af37" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M 4 4 L 4 32 C 10 32 14 26 18 22 C 22 18 28 20 30 24 C 32 28 26 34 20 34 C 14 34 10 30 6 32 C 2 34 2 40 2 48" stroke="#d4af37" stroke-width="2.2" stroke-linecap="round"/>
+  <circle cx="16" cy="16" r="3.5" fill="#ca8a04"/>
+  <path d="M 8 8 Q 22 8 22 22 Q 8 22 8 8" stroke="#ca8a04" stroke-width="1.2" fill="#fef08a" fill-opacity="0.35"/>
+</svg>
+<svg class="rococo-corner-filigree rococo-cf-bl" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M 4 4 L 32 4 C 32 10 26 14 22 18 C 18 22 20 28 24 30 C 28 32 34 26 34 20 C 34 14 30 10 32 6 C 34 2 40 2 48 2" stroke="#d4af37" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M 4 4 L 4 32 C 10 32 14 26 18 22 C 22 18 28 20 30 24 C 32 28 26 34 20 34 C 14 34 10 30 6 32 C 2 34 2 40 2 48" stroke="#d4af37" stroke-width="2.2" stroke-linecap="round"/>
+  <circle cx="16" cy="16" r="3.5" fill="#ca8a04"/>
+  <path d="M 8 8 Q 22 8 22 22 Q 8 22 8 8" stroke="#ca8a04" stroke-width="1.2" fill="#fef08a" fill-opacity="0.35"/>
+</svg>
+<svg class="rococo-corner-filigree rococo-cf-br" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M 4 4 L 32 4 C 32 10 26 14 22 18 C 18 22 20 28 24 30 C 28 32 34 26 34 20 C 34 14 30 10 32 6 C 34 2 40 2 48 2" stroke="#d4af37" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M 4 4 L 4 32 C 10 32 14 26 18 22 C 22 18 28 20 30 24 C 32 28 26 34 20 34 C 14 34 10 30 6 32 C 2 34 2 40 2 48" stroke="#d4af37" stroke-width="2.2" stroke-linecap="round"/>
+  <circle cx="16" cy="16" r="3.5" fill="#ca8a04"/>
+  <path d="M 8 8 Q 22 8 22 22 Q 8 22 8 8" stroke="#ca8a04" stroke-width="1.2" fill="#fef08a" fill-opacity="0.35"/>
+</svg>
+{% endmacro %}
+
   <!-- タブレット風ロココ調キャンバス（画像完全再現） -->
   <main class="max-w-5xl mx-auto p-3 sm:p-6 my-2 sm:my-4">
     <div class="rococo-tablet-canvas p-5 sm:p-8 relative">
-
-      <!-- 四隅のスカラップ・シェル装飾 -->
-      <div class="rococo-corner-shell rococo-corner-tl">🐚</div>
-      <div class="rococo-corner-shell rococo-corner-tr">🐚</div>
-      <div class="rococo-corner-shell rococo-corner-bl">🐚</div>
-      <div class="rococo-corner-shell rococo-corner-br">🐚</div>
+      {{ rococo_corners() }}
 
       <!-- ⚜️ リリー調剤薬局 グランド・ロココ壁画レリーフ ⚜️ -->
       <div class="text-center mb-5">
@@ -193,6 +215,7 @@
         
         <!-- 左カード：勤務スケジュール -->
         <div class="rococo-section-card">
+          {{ rococo_corners() }}
           <div class="rococo-section-card-badge">
             勤務スケジュール
           </div>
@@ -265,6 +288,7 @@
 
         <!-- 右カード：給与明細（言いがかり封じのガラス張り計算内訳） -->
         <div class="rococo-section-card">
+          {{ rococo_corners() }}
           <div class="rococo-section-card-badge">
             給与明細
           </div>
@@ -320,6 +344,7 @@
         
         <!-- 勤怠申請 -->
         <div class="rococo-section-card">
+          {{ rococo_corners() }}
           <div class="rococo-section-card-badge">
             勤怠申請
           </div>
@@ -342,6 +367,7 @@
 
         <!-- お知らせ / A Gentle Thought -->
         <div class="rococo-section-card">
+          {{ rococo_corners() }}
           <div class="rococo-section-card-badge">
             お知らせ
           </div>
