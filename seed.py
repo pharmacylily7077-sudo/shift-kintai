@@ -10,7 +10,7 @@ from auth import hash_password
 INITIAL_STAFF = [
     # 薬剤師（緑系統）
     {
-        "full_name": "三宅 興之",
+        "full_name": "三宅 智之",
         "position": models.Position.PHARMACIST,
         "employment_type": models.EmploymentType.FULLTIME,
         "default_shift": models.ShiftType.FULL,

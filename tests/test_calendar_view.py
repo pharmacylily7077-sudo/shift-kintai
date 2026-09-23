@@ -18,7 +18,7 @@ def test_calendar_api_evaluation_colors_and_no_leak(client):
     data = res.json()
 
     staff_colors = {s["full_name"]: s["color"] for s in data["staff"]}
-    assert staff_colors["三宅 興之"] == "#064e3b"
+    assert staff_colors["三宅 智之"] == "#064e3b"
     assert staff_colors["家田 知美"] == "#10b981"
     assert staff_colors["寺内 美和"] == "#2563eb"
     assert staff_colors["山中 久美"] == "#1e3a8a"

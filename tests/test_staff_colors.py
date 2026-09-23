@@ -16,7 +16,7 @@ def client():
 def test_six_staff_evaluation_colors_and_full_names(client):
     """6名のフルネームと評価カラー（緑・青・赤/紫グラデーション）の検証"""
     expected = {
-        "miyake": {"name": "三宅 興之", "color": "#064e3b", "pos": "PHARMACIST"},
+        "miyake": {"name": "三宅 智之", "color": "#064e3b", "pos": "PHARMACIST"},
         "ieda": {"name": "家田 知美", "color": "#10b981", "pos": "PHARMACIST"},
         "terauchi": {"name": "寺内 美和", "color": "#2563eb", "pos": "CLERK"},
         "yamanaka": {"name": "山中 久美", "color": "#1e3a8a", "pos": "CLERK"},
@@ -44,7 +44,7 @@ def test_six_staff_evaluation_colors_and_full_names(client):
         "password": "admin123"
     })
     assert res_miyake.status_code == 200
-    assert res_miyake.json()["full_name"] == "三宅 興之"
+    assert res_miyake.json()["full_name"] == "三宅 智之"
 
     res_kobayashi = client.post("/api/auth/login", json={
         "position": "ASSISTANT",
