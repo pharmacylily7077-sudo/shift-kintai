@@ -440,19 +440,19 @@ body.theme-simple {
   pointer-events: none;
 }
 
-/* ロココ調コーナー装飾（画像1＆2のアカンサス唐草・薔薇装飾） */
-.rococo-corner-filigree {
+/* ロココ調コーナー装飾（四隅の百合の紋章フルール・ド・リス） */
+.rococo-corner-fleur {
   position: absolute;
-  width: 44px;
-  height: 44px;
+  font-size: 20px;
+  line-height: 1;
   pointer-events: none;
-  z-index: 15;
-  filter: drop-shadow(0 1px 2px rgba(180, 140, 20, 0.4));
+  z-index: 20;
+  filter: drop-shadow(0 2px 4px rgba(180, 140, 20, 0.4));
 }
-.rococo-cf-tl { top: 6px; left: 6px; }
-.rococo-cf-tr { top: 6px; right: 6px; transform: scaleX(-1); }
-.rococo-cf-bl { bottom: 6px; left: 6px; transform: scaleY(-1); }
-.rococo-cf-br { bottom: 6px; right: 6px; transform: scale(-1); }
+.rococo-fleur-tl { top: 8px; left: 8px; }
+.rococo-fleur-tr { top: 8px; right: 8px; }
+.rococo-fleur-bl { bottom: 8px; left: 8px; }
+.rococo-fleur-br { bottom: 8px; right: 8px; }
 
 .rococo-section-card-badge {
   position: absolute;
