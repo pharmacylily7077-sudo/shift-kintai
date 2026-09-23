@@ -115,7 +115,7 @@ def update_single_shift(
     return {"success": True, "action": "updated"}
 
 
-from holidays import is_sunday_or_holiday
+from shift_rules import calculate_shift_type
 
 @router.post("/shifts/auto-generate")
 def auto_generate_shifts(
@@ -124,10 +124,13 @@ def auto_generate_shifts(
     db: Session = Depends(get_db)
 ):
     """
-    固定休日（日祝休日・火曜休み・木曜休みなど）と通常シフトに応じた月間一括自動生成
+    固定休日（日祝休日・火曜休み・木曜休みなど）と個別シフトルールに応じた月間一括自動生成
     ※ 日曜・祝日は全員一斉休み
-    ※ 家田、寺内、山中、本間は火曜日も休み
-    ※ 小林は木曜日も休み
+    ※ 土曜日は全員午前診 (AM)
+    ※ 本間は木曜日午前診 (AM)
+    ※ 小林は火曜日は午前診 (AM)
+    ※ 家田、寺内、山中、本間は火曜日休み
+    ※ 小林は木曜日休み
     """
     _, days_in_month = calendar.monthrange(req.year, req.month)
     users = db.query(models.User).filter(models.User.is_active == True).all()
@@ -141,23 +144,10 @@ def auto_generate_shifts(
     generated_count = 0
     for day in range(1, days_in_month + 1):
         d = date(req.year, req.month, day)
-        weekday_str = str(d.weekday()) # 0=月, 1=火, 2=水, 3=木, 4=金, 5=土, 6=日
-
-        # 1. 日祝休日の判定（日曜および日本の国民の祝日は全員休み）
-        if is_sunday_or_holiday(d):
-            continue
-
         for u in users:
-            off_days = [x.strip() for x in (u.fixed_off_weekdays or "6").split(",")]
-            # 2. 個別定休日判定（火曜休み・木曜休みなど）
-            if weekday_str in off_days:
+            st = calculate_shift_type(u, d)
+            if st is None:
                 continue
-
-            # シフト割り当て
-            st = u.default_shift
-            # 土曜日で後半シフトの場合は薬局営業時間に合わせてAMにするなどの現場配慮
-            if d.weekday() == 5 and st == models.ShiftType.SECOND:
-                st = models.ShiftType.AM
 
             shift = models.Shift(
                 user_id=u.id,

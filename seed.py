@@ -113,7 +113,7 @@ def seed_data():
         # 月間シフトが未生成の場合、今月と翌月のシフトを自動初期生成
         from datetime import date
         import calendar
-        from holidays import is_sunday_or_holiday
+        from shift_rules import calculate_shift_type
 
         today = date.today()
         target_months = [(today.year, today.month)]
@@ -132,19 +132,27 @@ def seed_data():
             if shift_count == 0:
                 for day in range(1, days_in_month + 1):
                     d = date(y, m, day)
-                    weekday_str = str(d.weekday())
-                    if is_sunday_or_holiday(d):
-                        continue
                     for u in all_users:
-                        off_days = [x.strip() for x in (u.fixed_off_weekdays or "6").split(",")]
-                        if weekday_str in off_days:
-                            continue
-                        st = u.default_shift
-                        if d.weekday() == 5 and st == models.ShiftType.SECOND:
-                            st = models.ShiftType.AM
-                        db.add(models.Shift(user_id=u.id, date=d, shift_type=st, note=""))
+                        st = calculate_shift_type(u, d)
+                        if st is not None:
+                            db.add(models.Shift(user_id=u.id, date=d, shift_type=st, note=""))
                 db.commit()
                 print(f"✅ {y}年{m}月の初期シフト自動生成完了（スタッフカラー反映）")
+
+        # 既存シフトに対する新ルール（土曜日全員午前診、本間木曜午前診、小林火曜午前診）の同期補正
+        all_existing_shifts = db.query(models.Shift).all()
+        corrected_count = 0
+        for s in all_existing_shifts:
+            user = db.query(models.User).filter(models.User.id == s.user_id).first()
+            if not user:
+                continue
+            expected_st = calculate_shift_type(user, s.date)
+            if expected_st and s.shift_type != expected_st:
+                s.shift_type = expected_st
+                corrected_count += 1
+        if corrected_count > 0:
+            db.commit()
+            print(f"✅ 既存シフト {corrected_count}件 を新シフトルール（土曜AM・本間木曜AM・小林火曜AM）に補正完了")
     except Exception as e:
         db.rollback()
         print(f"❌ シードエラー: {e}")
