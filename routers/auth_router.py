@@ -32,7 +32,15 @@ def get_staff_list(position: str, db: Session = Depends(get_db)):
         models.User.is_active == True
     ).order_by(models.User.id).all()
 
-    return [{"username": u.username, "full_name": u.full_name} for u in users]
+    return [
+        {
+            "username": u.username,
+            "full_name": u.full_name,
+            "evaluation_color": u.evaluation_color,
+            "position": u.position.value,
+        }
+        for u in users
+    ]
 
 
 @router.post("/login")

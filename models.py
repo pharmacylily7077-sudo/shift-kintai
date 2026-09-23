@@ -59,6 +59,7 @@ class User(Base):
     theme_bg = Column(String(20), default="simple")      # simple/sakura/ocean/night
 
     # 自己管理データ（暗号化せず本人管理前提）
+    evaluation_color = Column(String(20), nullable=True) # 三宅薬局長によるスタッフ成長・評価カラー
     hourly_wage = Column(Integer, default=0)
     paid_leave_remaining = Column(Float, default=0.0)
     fixed_off_weekdays = Column(String(50), default="6") # "6" = 日曜休み (0=月 ... 6=日)

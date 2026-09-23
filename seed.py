@@ -6,77 +6,83 @@ from database import SessionLocal, engine, Base
 import models
 from auth import hash_password
 
-# 初期スタッフデータ
+# 初期スタッフデータ（三宅薬局長による評価・成長カラー設定反映）
 INITIAL_STAFF = [
-    # 管理者（薬剤師）
+    # 薬剤師（緑系統）
     {
-        "full_name": "三宅",
+        "full_name": "三宅 興之",
         "position": models.Position.PHARMACIST,
         "employment_type": models.EmploymentType.FULLTIME,
         "default_shift": models.ShiftType.FULL,
         "username": "miyake",
         "password": "admin123",
         "is_admin": True,
+        "evaluation_color": "#064e3b", # 黒に近い緑
         "fixed_off_weekdays": "6", # 日曜休み
     },
-    # 薬剤師
     {
-        "full_name": "家田",
+        "full_name": "家田 知美",
         "position": models.Position.PHARMACIST,
         "employment_type": models.EmploymentType.FULLTIME,
         "default_shift": models.ShiftType.FULL,
         "username": "ieda",
         "password": "ieda1234",
         "is_admin": False,
+        "evaluation_color": "#10b981", # 綺麗な緑、エメラルドグリーン
         "fixed_off_weekdays": "1,6", # 火曜・日曜休み
     },
-    # 調剤事務
+    # 調剤事務（青系統）
     {
-        "full_name": "寺内",
+        "full_name": "寺内 美和",
         "position": models.Position.CLERK,
         "employment_type": models.EmploymentType.FULLTIME,
         "default_shift": models.ShiftType.FULL,
         "username": "terauchi",
         "password": "terauchi1234",
         "is_admin": False,
+        "evaluation_color": "#2563eb", # ロイヤルブルー
         "fixed_off_weekdays": "1,6", # 火曜・日曜休み
     },
     {
-        "full_name": "山中",
+        "full_name": "山中 久美",
         "position": models.Position.CLERK,
         "employment_type": models.EmploymentType.PARTTIME,
         "default_shift": models.ShiftType.AM,   # 午前診/午後診
         "username": "yamanaka",
         "password": "yamanaka1234",
         "is_admin": False,
+        "evaluation_color": "#1e3a8a", # 濃いめの青、ネイビーブルー
         "fixed_off_weekdays": "1,6", # 火曜・日曜休み
     },
-    # 調剤補助
+    # 調剤補助（赤・成長グラデーション系統）
     {
-        "full_name": "小林",
+        "full_name": "小林 綾",
         "position": models.Position.ASSISTANT,
         "employment_type": models.EmploymentType.PARTTIME,
         "default_shift": models.ShiftType.SECOND,  # 後半
         "username": "kobayashi",
         "password": "kobayashi1234",
         "is_admin": False,
+        "evaluation_color": "#8b5cf6", # ビビッドなバイオレット
         "fixed_off_weekdays": "3,6", # 木曜・日曜休み
     },
     {
-        "full_name": "本間",
+        "full_name": "本間 まや",
         "position": models.Position.ASSISTANT,
         "employment_type": models.EmploymentType.PARTTIME,
         "default_shift": models.ShiftType.FIRST,   # 前半
         "username": "honma",
         "password": "honma1234",
         "is_admin": False,
+        "evaluation_color": "#f43f5e", # 赤に近いピンク
         "fixed_off_weekdays": "1,6", # 火曜・日曜休み
     },
 ]
 
 
 def seed_data():
-    Base.metadata.create_all(bind=engine)
+    from database import init_db
+    init_db()
     db = SessionLocal()
     try:
         for staff in INITIAL_STAFF:
@@ -92,14 +98,17 @@ def seed_data():
                     username=staff["username"],
                     password_hash=hash_password(staff["password"]),
                     is_admin=staff["is_admin"],
+                    evaluation_color=staff.get("evaluation_color"),
                     fixed_off_weekdays=staff.get("fixed_off_weekdays", "6"),
                     is_active=True,
                 )
                 db.add(user)
             else:
+                existing.full_name = staff["full_name"]
+                existing.evaluation_color = staff.get("evaluation_color")
                 existing.fixed_off_weekdays = staff.get("fixed_off_weekdays", "6")
         db.commit()
-        print("✅ 初期データ投入完了")
+        print("✅ 初期データ投入完了（評価カラー同期済み）")
     except Exception as e:
         db.rollback()
         print(f"❌ シードエラー: {e}")
