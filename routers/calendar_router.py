@@ -65,10 +65,10 @@ def get_monthly_calendar(
             shift_map[d] = {}
         shift_map[d][s.user_id] = s
 
-    # スタッフ情報（色・ポジション）
+    # スタッフ情報（評価カラー・ポジション）
     staff_info = []
     for u in staff:
-        color = (
+        color = u.evaluation_color or (
             SHIFT_COLORS_FULL[u.position.value]
             if u.employment_type == models.EmploymentType.FULLTIME
             else SHIFT_COLORS_PART[u.position.value]
@@ -78,8 +78,8 @@ def get_monthly_calendar(
             "full_name": u.full_name,
             "position": u.position.value,
             "position_label": u.position_label,
-            "employment_type": u.employment_type.value,
             "color": color,
+            "evaluation_color": u.evaluation_color,
             "is_admin": u.is_admin,
         })
 
@@ -93,7 +93,7 @@ def get_monthly_calendar(
         for u in staff:
             s = shift_map.get(day, {}).get(u.id)
             if s:
-                color = (
+                color = u.evaluation_color or (
                     SHIFT_COLORS_FULL[u.position.value]
                     if u.employment_type == models.EmploymentType.FULLTIME
                     else SHIFT_COLORS_PART[u.position.value]

@@ -57,16 +57,8 @@
     <h1 class="text-2xl font-black" id="print-title"></h1>
   </div>
 
-  <!-- 凡例 -->
-  <div class="flex flex-wrap items-center gap-3 mb-4 px-1 print:mb-2">
-    <span class="text-xs font-bold text-slate-500">凡例:</span>
-    <span class="flex items-center space-x-1"><span class="w-4 h-4 rounded-md inline-block" style="background:#16a34a"></span><span class="text-xs text-slate-600">薬剤師（正）</span></span>
-    <span class="flex items-center space-x-1"><span class="w-4 h-4 rounded-md inline-block" style="background:#86efac"></span><span class="text-xs text-slate-600">薬剤師（パ）</span></span>
-    <span class="flex items-center space-x-1"><span class="w-4 h-4 rounded-md inline-block" style="background:#2563eb"></span><span class="text-xs text-slate-600">調剤事務（正）</span></span>
-    <span class="flex items-center space-x-1"><span class="w-4 h-4 rounded-md inline-block" style="background:#93c5fd"></span><span class="text-xs text-slate-600">調剤事務（パ）</span></span>
-    <span class="flex items-center space-x-1"><span class="w-4 h-4 rounded-md inline-block" style="background:#dc2626"></span><span class="text-xs text-slate-600">調剤補助（正）</span></span>
-    <span class="flex items-center space-x-1"><span class="w-4 h-4 rounded-md inline-block" style="background:#fca5a5"></span><span class="text-xs text-slate-600">調剤補助（パ）</span></span>
-  </div>
+  <!-- 評価カラー凡例（全員が見る場所は清潔な白ベース） -->
+  <div id="staff-legend" class="flex flex-wrap items-center gap-2 mb-4 px-1 print:mb-2"></div>
 
   <!-- カレンダーグリッド -->
   <div id="calendar-grid" class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden print:rounded-none print:shadow-none print:border-slate-300">
@@ -112,6 +104,18 @@
   function renderCalendar(data) {
     document.getElementById('month-label').textContent = data.month_label;
     document.getElementById('print-title').textContent = `リリー薬局 ${data.month_label} シフト表`;
+
+    // 評価カラー凡例の動的生成
+    const legendEl = document.getElementById('staff-legend');
+    if (legendEl && data.staff) {
+      legendEl.innerHTML = '<span class="text-xs font-bold text-slate-400 mr-1 uppercase tracking-wider text-[11px]">Staff:</span>';
+      data.staff.forEach(s => {
+        const tag = document.createElement('span');
+        tag.className = 'inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-800 shadow-2xs';
+        tag.innerHTML = `<span class="w-3.5 h-3.5 rounded-md inline-block shadow-2xs" style="background:${s.color}"></span><span>${s.full_name}</span><span class="text-[10px] text-slate-400 font-normal">(${s.position_label})</span>`;
+        legendEl.appendChild(tag);
+      });
+    }
 
     const body = document.getElementById('calendar-body');
     body.innerHTML = '';
