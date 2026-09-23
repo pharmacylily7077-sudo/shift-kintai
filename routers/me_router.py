@@ -12,6 +12,34 @@ from auth import get_current_user
 router = APIRouter(prefix="/api/me", tags=["me"])
 
 
+# 恋人に伝えるかのような24の感謝・温もりフレーズ（お説教・ダサい標語を完全排除）
+GENTLE_THOUGHTS = [
+    "I am grateful for you.",
+    "Thank you for being in my life.",
+    "Appreciate every moment.",
+    "You make my world brighter.",
+    "I couldn’t have done it without you.",
+    "A grateful heart is a happy heart.",
+    "Thank you for your kindness.",
+    "Every day is a gift.",
+    "Gratitude changes everything.",
+    "Thank you for believing in me.",
+    "I am so lucky to have you.",
+    "Wake up with gratitude.",
+    "You showed up when it mattered.",
+    "Thank you for your support.",
+    "Enough is a feast.",
+    "Your help means the world to me.",
+    "Thank you for being you.",
+    "Joy is in the little things.",
+    "I appreciate you.",
+    "Kindness is never forgotten.",
+    "Thank you for the memories.",
+    "Grateful for the journey.",
+    "Thank you, from the bottom of my heart.",
+    "You make a difference every single day."
+]
+
 # --- Pydantic リクエストモデル ---
 
 class WageUpdateRequest(BaseModel):
@@ -141,17 +169,29 @@ def get_my_dashboard(
         models.Message.is_read == False
     ).count()
 
+    today_int = int(today.strftime("%Y%m%d"))
+    daily_thought = GENTLE_THOUGHTS[today_int % len(GENTLE_THOUGHTS)]
+
     return {
         "user": {
             "id": current_user.id,
             "full_name": current_user.full_name,
             "position_label": current_user.position_label,
             "employment_type": current_user.employment_type.value,
+            "evaluation_color": current_user.evaluation_color,
             "theme_color": current_user.theme_color,
             "theme_bg": current_user.theme_bg,
             "hourly_wage": current_user.hourly_wage,
             "paid_leave_remaining": current_user.paid_leave_remaining,
         },
+        "gentle_thought": daily_thought,
+        "theme_palettes": [
+            {"id": "rose", "name": "ローズピンク", "color": "#f43f5e"},
+            {"id": "blue", "name": "パウダーブルー", "color": "#0284c7"},
+            {"id": "mint", "name": "ミントグリーン", "color": "#059669"},
+            {"id": "champagne", "name": "シャンパンアイボリー", "color": "#d97706"},
+            {"id": "lavender", "name": "ラベンダー", "color": "#7c3aed"}
+        ],
         "today_shift": {
             "shift_type": today_shift.shift_type.value if today_shift else "OFF",
             "shift_label": today_shift.shift_label if today_shift else "休み",
@@ -185,6 +225,17 @@ def get_my_dashboard(
             "balance": total_income - total_expense,
         },
         "unread_msg_count": unread_msg_count,
+    }
+
+
+@router.get("/gentle-thought")
+def get_gentle_thought():
+    """恋人に伝えるかのような心温まる英語の感謝メッセージを日替わりで配信"""
+    today_int = int(date.today().strftime("%Y%m%d"))
+    return {
+        "thought": GENTLE_THOUGHTS[today_int % len(GENTLE_THOUGHTS)],
+        "count": len(GENTLE_THOUGHTS),
+        "all_thoughts": GENTLE_THOUGHTS
     }
 
 

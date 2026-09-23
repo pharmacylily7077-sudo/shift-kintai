@@ -16,59 +16,71 @@
   background-color: rgba(241, 245, 249, 0.8);
 }
 
-/* --- 上品で清潔感のある洗練された壁紙テーマ --- */
+/* --- フレンチ手帳・ロココ調 5大カラーパレット --- */
 
-/* 1. ミントグリーン（爽やかで落ち着く淡いペールグリーン） */
-body.theme-mint {
-  background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 50%, #f1f5f9 100%) !important;
+/* 1. ローズピンク（華やかで優しいペールローズ） */
+body.theme-rose {
+  background: linear-gradient(135deg, #fff1f2 0%, #fff5f5 50%, #ffe4e6 100%) !important;
   background-attachment: fixed !important;
 }
-.theme-mint .glass-card {
-  background: rgba(255, 255, 255, 0.92) !important;
+.theme-rose .glass-card {
+  background: rgba(255, 255, 255, 0.94) !important;
   backdrop-filter: blur(12px);
-  border-color: rgba(226, 232, 240, 0.8) !important;
-  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.04);
+  border-color: rgba(254, 205, 211, 0.8) !important;
+  box-shadow: 0 4px 20px -2px rgba(244, 63, 94, 0.05);
 }
 
-/* 2. ラベンダーミスト（心安らぐ上品なペールパープル） */
+/* 2. パウダーブルー（澄んだ気品あるフレンチスカイ） */
+body.theme-blue {
+  background: linear-gradient(135deg, #f0f9ff 0%, #f8fafc 50%, #e0f2fe 100%) !important;
+  background-attachment: fixed !important;
+}
+.theme-blue .glass-card {
+  background: rgba(255, 255, 255, 0.94) !important;
+  backdrop-filter: blur(12px);
+  border-color: rgba(186, 230, 253, 0.8) !important;
+  box-shadow: 0 4px 20px -2px rgba(2, 132, 199, 0.05);
+}
+
+/* 3. ミントグリーン（爽やかで落ち着く淡いペールミント） */
+body.theme-mint, body.theme-herb {
+  background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 50%, #dcfce7 100%) !important;
+  background-attachment: fixed !important;
+}
+.theme-mint .glass-card, .theme-herb .glass-card {
+  background: rgba(255, 255, 255, 0.94) !important;
+  backdrop-filter: blur(12px);
+  border-color: rgba(187, 247, 208, 0.8) !important;
+  box-shadow: 0 4px 20px -2px rgba(5, 150, 105, 0.05);
+}
+
+/* 4. シャンパンアイボリー（温もりとクラシックな気品） */
+body.theme-champagne, body.theme-warm {
+  background: linear-gradient(135deg, #fffbeb 0%, #fefce8 50%, #fef3c7 100%) !important;
+  background-attachment: fixed !important;
+}
+.theme-champagne .glass-card, .theme-warm .glass-card {
+  background: rgba(255, 255, 255, 0.94) !important;
+  backdrop-filter: blur(12px);
+  border-color: rgba(254, 240, 138, 0.8) !important;
+  box-shadow: 0 4px 20px -2px rgba(217, 119, 6, 0.05);
+}
+
+/* 5. ラベンダーミスト（心安らぐ上品なペールパープル） */
 body.theme-lavender {
-  background: linear-gradient(135deg, #fbf7ff 0%, #f8fafc 50%, #f5f3ff 100%) !important;
+  background: linear-gradient(135deg, #faf5ff 0%, #f8fafc 50%, #f3e8ff 100%) !important;
   background-attachment: fixed !important;
 }
 .theme-lavender .glass-card {
-  background: rgba(255, 255, 255, 0.92) !important;
+  background: rgba(255, 255, 255, 0.94) !important;
   backdrop-filter: blur(12px);
-  border-color: rgba(226, 232, 240, 0.8) !important;
-  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.04);
+  border-color: rgba(233, 213, 255, 0.8) !important;
+  box-shadow: 0 4px 20px -2px rgba(124, 58, 237, 0.05);
 }
 
-/* 3. ハーブフォレスト（清潔感のあるペールティール） */
-body.theme-herb {
-  background: linear-gradient(135deg, #f0fdfa 0%, #f8fafc 50%, #ecfeff 100%) !important;
-  background-attachment: fixed !important;
-}
-.theme-herb .glass-card {
-  background: rgba(255, 255, 255, 0.92) !important;
-  backdrop-filter: blur(12px);
-  border-color: rgba(226, 232, 240, 0.8) !important;
-  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.04);
-}
-
-/* 4. ウォームベージュ（温もりと安心感のあるペールアイボリー） */
-body.theme-warm {
-  background: linear-gradient(135deg, #fdfbf7 0%, #f8fafc 50%, #fef3c7 100%) !important;
-  background-attachment: fixed !important;
-}
-.theme-warm .glass-card {
-  background: rgba(255, 255, 255, 0.92) !important;
-  backdrop-filter: blur(12px);
-  border-color: rgba(226, 232, 240, 0.8) !important;
-  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.04);
-}
-
-/* 5. ピュアホワイト（シンプルで美しいミニマル） */
+/* ピュアホワイト（シンプルで美しいミニマル） */
 body.theme-simple {
-  background: #f8fafc !important;
+  background: #ffffff !important;
   background-attachment: fixed !important;
 }
 .theme-simple .glass-card {

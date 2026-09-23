@@ -30,28 +30,28 @@
             class="px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center space-x-1 shadow-2xs">
             <span>🎨 カラー設定</span>
           </button>
-          <!-- 壁紙セレクターポップアップ -->
-          <div id="theme-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-200 p-2 z-50 space-y-1">
-            <div class="text-[10px] font-bold text-slate-400 px-2 py-1">背景カラー</div>
+          <!-- 5大カラーパレットセレクター -->
+          <div id="theme-menu" class="hidden absolute right-0 mt-2 w-52 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-slate-200 p-2.5 z-50 space-y-1">
+            <div class="text-[10px] font-bold text-slate-400 px-2 py-0.5 font-serif uppercase tracking-wider">Palette Selection</div>
+            <button onclick="setTheme('rose')" class="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-rose-50 text-slate-700 flex items-center space-x-2 transition">
+              <span class="w-4 h-4 rounded-full bg-rose-400 border border-rose-300 shadow-2xs"></span>
+              <span>🌸 ローズピンク</span>
+            </button>
+            <button onclick="setTheme('blue')" class="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-sky-50 text-slate-700 flex items-center space-x-2 transition">
+              <span class="w-4 h-4 rounded-full bg-sky-400 border border-sky-300 shadow-2xs"></span>
+              <span>🩵 パウダーブルー</span>
+            </button>
             <button onclick="setTheme('mint')" class="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-emerald-50 text-slate-700 flex items-center space-x-2 transition">
-              <span class="w-3.5 h-3.5 rounded-full bg-emerald-300 border border-emerald-400"></span>
-              <span>ペールミント</span>
+              <span class="w-4 h-4 rounded-full bg-emerald-400 border border-emerald-300 shadow-2xs"></span>
+              <span>🌿 ミントグリーン</span>
+            </button>
+            <button onclick="setTheme('champagne')" class="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-amber-50 text-slate-700 flex items-center space-x-2 transition">
+              <span class="w-4 h-4 rounded-full bg-amber-400 border border-amber-300 shadow-2xs"></span>
+              <span>🍯 シャンパンアイボリー</span>
             </button>
             <button onclick="setTheme('lavender')" class="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-purple-50 text-slate-700 flex items-center space-x-2 transition">
-              <span class="w-3.5 h-3.5 rounded-full bg-purple-300 border border-purple-400"></span>
-              <span>ラベンダー</span>
-            </button>
-            <button onclick="setTheme('herb')" class="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-teal-50 text-slate-700 flex items-center space-x-2 transition">
-              <span class="w-3.5 h-3.5 rounded-full bg-teal-300 border border-teal-400"></span>
-              <span>ソフトティール</span>
-            </button>
-            <button onclick="setTheme('warm')" class="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-amber-50 text-slate-700 flex items-center space-x-2 transition">
-              <span class="w-3.5 h-3.5 rounded-full bg-amber-300 border border-amber-400"></span>
-              <span>ウォームアイボリー</span>
-            </button>
-            <button onclick="setTheme('simple')" class="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-slate-100 text-slate-700 flex items-center space-x-2 transition">
-              <span class="w-3.5 h-3.5 rounded-full bg-slate-300 border border-slate-400"></span>
-              <span>ピュアホワイト</span>
+              <span class="w-4 h-4 rounded-full bg-purple-400 border border-purple-300 shadow-2xs"></span>
+              <span>💜 ラベンダー</span>
             </button>
           </div>
         </div>
@@ -69,6 +69,24 @@
   </header>
 
   <main class="max-w-4xl mx-auto px-4 py-6 space-y-6">
+
+    <!-- フレンチ手帳タイトル ＆ A Gentle Thought（恋人に伝えるかのような心温まる英語の感謝の言葉） -->
+    <div class="relative overflow-hidden rounded-3xl p-6 sm:p-7 border border-amber-200/70 bg-gradient-to-br from-amber-50/80 via-white/90 to-rose-50/60 shadow-xs text-center space-y-2">
+      <div class="flex items-center justify-center space-x-2">
+        <span class="h-px w-8 bg-amber-300"></span>
+        <span class="text-[11px] font-serif uppercase tracking-widest text-amber-800 font-bold">~ La Douce Gestion ~</span>
+        <span class="h-px w-8 bg-amber-300"></span>
+      </div>
+      <div class="inline-block px-3 py-0.5 rounded-full bg-white/80 border border-amber-200/80 text-amber-900 text-[10px] font-serif font-bold tracking-wider uppercase">
+        A Gentle Thought
+      </div>
+      <div class="text-xl sm:text-2xl font-serif italic text-slate-800 tracking-wide pt-1" id="gentle-thought-text">
+        “ Gratitude changes everything. ”
+      </div>
+      <div class="text-[11px] text-slate-400 font-serif">
+        リリー薬局の物語を共に紡ぐあなたへ
+      </div>
+    </div>
 
     <!-- 0. 本日のシフト ＆ 自己申告打刻（心温まるウェルカムカード） -->
     <div class="glass-card rounded-3xl p-5 sm:p-7 border relative overflow-hidden transition">
@@ -345,20 +363,32 @@
     menu.classList.toggle('hidden');
   }
 
-  function setTheme(theme) {
+  async function setTheme(theme) {
     activeTheme = theme;
     localStorage.setItem('myroom_theme', theme);
     applyTheme(theme);
     toggleThemeMenu();
-    showToast(`カラーを「${getThemeLabel(theme)}」に変更しました`);
+    showToast(`カラーを「${getThemeLabel(theme)}」に変更しました 🎨`);
+    try {
+      await fetch('/api/me/theme', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ theme_color: theme, theme_bg: 'simple' })
+      });
+    } catch(e) {
+      console.error(e);
+    }
   }
 
   function getThemeLabel(t) {
     const map = {
-      mint: 'ペールミント',
+      rose: 'ローズピンク',
+      blue: 'パウダーブルー',
+      mint: 'ミントグリーン',
+      champagne: 'シャンパンアイボリー',
       lavender: 'ラベンダー',
-      herb: 'ソフトティール',
-      warm: 'ウォームアイボリー',
+      herb: 'ミントグリーン',
+      warm: 'シャンパンアイボリー',
       simple: 'ピュアホワイト'
     };
     return map[t] || t;
@@ -390,6 +420,12 @@
   }
 
   function renderDashboard(d) {
+    // 恋人に伝えるかのような感謝の言葉
+    if (d.gentle_thought) {
+      const gtEl = document.getElementById('gentle-thought-text');
+      if (gtEl) gtEl.textContent = `“ ${d.gentle_thought} ”`;
+    }
+
     // 優先度①：給与シミュレーター
     const sal = d.salary_simulator;
     document.getElementById('val-hourly-wage').textContent = `¥${(sal.hourly_wage || 0).toLocaleString()}`;
