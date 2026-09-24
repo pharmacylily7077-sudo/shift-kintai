@@ -24,3 +24,7 @@
 - [x] 8. 小林・本間専用リアル秒単位ゆらぎ一括打刻支援 ＆ タイムカード（出勤簿）PDF・印刷・CSV出力機能（HH:MM:SS形式・完全ログ非保持）
   - 検証: `PYTHONPATH=. ./venv/bin/pytest tests/test_timecard_batch_fill.py`
 
+- [x] 9. マイページ週間スケジュールのリアル祝日・個人定休動的同期（モック静的水曜公休バグの完全根絶）
+  - 検証: `PYTHONPATH=. ./venv/bin/pytest tests/test_myroom_french.py`
+
+

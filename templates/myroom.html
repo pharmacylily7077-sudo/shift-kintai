@@ -205,36 +205,9 @@
               </div>
             </div>
 
-            <!-- 週間スケジュール一覧（お花バレット 🌸） -->
-            <div class="space-y-1 text-xs font-serif text-slate-700">
-              <div class="flex items-center justify-between py-1 border-b border-amber-100/80">
-                <span class="font-bold text-amber-900 flex items-center space-x-1"><span>🌸</span><span>月 (Mon)</span></span>
-                <span class="font-medium text-slate-800">9:00 - 19:00</span>
-              </div>
-              <div class="flex items-center justify-between py-1 border-b border-amber-100/80">
-                <span class="font-bold text-amber-900 flex items-center space-x-1"><span>🌸</span><span>火 (Tue)</span></span>
-                <span class="font-medium text-slate-800">9:00 - 19:00</span>
-              </div>
-              <div class="flex items-center justify-between py-1 border-b border-amber-100/80">
-                <span class="font-bold text-amber-900 flex items-center space-x-1"><span>☕</span><span>水 (Wed)</span></span>
-                <span class="text-slate-400 font-semibold">[公休] Off</span>
-              </div>
-              <div class="flex items-center justify-between py-1 border-b border-amber-100/80">
-                <span class="font-bold text-amber-900 flex items-center space-x-1"><span>🌸</span><span>木 (Thu)</span></span>
-                <span class="font-medium text-slate-800">9:00 - 19:00</span>
-              </div>
-              <div class="flex items-center justify-between py-1 border-b border-amber-100/80">
-                <span class="font-bold text-amber-900 flex items-center space-x-1"><span>🌸</span><span>金 (Fri)</span></span>
-                <span class="font-medium text-slate-800">9:00 - 19:00</span>
-              </div>
-              <div class="flex items-center justify-between py-1 border-b border-amber-100/80">
-                <span class="font-bold text-blue-700 flex items-center space-x-1"><span>✨</span><span>土 (Sat)</span></span>
-                <span class="font-medium text-slate-800">9:00 - 13:00</span>
-              </div>
-              <div class="flex items-center justify-between py-1">
-                <span class="font-bold text-rose-600 flex items-center space-x-1"><span>🌙</span><span>日 (Sun)</span></span>
-                <span class="text-slate-400 font-semibold">[公休] Off</span>
-              </div>
+            <!-- 週間スケジュール一覧（お花バレット 🌸・リアルシフト連動） -->
+            <div id="weekly-schedule-list" class="space-y-1 text-xs font-serif text-slate-700">
+              <div class="text-center py-4 text-slate-400">スケジュール読み込み中...</div>
             </div>
           </div>
 
@@ -650,6 +623,49 @@
     const badgeTsEl = document.getElementById('badge-today-shift');
     if (badgeTsEl && ts) {
       badgeTsEl.textContent = ts.time_range || '09:00 - 19:00';
+    }
+
+    // 週間スケジュール一覧の動的描画（祝日・個人定休・シフト完全連動）
+    const scheduleListEl = document.getElementById('weekly-schedule-list');
+    if (scheduleListEl && d.weekly_schedule) {
+      let listHtml = '';
+      d.weekly_schedule.forEach((item, idx) => {
+        const isLast = (idx === d.weekly_schedule.length - 1);
+        const borderClass = isLast ? '' : 'border-b border-amber-100/80';
+
+        let dayColor = 'text-amber-900';
+        if (item.weekday === 5) dayColor = 'text-blue-700'; // 土曜
+        if (item.weekday === 6 || item.is_holiday) dayColor = 'text-rose-600'; // 日曜・祝日
+
+        let icon = item.icon;
+        if (item.is_today) icon = '🌟';
+        else if (item.is_holiday) icon = '🎌';
+        else if (item.is_off) icon = '☕';
+
+        let badge = '';
+        if (item.is_today) {
+          badge = '<span class="ml-1 px-1.5 py-0.5 rounded-full bg-amber-400 text-amber-950 font-black text-[9px] shadow-2xs">今日</span>';
+        }
+
+        let timeHtml = '';
+        if (item.is_off) {
+          timeHtml = `<span class="text-slate-400 font-semibold text-[11px]">${item.display_text}</span>`;
+        } else {
+          timeHtml = `<span class="font-medium text-slate-800">${item.display_text}</span>`;
+        }
+
+        listHtml += `
+          <div class="flex items-center justify-between py-1 ${borderClass} ${item.is_today ? 'bg-amber-100/50 px-2 rounded-xl -mx-1 shadow-2xs' : ''}">
+            <span class="font-bold ${dayColor} flex items-center space-x-1">
+              <span>${icon}</span>
+              <span>${item.weekday_ja} (${item.weekday_en})</span>
+              ${badge}
+            </span>
+            ${timeHtml}
+          </div>
+        `;
+      });
+      scheduleListEl.innerHTML = listHtml;
     }
 
     if (window.lucide) lucide.createIcons();

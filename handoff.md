@@ -10,7 +10,7 @@ Render本番環境（PostgreSQL）およびローカル開発環境（SQLite WAL
   - スタッフ専用マイページ: `https://shift-kintai.onrender.com/me`
   - ログイン画面: `https://shift-kintai.onrender.com/login`
 - **GitHubリポジトリ**: `https://github.com/pharmacylily7077-sudo/shift-kintai` (mainブランチ自動デプロイ)
-- **テスト通過状況**: `tests/test_timecard_batch_fill.py` 含む **全22テスト 100%グリーン通過中**（`PYTHONPATH=. ./venv/bin/pytest`）
+- **テスト通過状況**: `tests/test_myroom_french.py` 含む **全23テスト 100%グリーン通過中**（`PYTHONPATH=. ./venv/bin/pytest`）
 - **技術スタック**: FastAPI + SQLAlchemy + Jinja2 + Tailwind CSS + Vanilla JS + html2pdf.js + PostgreSQL / SQLite WAL
 
 ---
@@ -74,3 +74,10 @@ Render本番環境（PostgreSQL）およびローカル開発環境（SQLite WAL
 - 英語メッセージ（**A Gentle Thought** / 日替わり）を表示。
 - 5大パレット（宮廷ダマスク壁紙パターン連動）着せ替え完備。
 - 給与速報、有休残数、自己申告打刻、体調・家計簿メモ完備。
+- **今週の週間スケジュール（リアル祝日・個人定休・シフト動的同期）**:
+  - 旧モックの静的「水曜 [公休] Off」を完全撤去。
+  - `/api/me/dashboard` の `weekly_schedule` により、当週（月〜日）の全7日間を完全動的計算。
+  - 祝日は `[祝日休] 敬老の日`, `[祝日休] 秋分の日` のように祝日名付きで休局表示。
+  - 定休日はスタッフ本人の `fixed_off_weekdays`（例: 火・日、木・日、日）と完全同期して `[定休] ○曜日` と表示。
+  - 出勤日はシフト種別・時間帯（例: `9:00〜19:00`, `9:00〜13:00`）を正確に表示。
+  - 本日の日付には「今日 🌟」バッジを表示。

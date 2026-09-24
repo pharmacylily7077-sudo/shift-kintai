@@ -1,5 +1,5 @@
 import calendar
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 import models
 from auth import get_current_user
+from holidays import get_holiday_name, is_sunday_or_holiday
 
 router = APIRouter(prefix="/api/me", tags=["me"])
 
@@ -176,6 +177,90 @@ def get_my_dashboard(
     today_int = int(today.strftime("%Y%m%d"))
     daily_thought = GENTLE_THOUGHTS[today_int % len(GENTLE_THOUGHTS)]
 
+    # 8. 今週のリアル週間スケジュール（月〜日）
+    # 今日が属する週の月曜日〜日曜日（7日間）を完全計算（祝日・個人定休・シフト連動）
+    monday = today - timedelta(days=today.weekday())
+    weekday_labels_ja = ["月", "火", "水", "木", "金", "土", "日"]
+    weekday_labels_en = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    weekday_icons = ["🌸", "🌸", "🌸", "🌸", "🌸", "✨", "🌙"]
+
+    fixed_off_set = set([x.strip() for x in (current_user.fixed_off_weekdays or "6").split(",") if x.strip()])
+
+    from shift_rules import calculate_shift_type
+    ranges = {
+        models.ShiftType.FULL: "9:00 - 19:00",
+        models.ShiftType.AM: "9:00 - 13:00",
+        models.ShiftType.PM: "15:00 - 19:00",
+        models.ShiftType.FIRST: "9:00 - 18:00",
+        models.ShiftType.SECOND: "10:00 - 19:00",
+    }
+    labels = {
+        models.ShiftType.FULL: "全日",
+        models.ShiftType.AM: "午前診",
+        models.ShiftType.PM: "午後診",
+        models.ShiftType.FIRST: "前半",
+        models.ShiftType.SECOND: "後半",
+    }
+
+    weekly_schedule = []
+    for i in range(7):
+        target_d = monday + timedelta(days=i)
+        w_idx = target_d.weekday()
+        hol_name = get_holiday_name(target_d)
+        is_sun = (w_idx == 6)
+        is_fixed_off = str(w_idx) in fixed_off_set
+
+        s = db.query(models.Shift).filter(
+            models.Shift.user_id == current_user.id,
+            models.Shift.date == target_d
+        ).first()
+
+        shift_type = s.shift_type.value if s else None
+        shift_label = s.shift_label if s else None
+        time_range = s.time_range if s else None
+
+        if not s:
+            calc_st = calculate_shift_type(current_user, target_d)
+            if calc_st:
+                shift_type = calc_st.value
+                shift_label = labels.get(calc_st, "")
+                time_range = ranges.get(calc_st, "")
+            else:
+                shift_type = "OFF"
+                shift_label = "休"
+
+        is_off = (shift_type == "OFF")
+        off_reason = ""
+        if is_off:
+            if hol_name:
+                off_reason = f"[祝日休] {hol_name}"
+            elif is_sun:
+                off_reason = "[定休] 日曜日"
+            elif is_fixed_off:
+                off_reason = f"[定休] {weekday_labels_ja[w_idx]}曜日"
+            else:
+                off_reason = "[公休] お休み"
+
+        display_text = off_reason if is_off else (time_range or "勤務")
+
+        weekly_schedule.append({
+            "date": target_d.isoformat(),
+            "month_day": f"{target_d.month}/{target_d.day}",
+            "weekday": w_idx,
+            "weekday_ja": weekday_labels_ja[w_idx],
+            "weekday_en": weekday_labels_en[w_idx],
+            "icon": weekday_icons[w_idx],
+            "is_today": (target_d == today),
+            "is_holiday": bool(hol_name),
+            "holiday_name": hol_name,
+            "is_off": is_off,
+            "off_reason": off_reason,
+            "shift_type": shift_type,
+            "shift_label": shift_label,
+            "time_range": time_range or "",
+            "display_text": display_text
+        })
+
     return {
         "user": {
             "id": current_user.id,
@@ -242,6 +327,7 @@ def get_my_dashboard(
             "balance": total_income - total_expense,
         },
         "unread_msg_count": unread_msg_count,
+        "weekly_schedule": weekly_schedule,
     }
 
 

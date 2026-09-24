@@ -69,3 +69,23 @@ def test_myroom_html_french_aesthetic(auth_client):
     # ダサい言葉・標語の完全排除検証
     assert "今月の言葉" not in html
     assert "今月のお知らせ" not in html
+
+
+def test_myroom_weekly_schedule_sync_with_holidays(auth_client):
+    """マイページの週間スケジュールが祝日・スタッフ定休日と完全同期し、勝手な水曜公休が存在しないこと"""
+    res = auth_client.get("/api/me/dashboard")
+    assert res.status_code == 200
+    data = res.json()
+    assert "weekly_schedule" in data
+    ws = data["weekly_schedule"]
+    assert len(ws) == 7
+
+    # 曜日が月〜日(0〜6)で揃っていること
+    weekdays = [w["weekday"] for w in ws]
+    assert weekdays == [0, 1, 2, 3, 4, 5, 6]
+
+    # HTMLにハードコードされていた「水 (Wed) [公休] Off」が完全排除されていること
+    res_html = auth_client.get("/me")
+    assert "<span>水 (Wed)</span>" not in res_html.text
+    assert "weekly-schedule-list" in res_html.text
+
