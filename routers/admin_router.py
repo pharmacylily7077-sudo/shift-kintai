@@ -613,10 +613,11 @@ def get_paid_leave_compliance(
     )
 
 
-# --- 5. 小林・本間専用「リアル一桁分刻み」一括打刻支援 ＆ タイムカード機能 ---
+# --- 5. 小林・本間専用「リアル秒単位ゆらぎ」一括打刻支援 ＆ タイムカード機能 ---
 def generate_realistic_minutes_time(shift_type: models.ShiftType):
     """
-    現場の実態（毎日早く来て準備し、残業もして帰る）に即した完全ランダムな一桁分刻みの出退勤時刻を生成。
+    現場の実態（毎日早く来て準備し、残業もして帰る）に即した完全ランダムな一桁分刻み＋秒単位の出退勤時刻を生成。
+    電子タイムレコーダーの生ログと同様の自然なゆらぎ（秒まで完全再現）。
     返り値: (clock_in_time, clock_out_time, break_minutes)
     """
     if shift_type == models.ShiftType.OFF:
@@ -624,35 +625,45 @@ def generate_realistic_minutes_time(shift_type: models.ShiftType):
 
     if shift_type == models.ShiftType.FIRST:
         # 前半: 定時 9:00〜18:00 (本間まや など)
-        # 出勤: 8:46〜8:56 のランダムな一桁分 (例: 8:47, 8:51, 8:53)
+        # 出勤: 8:46〜8:56 のランダムな一桁分、02〜58秒
         in_min = random.randint(46, 56)
-        # 退勤: 18:04〜18:22 のランダムな一桁分 (例: 18:07, 18:14, 18:21)
+        in_sec = random.randint(2, 58)
+        # 退勤: 18:04〜18:22 のランダムな一桁分、02〜58秒
         out_min = random.randint(4, 22)
-        return time(8, in_min), time(18, out_min), 60
+        out_sec = random.randint(2, 58)
+        return time(8, in_min, in_sec), time(18, out_min, out_sec), 60
 
     elif shift_type == models.ShiftType.SECOND:
         # 後半: 定時 10:00〜19:00 (小林彩乃 など)
         in_min = random.randint(47, 56)
+        in_sec = random.randint(2, 58)
         out_min = random.randint(4, 23)
-        return time(9, in_min), time(19, out_min), 60
+        out_sec = random.randint(2, 58)
+        return time(9, in_min, in_sec), time(19, out_min, out_sec), 60
 
     elif shift_type == models.ShiftType.AM:
         # 午前診: 定時 9:00〜13:00 (土曜・火曜/木曜など、休憩なし)
         in_min = random.randint(47, 55)
+        in_sec = random.randint(2, 58)
         out_min = random.randint(3, 16)
-        return time(8, in_min), time(13, out_min), 0
+        out_sec = random.randint(2, 58)
+        return time(8, in_min, in_sec), time(13, out_min, out_sec), 0
 
     elif shift_type == models.ShiftType.PM:
         # 午後診: 定時 15:00〜19:00 (休憩なし)
         in_min = random.randint(48, 56)
+        in_sec = random.randint(2, 58)
         out_min = random.randint(3, 18)
-        return time(14, in_min), time(19, out_min), 0
+        out_sec = random.randint(2, 58)
+        return time(14, in_min, in_sec), time(19, out_min, out_sec), 0
 
     elif shift_type == models.ShiftType.FULL:
         # 全日: 定時 9:00〜19:00
         in_min = random.randint(46, 55)
+        in_sec = random.randint(2, 58)
         out_min = random.randint(4, 24)
-        return time(8, in_min), time(19, out_min), 60
+        out_sec = random.randint(2, 58)
+        return time(8, in_min, in_sec), time(19, out_min, out_sec), 60
 
     return None, None, 0
 
@@ -702,8 +713,8 @@ def get_admin_monthly_time_records(
         shift_label = s.shift_label if s else "休"
         time_range = s.time_range if s else ""
 
-        clock_in_str = r.clock_in.strftime("%H:%M") if (r and r.clock_in) else ""
-        clock_out_str = r.clock_out.strftime("%H:%M") if (r and r.clock_out) else ""
+        clock_in_str = r.clock_in.strftime("%H:%M:%S") if (r and r.clock_in) else ""
+        clock_out_str = r.clock_out.strftime("%H:%M:%S") if (r and r.clock_out) else ""
 
         break_mins = 0
         work_mins = 0
@@ -820,7 +831,7 @@ def batch_fill_time_records(
     return {
         "success": True,
         "filled_count": filled_count,
-        "message": f"{target_user.full_name}さんの{req.year}年{req.month}月タイムカードをリアル一桁分刻みで一括生成しました（{filled_count}日分）"
+        "message": f"{target_user.full_name}さんの{req.year}年{req.month}月タイムカードをリアル秒単位ゆらぎで一括生成しました（{filled_count}日分）"
     }
 
 
@@ -830,7 +841,7 @@ def update_single_time_record(
     admin: models.User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
-    """1分刻みの手動打刻修正（ログなし・本人が押したのと同じクリーン保存）"""
+    """秒単位対応の手動打刻修正（ログなし・本人が押したのと同じクリーン保存）"""
     target_date = date.fromisoformat(req.date)
     record = db.query(models.TimeRecord).filter(
         models.TimeRecord.user_id == req.user_id,
@@ -853,13 +864,24 @@ def update_single_time_record(
 
     if req.clock_in:
         parts = req.clock_in.strip().split(":")
-        record.clock_in = time(int(parts[0]), int(parts[1]))
+        if len(parts) >= 3:
+            record.clock_in = time(int(parts[0]), int(parts[1]), int(parts[2]))
+        elif len(parts) == 2:
+            # 秒が省略された場合は自然なランダム秒を付与してリアルタイムレコーダー感を維持
+            record.clock_in = time(int(parts[0]), int(parts[1]), random.randint(2, 58))
+        else:
+            record.clock_in = None
     else:
         record.clock_in = None
 
     if req.clock_out:
         parts = req.clock_out.strip().split(":")
-        record.clock_out = time(int(parts[0]), int(parts[1]))
+        if len(parts) >= 3:
+            record.clock_out = time(int(parts[0]), int(parts[1]), int(parts[2]))
+        elif len(parts) == 2:
+            record.clock_out = time(int(parts[0]), int(parts[1]), random.randint(2, 58))
+        else:
+            record.clock_out = None
     else:
         record.clock_out = None
 
@@ -923,8 +945,8 @@ def export_timecard_csv(
         r = record_map.get(day)
 
         shift_label = s.shift_label if s else "休"
-        cin = r.clock_in.strftime("%H:%M") if (r and r.clock_in) else ""
-        cout = r.clock_out.strftime("%H:%M") if (r and r.clock_out) else ""
+        cin = r.clock_in.strftime("%H:%M:%S") if (r and r.clock_in) else ""
+        cout = r.clock_out.strftime("%H:%M:%S") if (r and r.clock_out) else ""
 
         b_min = 0
         w_str = ""
