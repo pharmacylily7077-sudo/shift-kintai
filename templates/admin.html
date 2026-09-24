@@ -90,7 +90,82 @@
       </div>
     </div>
 
-    <!-- 3. スタッフ勤務条件・時間設定（雇用形態・定休日・シフト区分） -->
+    <!-- 3. タイムカード（出勤簿）管理 ＆ リアル一括打刻支援（小林・本間専用） -->
+    <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-100 space-y-4">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+        <div class="flex items-center space-x-2">
+          <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-purple-500 to-pink-500 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+            <i data-lucide="clock" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <h3 class="font-black text-slate-900 text-sm">タイムカード（出勤簿）管理 ＆ リアル一括打刻支援</h3>
+              <span class="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 text-[10px] font-bold">完全クリーン・ログなし</span>
+            </div>
+            <p class="text-[11px] text-slate-400">押し忘れの未打刻日も、早め出勤・残業の実態に即した「リアル一桁分刻み」で一気につけて守れます</p>
+          </div>
+        </div>
+
+        <!-- アクションボタン群 -->
+        <div class="flex flex-wrap items-center gap-2">
+          <button onclick="runBatchFillTimeRecords()" id="btn-batch-fill"
+            class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold text-xs shadow-xs transition flex items-center space-x-1.5">
+            <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+            <span>⚡ リアル一桁分刻みで一括打刻</span>
+          </button>
+          <button onclick="downloadTimecardPDF()" id="btn-timecard-pdf"
+            class="px-3 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-xs transition flex items-center space-x-1">
+            <i data-lucide="file-down" class="w-3.5 h-3.5"></i>
+            <span>📄 PDF保存</span>
+          </button>
+          <button onclick="printTimecard()"
+            class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition flex items-center space-x-1">
+            <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+            <span>印刷</span>
+          </button>
+          <button onclick="exportTimecardCSV()"
+            class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition flex items-center space-x-1">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+            <span>CSV</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- スタッフ選択タブ（小林・本間 2大タブ＋他スタッフ） -->
+      <div class="flex items-center justify-between flex-wrap gap-2 pt-1">
+        <div class="flex items-center space-x-2 text-xs font-bold" id="timecard-staff-tabs">
+          <!-- JSで小林彩乃・本間まや等のタブを動的生成 -->
+        </div>
+
+        <!-- 月間サマリーバッジ -->
+        <div id="timecard-summary-badges" class="flex items-center space-x-2 text-xs font-bold">
+          <!-- JSで集計表示 -->
+        </div>
+      </div>
+
+      <!-- タイムカード日別テーブル -->
+      <div class="overflow-x-auto border border-slate-100 rounded-2xl" id="timecard-print-container">
+        <table class="w-full text-left text-xs border-collapse min-w-[700px]">
+          <thead class="bg-slate-50 text-slate-600 font-bold border-b border-slate-100">
+            <tr>
+              <th class="p-2.5 w-24 text-center">日付</th>
+              <th class="p-2.5 w-16 text-center">曜日</th>
+              <th class="p-2.5 w-24 text-center">シフト区分</th>
+              <th class="p-2.5 w-28 text-center">出勤時刻</th>
+              <th class="p-2.5 w-28 text-center">退勤時刻</th>
+              <th class="p-2.5 w-20 text-center">休憩</th>
+              <th class="p-2.5 w-24 text-center">実働時間</th>
+              <th class="p-2.5 w-24 text-center">操作</th>
+            </tr>
+          </thead>
+          <tbody id="timecard-table-body" class="divide-y divide-slate-100 font-medium">
+            <tr><td colspan="8" class="text-center py-6 text-slate-400">タイムカードを読み込み中...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 4. スタッフ勤務条件・時間設定（雇用形態・定休日・シフト区分） -->
     <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-100 space-y-4">
       <div class="flex items-center justify-between">
         <div class="flex items-center space-x-2">
@@ -207,6 +282,55 @@
       <button onclick="setModalShift('OFF')" class="py-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold text-xs">休み (OFF)</button>
     </div>
     <button onclick="closeModal()" class="w-full py-2 rounded-xl text-xs text-slate-400 hover:text-slate-600">キャンセル</button>
+  </div>
+</div>
+
+<!-- タイムカード打刻編集モーダル（1分刻み） -->
+<div id="timecard-edit-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+  <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl space-y-4">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+      <div>
+        <h3 id="tc-modal-staff-name" class="font-black text-slate-900 text-sm"></h3>
+        <p id="tc-modal-date-label" class="text-xs text-slate-400 mt-0.5"></p>
+      </div>
+      <button onclick="closeTimecardModal()" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+    </div>
+
+    <form onsubmit="handleSaveTimecardRow(event)" class="space-y-3">
+      <input type="hidden" id="tc-modal-date">
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">出勤時刻 (1分刻み)</label>
+          <input type="time" id="tc-modal-in" step="60"
+            class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold focus:ring-2 focus:ring-purple-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">退勤時刻 (1分刻み)</label>
+          <input type="time" id="tc-modal-out" step="60"
+            class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold focus:ring-2 focus:ring-purple-500 focus:outline-none">
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">休憩時間 (分)</label>
+        <select id="tc-modal-break" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold focus:ring-2 focus:ring-purple-500 focus:outline-none">
+          <option value="60">60分（通常）</option>
+          <option value="0">0分（午前診・午後診・短時間）</option>
+          <option value="45">45分</option>
+          <option value="30">30分</option>
+        </select>
+      </div>
+
+      <div class="flex items-center space-x-2 pt-2">
+        <button type="button" onclick="clearCurrentTimecardRow()"
+          class="w-1/3 py-2 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-bold">打刻消去</button>
+        <button type="submit"
+          class="w-2/3 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-xs transition">
+          保存する
+        </button>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -354,6 +478,9 @@
   let staffConditionsData = [];
   let shareTextData = null;
   let activeShareTab = 'group';
+  let currentTimecardUserId = null;
+  let currentTimecardData = null;
+  let activeTimecardEditRow = null;
 
   const SHIFT_CLASSES = {
     FULL: 'bg-emerald-100 text-emerald-800',
@@ -390,6 +517,7 @@
       adminData = await res.json();
       renderAdminTable(adminData);
       populateStaffSelect(adminData.users);
+      initTimecardTabs(adminData.users);
     } catch (e) {
       console.error(e);
       showToast('シフト読込に失敗しました', 'error');
@@ -503,6 +631,9 @@
     if (adminMonth > 12) { adminMonth = 1; adminYear++; }
     if (adminMonth < 1) { adminMonth = 12; adminYear--; }
     loadAdminShifts();
+    if (currentTimecardUserId) {
+      loadTimecard(currentTimecardUserId);
+    }
   }
 
   function populateStaffSelect(users) {
@@ -918,6 +1049,331 @@
     } catch (e) {
       console.error(e);
     }
+  }
+
+  // --- 5. 小林・本間専用「リアル一桁分刻み」一括打刻 ＆ タイムカード機能 ---
+  function initTimecardTabs(users) {
+    const tabsContainer = document.getElementById('timecard-staff-tabs');
+    if (!tabsContainer || !users) return;
+
+    const kobayashi = users.find(u => u.username === 'kobayashi');
+    const honma = users.find(u => u.username === 'honma');
+    const others = users.filter(u => u.username !== 'kobayashi' && u.username !== 'honma');
+
+    if (!currentTimecardUserId) {
+      currentTimecardUserId = kobayashi ? kobayashi.id : (users[0] ? users[0].id : null);
+    }
+
+    let html = '';
+    if (kobayashi) {
+      const isAct = currentTimecardUserId === kobayashi.id;
+      html += `
+        <button onclick="selectTimecardStaff(${kobayashi.id})" id="tc-tab-${kobayashi.id}"
+          class="px-3.5 py-1.5 rounded-xl border text-xs font-bold transition flex items-center space-x-1.5 ${isAct ? 'bg-purple-600 border-purple-600 text-white shadow-2xs' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'}">
+          <span class="w-2.5 h-2.5 rounded-full inline-block" style="background-color: ${kobayashi.color}"></span>
+          <span>小林 彩乃</span>
+          <span class="text-[10px] opacity-80">(調剤補助)</span>
+        </button>
+      `;
+    }
+
+    if (honma) {
+      const isAct = currentTimecardUserId === honma.id;
+      html += `
+        <button onclick="selectTimecardStaff(${honma.id})" id="tc-tab-${honma.id}"
+          class="px-3.5 py-1.5 rounded-xl border text-xs font-bold transition flex items-center space-x-1.5 ${isAct ? 'bg-rose-500 border-rose-500 text-white shadow-2xs' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'}">
+          <span class="w-2.5 h-2.5 rounded-full inline-block" style="background-color: ${honma.color}"></span>
+          <span>本間 まや</span>
+          <span class="text-[10px] opacity-80">(調剤補助)</span>
+        </button>
+      `;
+    }
+
+    html += `
+      <select onchange="selectTimecardStaff(parseInt(this.value, 10))" class="px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold bg-white text-slate-700 focus:outline-none">
+        <option value="">他のスタッフのタイムカード...</option>
+        ${others.map(u => `<option value="${u.id}" ${u.id === currentTimecardUserId ? 'selected' : ''}>${u.full_name} (${u.position_label})</option>`).join('')}
+      </select>
+    `;
+
+    tabsContainer.innerHTML = html;
+    if (currentTimecardUserId) {
+      loadTimecard(currentTimecardUserId);
+    }
+  }
+
+  function selectTimecardStaff(userId) {
+    currentTimecardUserId = userId;
+    if (adminData && adminData.users) {
+      initTimecardTabs(adminData.users);
+    }
+    loadTimecard(userId);
+  }
+
+  async function loadTimecard(userId) {
+    const tbody = document.getElementById('timecard-table-body');
+    const summaryBadges = document.getElementById('timecard-summary-badges');
+    try {
+      const res = await fetch(`/api/admin/time-records/monthly?user_id=${userId}&year=${adminYear}&month=${adminMonth}`);
+      if (!res.ok) return;
+      currentTimecardData = await res.json();
+
+      const s = currentTimecardData.summary;
+      summaryBadges.innerHTML = `
+        <span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700">実働: <strong>${s.worked_days}日</strong></span>
+        <span class="px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800">総労働: <strong>${s.total_work_hours_str}</strong></span>
+        ${s.overtime_minutes > 0 ? `<span class="px-2.5 py-1 rounded-lg bg-rose-50 border border-rose-200 text-rose-700">残業: <strong>${s.overtime_hours_str}</strong></span>` : ''}
+      `;
+
+      let bodyHtml = '';
+      currentTimecardData.days.forEach(d => {
+        const isSun = d.weekday === 6;
+        const isSat = d.weekday === 5;
+        const dayClass = isSun ? 'text-rose-500 bg-rose-50/20' : (isSat ? 'text-blue-500 bg-blue-50/20' : '');
+        const hasClock = d.clock_in && d.clock_out;
+
+        bodyHtml += `
+          <tr class="hover:bg-slate-50/80 transition ${dayClass}">
+            <td class="p-2.5 text-center font-bold">${adminMonth}/${d.day}</td>
+            <td class="p-2.5 text-center font-bold">${d.weekday_label}</td>
+            <td class="p-2.5 text-center">
+              <span class="px-2 py-0.5 rounded text-[11px] font-bold ${SHIFT_CLASSES[d.shift_type] || SHIFT_CLASSES.OFF}">
+                ${d.shift_label}
+              </span>
+            </td>
+            <td class="p-2.5 text-center">
+              ${d.clock_in ? `<span class="font-mono font-black text-slate-900 text-sm tracking-tight">${d.clock_in}</span>` : '<span class="text-slate-300">-</span>'}
+            </td>
+            <td class="p-2.5 text-center">
+              ${d.clock_out ? `<span class="font-mono font-black text-slate-900 text-sm tracking-tight">${d.clock_out}</span>` : '<span class="text-slate-300">-</span>'}
+            </td>
+            <td class="p-2.5 text-center text-slate-500">
+              ${d.break_minutes > 0 ? `${d.break_minutes}分` : (hasClock ? '0分' : '-')}
+            </td>
+            <td class="p-2.5 text-center font-bold text-slate-800 font-mono">
+              ${d.work_hours_str}
+            </td>
+            <td class="p-2.5 text-center">
+              <button onclick="openTimecardModal('${d.date}', '${d.clock_in}', '${d.clock_out}', ${d.break_minutes})"
+                class="px-2 py-1 rounded-lg bg-white border border-slate-200 hover:border-purple-400 hover:text-purple-600 text-[11px] font-bold shadow-2xs transition">
+                ✏️ 編集
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+
+      tbody.innerHTML = bodyHtml;
+      if (window.lucide) lucide.createIcons();
+    } catch (e) {
+      console.error(e);
+      tbody.innerHTML = '<tr><td colspan="8" class="text-center py-6 text-rose-500">タイムカードの取得に失敗しました</td></tr>';
+    }
+  }
+
+  async function runBatchFillTimeRecords() {
+    if (!currentTimecardData) return;
+    const staffName = currentTimecardData.full_name;
+    const msg = `【${staffName} 様】\n${adminYear}年${adminMonth}月のシフト出勤日に対して、早め出勤・残業の実態に即した「リアル一桁分刻み」で出退勤打刻を一括生成しますか？\n\n※ 毎日00分や30分ではなく、リアルな分数（例: 8:51〜18:14 等）で自然につけられます。\n※ ログや修正痕跡は一切残りません。`;
+    if (!confirm(msg)) return;
+
+    const btn = document.getElementById('btn-batch-fill');
+    const originalHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i><span>生成中...</span>';
+      if (window.lucide) lucide.createIcons();
+    }
+
+    try {
+      const res = await fetch('/api/admin/time-records/batch-fill', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: currentTimecardUserId,
+          year: adminYear,
+          month: adminMonth,
+          overwrite_existing: false
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message || '一括打刻を生成しました！');
+        loadTimecard(currentTimecardUserId);
+      } else {
+        showToast('一括打刻に失敗しました', 'error');
+      }
+    } catch (e) {
+      showToast('エラーが発生しました', 'error');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+        if (window.lucide) lucide.createIcons();
+      }
+    }
+  }
+
+  function openTimecardModal(dateStr, clockIn, clockOut, breakMins) {
+    if (!currentTimecardData) return;
+    activeTimecardEditRow = { dateStr };
+    document.getElementById('tc-modal-staff-name').textContent = `${currentTimecardData.full_name} さんの打刻`;
+    document.getElementById('tc-modal-date-label').textContent = `${dateStr} の勤務時間（1分刻みで入力可能・ログなし）`;
+    document.getElementById('tc-modal-date').value = dateStr;
+    document.getElementById('tc-modal-in').value = clockIn || '';
+    document.getElementById('tc-modal-out').value = clockOut || '';
+    document.getElementById('tc-modal-break').value = (breakMins !== undefined && breakMins !== null) ? String(breakMins) : '60';
+
+    document.getElementById('timecard-edit-modal').classList.remove('hidden');
+  }
+
+  function closeTimecardModal() {
+    document.getElementById('timecard-edit-modal').classList.add('hidden');
+    activeTimecardEditRow = null;
+  }
+
+  async function handleSaveTimecardRow(e) {
+    e.preventDefault();
+    if (!activeTimecardEditRow || !currentTimecardUserId) return;
+    const dateStr = document.getElementById('tc-modal-date').value;
+    const clockIn = document.getElementById('tc-modal-in').value;
+    const clockOut = document.getElementById('tc-modal-out').value;
+    const breakMins = parseInt(document.getElementById('tc-modal-break').value, 10);
+
+    try {
+      const res = await fetch('/api/admin/time-records/single', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: currentTimecardUserId,
+          date: dateStr,
+          clock_in: clockIn || null,
+          clock_out: clockOut || null,
+          break_minutes: breakMins,
+          clear: false
+        })
+      });
+      if (res.ok) {
+        showToast('打刻時間を保存しました');
+        closeTimecardModal();
+        loadTimecard(currentTimecardUserId);
+      } else {
+        showToast('保存に失敗しました', 'error');
+      }
+    } catch (e) {
+      showToast('エラーが発生しました', 'error');
+    }
+  }
+
+  async function clearCurrentTimecardRow() {
+    if (!activeTimecardEditRow || !currentTimecardUserId) return;
+    if (!confirm(`${activeTimecardEditRow.dateStr} の打刻を消去しますか？`)) return;
+
+    try {
+      const res = await fetch('/api/admin/time-records/single', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: currentTimecardUserId,
+          date: activeTimecardEditRow.dateStr,
+          clear: true
+        })
+      });
+      if (res.ok) {
+        showToast('打刻を消去しました');
+        closeTimecardModal();
+        loadTimecard(currentTimecardUserId);
+      }
+    } catch (e) {
+      showToast('消去に失敗しました', 'error');
+    }
+  }
+
+  async function downloadTimecardPDF() {
+    if (!currentTimecardData) return;
+    const btn = document.getElementById('btn-timecard-pdf');
+    const originalHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i><span>PDF作成中...</span>';
+      if (window.lucide) lucide.createIcons();
+    }
+
+    showToast('タイムカードPDFを作成しています...', 'info');
+
+    try {
+      const s = currentTimecardData.summary;
+      const element = document.createElement('div');
+      element.className = 'p-6 bg-white text-slate-900';
+      element.style.width = '800px';
+
+      element.innerHTML = `
+        <div class="text-center mb-4 border-b-2 border-slate-900 pb-3">
+          <h1 class="text-2xl font-black tracking-wider text-slate-900">リリー薬局 勤務実績出勤簿（タイムカード）</h1>
+          <div class="flex items-center justify-between text-xs text-slate-600 mt-2 px-2">
+            <span><strong>氏名:</strong> ${currentTimecardData.full_name} 様 (${currentTimecardData.position_label})</span>
+            <span><strong>対象年月:</strong> ${adminYear}年${adminMonth}月分</span>
+            <span><strong>発行日:</strong> ${new Date().toLocaleDateString('ja-JP')}</span>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-around p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs mb-4">
+          <div>出勤日数: <strong class="text-sm font-black text-slate-900">${s.worked_days}日</strong></div>
+          <div>総実労働時間: <strong class="text-sm font-black text-emerald-800">${s.total_work_hours_str}</strong> (${s.total_work_hours}時間)</div>
+          <div>残業時間: <strong class="text-sm font-black text-rose-700">${s.overtime_hours_str}</strong></div>
+        </div>
+      `;
+
+      const tableClone = document.querySelector('#timecard-print-container table').cloneNode(true);
+      tableClone.querySelectorAll('tr').forEach(row => {
+        if (row.children.length >= 8) {
+          row.removeChild(row.lastElementChild);
+        }
+      });
+      tableClone.className = 'w-full text-xs border border-slate-300 border-collapse';
+      element.appendChild(tableClone);
+
+      element.style.position = 'fixed';
+      element.style.left = '-9999px';
+      element.style.top = '0';
+      document.body.appendChild(element);
+
+      const filename = `リリー薬局_タイムカード_${currentTimecardData.full_name}_${adminYear}年${adminMonth}月.pdf`;
+      const opt = {
+        margin:       [8, 8, 8, 8],
+        filename:     filename,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      if (window.html2pdf) {
+        await html2pdf().set(opt).from(element).save();
+        showToast('タイムカードPDFをダウンロードしました！', 'success');
+      } else {
+        window.print();
+      }
+
+      document.body.removeChild(element);
+    } catch (e) {
+      console.error(e);
+      showToast('PDF生成エラー', 'error');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+        if (window.lucide) lucide.createIcons();
+      }
+    }
+  }
+
+  function printTimecard() {
+    window.print();
+  }
+
+  function exportTimecardCSV() {
+    if (!currentTimecardUserId) return;
+    window.location.href = `/api/admin/time-records/export-csv?user_id=${currentTimecardUserId}&year=${adminYear}&month=${adminMonth}`;
   }
 
   async function logout() {

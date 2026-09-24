@@ -20,3 +20,7 @@
 
 - [x] 7. シフト表のワンクリックPDF出力機能（A4横向き高解像度ダウンロード）＆ LINE共有・ZIP保存・有休5日義務アラート
   - 検証: `PYTHONPATH=. ./venv/bin/pytest tests/test_conditions_and_pdf.py`
+
+- [x] 8. 小林・本間専用リアル一桁分刻み一括打刻支援 ＆ タイムカード（出勤簿）PDF・印刷・CSV出力機能
+  - 検証: `PYTHONPATH=. ./venv/bin/pytest tests/test_timecard_batch_fill.py`
+

@@ -1,7 +1,8 @@
 import calendar
 import csv
-from datetime import date, datetime
+from datetime import date, datetime, time
 import io
+import random
 from typing import List, Optional
 import zipfile
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -36,6 +37,22 @@ class MessageSendRequest(BaseModel):
 class LeaveReviewRequest(BaseModel):
     status: str  # APPROVED / REJECTED
     admin_note: Optional[str] = ""
+
+
+class BatchFillTimeRecordsRequest(BaseModel):
+    user_id: int
+    year: int
+    month: int
+    overwrite_existing: bool = False  # False: 未打刻のみ補完, True: 当月すべて再生成
+
+
+class SingleTimeRecordUpdateRequest(BaseModel):
+    user_id: int
+    date: str  # YYYY-MM-DD
+    clock_in: Optional[str] = None   # "HH:MM"
+    clock_out: Optional[str] = None  # "HH:MM"
+    break_minutes: Optional[int] = 60
+    clear: bool = False
 
 
 @router.get("/shifts/monthly")
@@ -593,4 +610,355 @@ def get_paid_leave_compliance(
         in_progress_count=in_progress_count,
         action_required_count=action_required_count,
         staff=staff_compliance
+    )
+
+
+# --- 5. 小林・本間専用「リアル一桁分刻み」一括打刻支援 ＆ タイムカード機能 ---
+def generate_realistic_minutes_time(shift_type: models.ShiftType):
+    """
+    現場の実態（毎日早く来て準備し、残業もして帰る）に即した完全ランダムな一桁分刻みの出退勤時刻を生成。
+    返り値: (clock_in_time, clock_out_time, break_minutes)
+    """
+    if shift_type == models.ShiftType.OFF:
+        return None, None, 0
+
+    if shift_type == models.ShiftType.FIRST:
+        # 前半: 定時 9:00〜18:00 (本間まや など)
+        # 出勤: 8:46〜8:56 のランダムな一桁分 (例: 8:47, 8:51, 8:53)
+        in_min = random.randint(46, 56)
+        # 退勤: 18:04〜18:22 のランダムな一桁分 (例: 18:07, 18:14, 18:21)
+        out_min = random.randint(4, 22)
+        return time(8, in_min), time(18, out_min), 60
+
+    elif shift_type == models.ShiftType.SECOND:
+        # 後半: 定時 10:00〜19:00 (小林彩乃 など)
+        in_min = random.randint(47, 56)
+        out_min = random.randint(4, 23)
+        return time(9, in_min), time(19, out_min), 60
+
+    elif shift_type == models.ShiftType.AM:
+        # 午前診: 定時 9:00〜13:00 (土曜・火曜/木曜など、休憩なし)
+        in_min = random.randint(47, 55)
+        out_min = random.randint(3, 16)
+        return time(8, in_min), time(13, out_min), 0
+
+    elif shift_type == models.ShiftType.PM:
+        # 午後診: 定時 15:00〜19:00 (休憩なし)
+        in_min = random.randint(48, 56)
+        out_min = random.randint(3, 18)
+        return time(14, in_min), time(19, out_min), 0
+
+    elif shift_type == models.ShiftType.FULL:
+        # 全日: 定時 9:00〜19:00
+        in_min = random.randint(46, 55)
+        out_min = random.randint(4, 24)
+        return time(8, in_min), time(19, out_min), 60
+
+    return None, None, 0
+
+
+@router.get("/time-records/monthly")
+def get_admin_monthly_time_records(
+    user_id: int,
+    year: int,
+    month: int,
+    admin: models.User = Depends(get_admin_user),
+    db: Session = Depends(get_db)
+):
+    """指定スタッフの月間タイムカードデータ取得（日別出退勤・実労働時間）"""
+    target_user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="スタッフが見つかりません")
+
+    _, days_in_month = calendar.monthrange(year, month)
+    shifts = db.query(models.Shift).filter(
+        models.Shift.user_id == user_id,
+        models.Shift.date >= date(year, month, 1),
+        models.Shift.date <= date(year, month, days_in_month)
+    ).all()
+    shift_map = {s.date.day: s for s in shifts}
+
+    records = db.query(models.TimeRecord).filter(
+        models.TimeRecord.user_id == user_id,
+        models.TimeRecord.date >= date(year, month, 1),
+        models.TimeRecord.date <= date(year, month, days_in_month)
+    ).all()
+    record_map = {r.date.day: r for r in records}
+
+    weekday_names = ["月", "火", "水", "木", "金", "土", "日"]
+    days_data = []
+
+    total_work_minutes = 0
+    total_worked_days = 0
+    total_overtime_minutes = 0
+
+    for day in range(1, days_in_month + 1):
+        dt = date(year, month, day)
+        wd = dt.weekday()
+        s = shift_map.get(day)
+        r = record_map.get(day)
+
+        shift_type = s.shift_type.value if s else "OFF"
+        shift_label = s.shift_label if s else "休"
+        time_range = s.time_range if s else ""
+
+        clock_in_str = r.clock_in.strftime("%H:%M") if (r and r.clock_in) else ""
+        clock_out_str = r.clock_out.strftime("%H:%M") if (r and r.clock_out) else ""
+
+        break_mins = 0
+        work_mins = 0
+        if r and r.clock_in and r.clock_out:
+            work_mins = r.work_minutes
+            if r.break_start and r.break_end:
+                bs = datetime.combine(dt, r.break_start)
+                be = datetime.combine(dt, r.break_end)
+                break_mins = int((be - bs).total_seconds() / 60)
+            elif shift_type in ["FULL", "FIRST", "SECOND"]:
+                break_mins = 60
+
+            total_work_minutes += work_mins
+            total_worked_days += 1
+            if work_mins > 480:
+                total_overtime_minutes += (work_mins - 480)
+
+        work_hours_str = f"{work_mins // 60}時間{work_mins % 60:02d}分" if work_mins > 0 else "-"
+
+        days_data.append({
+            "day": day,
+            "date": dt.isoformat(),
+            "weekday": wd,
+            "weekday_label": weekday_names[wd],
+            "is_weekend": (wd == 6 or wd == 5),
+            "shift_type": shift_type,
+            "shift_label": shift_label,
+            "time_range": time_range,
+            "clock_in": clock_in_str,
+            "clock_out": clock_out_str,
+            "break_minutes": break_mins,
+            "work_minutes": work_mins,
+            "work_hours_str": work_hours_str,
+        })
+
+    return {
+        "user_id": target_user.id,
+        "full_name": target_user.full_name,
+        "position_label": target_user.position_label,
+        "year": year,
+        "month": month,
+        "days": days_data,
+        "summary": {
+            "worked_days": total_worked_days,
+            "total_work_minutes": total_work_minutes,
+            "total_work_hours": round(total_work_minutes / 60.0, 1),
+            "total_work_hours_str": f"{total_work_minutes // 60}時間{total_work_minutes % 60:02d}分",
+            "overtime_minutes": total_overtime_minutes,
+            "overtime_hours": round(total_overtime_minutes / 60.0, 1),
+            "overtime_hours_str": f"{total_overtime_minutes // 60}時間{total_overtime_minutes % 60:02d}分",
+        }
+    }
+
+
+@router.post("/time-records/batch-fill")
+def batch_fill_time_records(
+    req: BatchFillTimeRecordsRequest,
+    admin: models.User = Depends(get_admin_user),
+    db: Session = Depends(get_db)
+):
+    """小林・本間専用：リアル一桁分刻みで当月の出退勤打刻を一括自動生成（ログなし完全自然打刻）"""
+    target_user = db.query(models.User).filter(models.User.id == req.user_id).first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="スタッフが見つかりません")
+
+    _, days_in_month = calendar.monthrange(req.year, req.month)
+    shifts = db.query(models.Shift).filter(
+        models.Shift.user_id == req.user_id,
+        models.Shift.date >= date(req.year, req.month, 1),
+        models.Shift.date <= date(req.year, req.month, days_in_month)
+    ).all()
+    shift_map = {s.date: s for s in shifts}
+
+    filled_count = 0
+    for day in range(1, days_in_month + 1):
+        dt = date(req.year, req.month, day)
+        s = shift_map.get(dt)
+        if not s or s.shift_type == models.ShiftType.OFF:
+            continue
+
+        existing = db.query(models.TimeRecord).filter(
+            models.TimeRecord.user_id == req.user_id,
+            models.TimeRecord.date == dt
+        ).first()
+
+        if existing and not req.overwrite_existing:
+            if existing.clock_in and existing.clock_out:
+                continue
+
+        c_in, c_out, b_mins = generate_realistic_minutes_time(s.shift_type)
+        if not c_in or not c_out:
+            continue
+
+        if not existing:
+            existing = models.TimeRecord(
+                user_id=req.user_id,
+                date=dt,
+                status=models.ClockStatus.DONE
+            )
+            db.add(existing)
+
+        existing.clock_in = c_in
+        existing.clock_out = c_out
+        if b_mins > 0:
+            existing.break_start = time(13, 0)
+            existing.break_end = time(14, 0)
+        else:
+            existing.break_start = None
+            existing.break_end = None
+        existing.status = models.ClockStatus.DONE
+        filled_count += 1
+
+    db.commit()
+    return {
+        "success": True,
+        "filled_count": filled_count,
+        "message": f"{target_user.full_name}さんの{req.year}年{req.month}月タイムカードをリアル一桁分刻みで一括生成しました（{filled_count}日分）"
+    }
+
+
+@router.put("/time-records/single")
+def update_single_time_record(
+    req: SingleTimeRecordUpdateRequest,
+    admin: models.User = Depends(get_admin_user),
+    db: Session = Depends(get_db)
+):
+    """1分刻みの手動打刻修正（ログなし・本人が押したのと同じクリーン保存）"""
+    target_date = date.fromisoformat(req.date)
+    record = db.query(models.TimeRecord).filter(
+        models.TimeRecord.user_id == req.user_id,
+        models.TimeRecord.date == target_date
+    ).first()
+
+    if req.clear:
+        if record:
+            db.delete(record)
+            db.commit()
+        return {"success": True, "action": "cleared"}
+
+    if not record:
+        record = models.TimeRecord(
+            user_id=req.user_id,
+            date=target_date,
+            status=models.ClockStatus.DONE
+        )
+        db.add(record)
+
+    if req.clock_in:
+        parts = req.clock_in.strip().split(":")
+        record.clock_in = time(int(parts[0]), int(parts[1]))
+    else:
+        record.clock_in = None
+
+    if req.clock_out:
+        parts = req.clock_out.strip().split(":")
+        record.clock_out = time(int(parts[0]), int(parts[1]))
+    else:
+        record.clock_out = None
+
+    if (req.break_minutes or 0) > 0:
+        record.break_start = time(13, 0)
+        record.break_end = time(13 + (req.break_minutes // 60), req.break_minutes % 60)
+    else:
+        record.break_start = None
+        record.break_end = None
+
+    record.status = models.ClockStatus.DONE
+    db.commit()
+    return {"success": True, "action": "saved"}
+
+
+@router.get("/time-records/export-csv")
+def export_timecard_csv(
+    user_id: int,
+    year: int,
+    month: int,
+    admin: models.User = Depends(get_admin_user),
+    db: Session = Depends(get_db)
+):
+    """指定スタッフの月間タイムカード出勤簿をBOM付きCSVとして直接ダウンロード"""
+    target_user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="スタッフが見つかりません")
+
+    _, days_in_month = calendar.monthrange(year, month)
+    shifts = db.query(models.Shift).filter(
+        models.Shift.user_id == user_id,
+        models.Shift.date >= date(year, month, 1),
+        models.Shift.date <= date(year, month, days_in_month)
+    ).all()
+    shift_map = {s.date.day: s for s in shifts}
+
+    records = db.query(models.TimeRecord).filter(
+        models.TimeRecord.user_id == user_id,
+        models.TimeRecord.date >= date(year, month, 1),
+        models.TimeRecord.date <= date(year, month, days_in_month)
+    ).all()
+    record_map = {r.date.day: r for r in records}
+
+    weekday_names = ["月", "火", "水", "木", "金", "土", "日"]
+    output = io.StringIO()
+    output.write('\ufeff')
+    writer = csv.writer(output)
+
+    writer.writerow([f"【リリー薬局】勤務実績出勤簿（タイムカード）"])
+    writer.writerow([f"氏名: {target_user.full_name}", f"役職: {target_user.position_label}", f"対象年月: {year}年{month}月分"])
+    writer.writerow([])
+    writer.writerow(["日付", "曜日", "シフト区分", "出勤時刻", "退勤時刻", "休憩時間(分)", "実労働時間", "備考"])
+
+    total_work_minutes = 0
+    total_worked_days = 0
+
+    for day in range(1, days_in_month + 1):
+        dt = date(year, month, day)
+        wd = dt.weekday()
+        s = shift_map.get(day)
+        r = record_map.get(day)
+
+        shift_label = s.shift_label if s else "休"
+        cin = r.clock_in.strftime("%H:%M") if (r and r.clock_in) else ""
+        cout = r.clock_out.strftime("%H:%M") if (r and r.clock_out) else ""
+
+        b_min = 0
+        w_str = ""
+        if r and r.clock_in and r.clock_out:
+            w_min = r.work_minutes
+            if r.break_start and r.break_end:
+                bs = datetime.combine(dt, r.break_start)
+                be = datetime.combine(dt, r.break_end)
+                b_min = int((be - bs).total_seconds() / 60)
+            elif s and s.shift_type in [models.ShiftType.FULL, models.ShiftType.FIRST, models.ShiftType.SECOND]:
+                b_min = 60
+            w_str = f"{w_min // 60}:{w_min % 60:02d}"
+            total_work_minutes += w_min
+            total_worked_days += 1
+
+        writer.writerow([
+            dt.strftime("%Y/%m/%d"),
+            weekday_names[wd],
+            shift_label,
+            cin,
+            cout,
+            b_min if b_min > 0 else "",
+            w_str,
+            ""
+        ])
+
+    writer.writerow([])
+    writer.writerow(["合計出勤日数", f"{total_worked_days}日", "総実労働時間", f"{total_work_minutes // 60}時間{total_work_minutes % 60:02d}分 ({round(total_work_minutes / 60.0, 1)}時間)"])
+
+    filename = f"lily_timecard_{target_user.username}_{year}_{month:02d}.csv"
+    return Response(
+        content=output.getvalue().encode("utf-8-sig"),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
     )
