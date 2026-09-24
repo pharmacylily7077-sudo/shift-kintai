@@ -14,3 +14,9 @@
 
 - [x] 5. 「正社員」「パート」表記の完全排除および総合自動テストの全件通過
   - 検証: `PYTHONPATH=. ./venv/bin/pytest tests/test_no_discriminatory_labels.py tests/test_app.py`
+
+- [x] 6. 雇用形態ごとの勤務時間調節・詳細設定機能（シフト区分・定休曜日・時給・有休残日数）
+  - 検証: `PYTHONPATH=. ./venv/bin/pytest tests/test_conditions_and_pdf.py`
+
+- [x] 7. シフト表のワンクリックPDF出力機能（A4横向き高解像度ダウンロード）＆ LINE共有・ZIP保存・有休5日義務アラート
+  - 検証: `PYTHONPATH=. ./venv/bin/pytest tests/test_conditions_and_pdf.py`

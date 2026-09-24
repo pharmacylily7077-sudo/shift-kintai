@@ -12,6 +12,11 @@
       <span class="font-black text-slate-900 text-sm">リリー薬局 シフト表</span>
     </div>
     <div class="flex items-center space-x-2">
+      <button id="btn-pdf-download" onclick="downloadPDF()"
+        class="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white text-xs font-bold transition shadow-xs">
+        <i data-lucide="file-down" class="w-4 h-4"></i>
+        <span>PDF保存</span>
+      </button>
       <button onclick="window.print()"
         class="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition">
         <i data-lucide="printer" class="w-4 h-4"></i>
@@ -187,6 +192,73 @@
     if (currentMonth > 12) { currentMonth = 1; currentYear++; }
     if (currentMonth < 1)  { currentMonth = 12; currentYear--; }
     loadCalendar();
+  }
+
+  async function downloadPDF() {
+    const btn = document.getElementById('btn-pdf-download');
+    const originalHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>PDF作成中...</span>';
+      if (window.lucide) lucide.createIcons();
+    }
+
+    showToast('シフト表のPDFを作成しています...', 'info');
+
+    try {
+      const element = document.createElement('div');
+      element.className = 'p-6 bg-white text-slate-900';
+      element.style.width = '1120px';
+
+      const title = document.createElement('div');
+      title.className = 'text-center mb-4';
+      title.innerHTML = `
+        <h1 class="text-2xl font-black text-slate-900 tracking-wide">リリー薬局 シフト表（${currentYear}年${currentMonth}月）</h1>
+        <p class="text-xs text-slate-500 mt-1">発行日: ${new Date().toLocaleDateString('ja-JP')} | A4横公式シフト表</p>
+      `;
+      element.appendChild(title);
+
+      const legendClone = document.getElementById('staff-legend').cloneNode(true);
+      legendClone.className = 'flex flex-wrap items-center justify-center gap-2 mb-4 px-1';
+      element.appendChild(legendClone);
+
+      const gridClone = document.getElementById('calendar-grid').cloneNode(true);
+      gridClone.className = 'bg-white rounded-xl border border-slate-300 overflow-hidden';
+      element.appendChild(gridClone);
+
+      element.style.position = 'fixed';
+      element.style.left = '-9999px';
+      element.style.top = '0';
+      document.body.appendChild(element);
+
+      const filename = `リリー薬局_シフト表_${currentYear}年${currentMonth}月.pdf`;
+      const opt = {
+        margin:       [8, 8, 8, 8],
+        filename:     filename,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
+      };
+
+      if (window.html2pdf) {
+        await html2pdf().set(opt).from(element).save();
+        showToast('PDFをダウンロードしました！', 'success');
+      } else {
+        window.print();
+      }
+
+      document.body.removeChild(element);
+    } catch (err) {
+      console.error('PDF生成エラー:', err);
+      showToast('PDF生成に失敗したため、印刷画面を開きます', 'error');
+      window.print();
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+        if (window.lucide) lucide.createIcons();
+      }
+    }
   }
 
   // 初期ロード

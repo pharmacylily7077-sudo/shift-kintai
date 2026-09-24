@@ -463,3 +463,32 @@ class PaidLeaveComplianceResponse(BaseModel):
     action_required_count: int
     staff: List[PaidLeaveComplianceUser]
 
+
+# --- スタッフ勤務条件・時間設定（雇用形態・定休日・シフト区分） ---
+class StaffConditionItem(BaseModel):
+    id: int
+    full_name: str
+    username: str
+    position: str
+    position_label: str
+    employment_type: str
+    default_shift: str
+    default_shift_label: str
+    shift_time_range: str
+    fixed_off_weekdays: str  # 例: "1,6" (火曜・日曜)
+    fixed_off_labels: List[str]  # 例: ["火", "日"]
+    color: str
+    hourly_wage: int
+    paid_leave_remaining: float
+    is_active: bool
+
+class StaffConditionsResponse(BaseModel):
+    staff: List[StaffConditionItem]
+
+class StaffConditionUpdateRequest(BaseModel):
+    default_shift: Optional[str] = None  # FULL / FIRST / SECOND / AM / PM
+    fixed_off_weekdays: Optional[str] = None  # "1,6" 等
+    hourly_wage: Optional[int] = None
+    paid_leave_remaining: Optional[float] = None
+    employment_type: Optional[str] = None  # FULLTIME / PARTTIME
+

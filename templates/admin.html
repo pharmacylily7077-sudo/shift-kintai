@@ -18,7 +18,15 @@
       <div class="flex items-center space-x-2">
         <a href="/calendar" class="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold hover:bg-slate-50 transition flex items-center space-x-1">
           <i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-500"></i>
-          <span>シフト表を見る</span>
+          <span>シフト表</span>
+        </a>
+        <button onclick="openShareTextModal()" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition flex items-center space-x-1 shadow-xs">
+          <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
+          <span>💬 LINE共有</span>
+        </button>
+        <a href="/api/admin/backup/export" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition flex items-center space-x-1">
+          <i data-lucide="download-cloud" class="w-3.5 h-3.5"></i>
+          <span>💾 全保存(ZIP)</span>
         </a>
         <button onclick="logout()" class="px-3 py-1.5 rounded-xl bg-slate-800 text-white text-xs font-semibold hover:bg-slate-900 transition flex items-center space-x-1">
           <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
@@ -43,9 +51,11 @@
       </div>
 
       <div class="flex flex-wrap items-center gap-2">
-        <div class="text-xs text-slate-500 mr-2">
-          ※ 家田・寺内・山中・本間は火曜・日曜休み自動判定
-        </div>
+        <button id="btn-admin-pdf" onclick="downloadAdminPDF()"
+          class="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-bold text-xs shadow-xs transition flex items-center space-x-1.5">
+          <i data-lucide="file-down" class="w-4 h-4"></i>
+          <span>📄 シフト表PDF保存</span>
+        </button>
         <button onclick="runAutoGenerate()" id="btn-auto-gen"
           class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-xs shadow-md shadow-blue-200 hover:shadow-lg transition flex items-center space-x-1.5">
           <i data-lucide="sparkles" class="w-4 h-4"></i>
@@ -80,7 +90,51 @@
       </div>
     </div>
 
-    <!-- 3. スタッフへのプライベート個別連絡 & 休暇申請確認 -->
+    <!-- 3. スタッフ勤務条件・時間設定（雇用形態・定休日・シフト区分） -->
+    <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-100 space-y-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <div class="w-7 h-7 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-xs">
+            <i data-lucide="sliders" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-900 text-sm">スタッフ勤務条件・時間設定（雇用形態・定休日・シフト区分）</h3>
+            <p class="text-[11px] text-slate-400">変更後「この月のシフトを一括自動生成」を実行すると即座にシフトへ反映されます</p>
+          </div>
+        </div>
+        <button onclick="loadStaffConditions()" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400">
+          <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div id="staff-conditions-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="text-xs text-slate-400 py-6 text-center col-span-full">勤務条件を読み込み中...</div>
+      </div>
+    </div>
+
+    <!-- 4. 法定有休 年5日取得義務コンプライアンス管理パネル -->
+    <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-100 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-50 pb-3">
+        <div class="flex items-center space-x-2">
+          <div class="w-7 h-7 rounded-xl bg-teal-100 text-teal-800 flex items-center justify-center font-bold text-xs">
+            <i data-lucide="shield-check" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-900 text-sm">年次有給休暇 年5日取得義務（労基法第39条第7項）進捗管理</h3>
+            <p class="text-[11px] text-slate-400">薬事監査・労基署対応：今年度の有休消化状況と警告アラート</p>
+          </div>
+        </div>
+        <button onclick="loadCompliance()" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400">
+          <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div id="compliance-summary-container">
+        <div class="text-xs text-slate-400 py-4 text-center">進捗データを読み込み中...</div>
+      </div>
+    </div>
+
+    <!-- 5. スタッフへのプライベート個別連絡 & 休暇申請確認 -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       
       <!-- 休暇申請の確認パネル -->
@@ -97,7 +151,6 @@
             <i data-lucide="refresh-cw" class="w-4 h-4"></i>
           </button>
         </div>
-
         <div id="leave-requests-container" class="space-y-2 max-h-80 overflow-y-auto">
           <div class="text-xs text-slate-400 text-center py-6">申請を読み込み中...</div>
         </div>
@@ -156,6 +209,140 @@
     <button onclick="closeModal()" class="w-full py-2 rounded-xl text-xs text-slate-400 hover:text-slate-600">キャンセル</button>
   </div>
 </div>
+
+<!-- スタッフ勤務条件編集モーダル -->
+<div id="condition-edit-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+  <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+      <div class="flex items-center space-x-2">
+        <span id="cond-modal-color-dot" class="w-3.5 h-3.5 rounded-full inline-block"></span>
+        <h3 id="cond-modal-name" class="font-black text-slate-900 text-base"></h3>
+      </div>
+      <button onclick="closeConditionModal()" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+    </div>
+
+    <form onsubmit="handleSaveCondition(event)" class="space-y-4">
+      <input type="hidden" id="cond-user-id">
+
+      <!-- 基本シフト区分 -->
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">基本シフト区分（通常出勤時間）</label>
+        <select id="cond-default-shift" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none">
+          <option value="FULL">全日 (9:00〜19:00 / 休憩60分)</option>
+          <option value="FIRST">前半 (9:00〜18:00 / 休憩60分)</option>
+          <option value="SECOND">後半 (10:00〜19:00 / 休憩60分)</option>
+          <option value="AM">午前診 (9:00〜13:00 / 休憩なし)</option>
+          <option value="PM">午後診 (15:00〜19:00 / 休憩なし)</option>
+        </select>
+      </div>
+
+      <!-- 固定定休日 -->
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">固定定休日（チェックした曜日は公休判定）</label>
+        <div class="grid grid-cols-7 gap-1 text-center">
+          <label class="p-2 rounded-xl border border-slate-200 text-xs font-bold cursor-pointer hover:bg-slate-50 flex flex-col items-center">
+            <span>月</span>
+            <input type="checkbox" name="off-weekday" value="0" class="mt-1">
+          </label>
+          <label class="p-2 rounded-xl border border-slate-200 text-xs font-bold cursor-pointer hover:bg-slate-50 flex flex-col items-center">
+            <span class="text-amber-600">火</span>
+            <input type="checkbox" name="off-weekday" value="1" class="mt-1">
+          </label>
+          <label class="p-2 rounded-xl border border-slate-200 text-xs font-bold cursor-pointer hover:bg-slate-50 flex flex-col items-center">
+            <span>水</span>
+            <input type="checkbox" name="off-weekday" value="2" class="mt-1">
+          </label>
+          <label class="p-2 rounded-xl border border-slate-200 text-xs font-bold cursor-pointer hover:bg-slate-50 flex flex-col items-center">
+            <span class="text-purple-600">木</span>
+            <input type="checkbox" name="off-weekday" value="3" class="mt-1">
+          </label>
+          <label class="p-2 rounded-xl border border-slate-200 text-xs font-bold cursor-pointer hover:bg-slate-50 flex flex-col items-center">
+            <span>金</span>
+            <input type="checkbox" name="off-weekday" value="4" class="mt-1">
+          </label>
+          <label class="p-2 rounded-xl border border-slate-200 text-xs font-bold cursor-pointer hover:bg-slate-50 flex flex-col items-center">
+            <span class="text-blue-500">土</span>
+            <input type="checkbox" name="off-weekday" value="5" class="mt-1">
+          </label>
+          <label class="p-2 rounded-xl border border-slate-200 text-xs font-bold cursor-pointer hover:bg-slate-50 flex flex-col items-center">
+            <span class="text-rose-500">日</span>
+            <input type="checkbox" name="off-weekday" value="6" class="mt-1">
+          </label>
+        </div>
+        <p class="text-[10px] text-slate-400 mt-1">※ 日曜・祝日および土曜午前診、木曜/火曜午前診の特例は自動制御されます</p>
+      </div>
+
+      <!-- 設定時給 & 有休残日数 -->
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">設定時給 (円)</label>
+          <input type="number" id="cond-hourly-wage" min="0" step="10"
+            class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">有休残日数 (日)</label>
+          <input type="number" id="cond-paid-leave" min="0" step="0.5"
+            class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-2 pt-2">
+        <button type="button" onclick="closeConditionModal()"
+          class="w-1/3 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50">キャンセル</button>
+        <button type="submit"
+          class="w-2/3 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition">
+          勤務条件を保存する
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- LINE共有・連絡文コピーモーダル -->
+<div id="share-text-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+  <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+      <div class="flex items-center space-x-2">
+        <span class="text-lg">💬</span>
+        <div>
+          <h3 class="font-black text-slate-900 text-sm">シフト確定・LINE一斉送信／連絡文コピー</h3>
+          <p class="text-[11px] text-slate-400">1タップでクリップボードにコピーしてLINEやメールへ貼り付け可能</p>
+        </div>
+      </div>
+      <button onclick="closeShareTextModal()" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+    </div>
+
+    <!-- 切り替えタブ -->
+    <div class="flex items-center space-x-2 border-b border-slate-100 pb-2 text-xs font-bold">
+      <button id="tab-share-group" onclick="selectShareTab('group')" class="px-3 py-1.5 rounded-xl bg-emerald-600 text-white shadow-2xs">
+        全員分一括（グループLINE用）
+      </button>
+      <button id="tab-share-staff" onclick="selectShareTab('staff')" class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200">
+        スタッフ別（個人LINE用）
+      </button>
+    </div>
+
+    <!-- スタッフ個別選択ドロップダウン -->
+    <div id="share-staff-select-wrapper" class="hidden">
+      <label class="block text-xs font-semibold text-slate-600 mb-1">対象スタッフを選択:</label>
+      <select id="share-staff-select" onchange="renderStaffShareText()" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold focus:ring-2 focus:ring-blue-500 focus:outline-none">
+      </select>
+    </div>
+
+    <!-- テキストエリア -->
+    <textarea id="share-text-area" rows="10" readonly
+      class="w-full p-3 rounded-2xl border border-slate-200 bg-slate-50 text-xs font-mono leading-relaxed focus:outline-none select-all"></textarea>
+
+    <!-- コピーボタン -->
+    <div class="flex items-center justify-between pt-1">
+      <button onclick="closeShareTextModal()" class="px-4 py-2 rounded-xl text-xs text-slate-500 hover:text-slate-700">閉じる</button>
+      <button onclick="copyShareText()" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-200 transition flex items-center space-x-1.5">
+        <i data-lucide="copy" class="w-4 h-4"></i>
+        <span>📋 文面をコピーする</span>
+      </button>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -164,6 +351,9 @@
   let adminMonth = new Date().getMonth() + 1;
   let adminData = null;
   let activeEdit = null;
+  let staffConditionsData = [];
+  let shareTextData = null;
+  let activeShareTab = 'group';
 
   const SHIFT_CLASSES = {
     FULL: 'bg-emerald-100 text-emerald-800',
@@ -186,6 +376,8 @@
   document.addEventListener('DOMContentLoaded', () => {
     loadAdminShifts();
     loadLeaveRequests();
+    loadStaffConditions();
+    loadCompliance();
   });
 
   async function loadAdminShifts() {
@@ -399,6 +591,332 @@
       }
     } catch (e) {
       showToast('処理に失敗しました', 'error');
+    }
+  }
+
+  // --- 1. スタッフ勤務条件・時間設定 ---
+  async function loadStaffConditions() {
+    const grid = document.getElementById('staff-conditions-grid');
+    try {
+      const res = await fetch('/api/admin/staff/conditions');
+      if (!res.ok) return;
+      const data = await res.json();
+      staffConditionsData = data.staff || [];
+      if (staffConditionsData.length === 0) {
+        grid.innerHTML = '<div class="text-xs text-slate-400 py-6 text-center col-span-full">スタッフが見つかりません</div>';
+        return;
+      }
+      grid.innerHTML = '';
+      staffConditionsData.forEach(s => {
+        const offText = s.fixed_off_labels.length > 0 ? s.fixed_off_labels.join('・') + '曜日' : 'なし（毎日出勤可能）';
+        const card = document.createElement('div');
+        card.className = 'p-4 rounded-2xl border border-slate-100 bg-slate-50/70 hover:bg-slate-50 transition space-y-3';
+        card.innerHTML = `
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <span class="w-3.5 h-3.5 rounded-full inline-block shadow-inner" style="background-color: ${s.color};"></span>
+              <div>
+                <div class="font-bold text-slate-900 text-xs">${s.full_name}</div>
+                <div class="text-[10px] text-slate-400 font-semibold">${s.position_label}</div>
+              </div>
+            </div>
+            <span class="px-2 py-0.5 rounded-lg bg-white border border-slate-200 text-[10px] font-bold text-slate-700 shadow-2xs">
+              ${s.default_shift_label}
+            </span>
+          </div>
+
+          <div class="space-y-1.5 text-xs text-slate-600 border-t border-slate-200/50 pt-2">
+            <div class="flex items-center justify-between text-[11px]">
+              <span class="text-slate-400">勤務時間帯:</span>
+              <span class="font-bold text-slate-800">${s.shift_time_range}</span>
+            </div>
+            <div class="flex items-center justify-between text-[11px]">
+              <span class="text-slate-400">固定定休日:</span>
+              <span class="font-bold text-amber-700">${offText}</span>
+            </div>
+            <div class="flex items-center justify-between text-[11px]">
+              <span class="text-slate-400">時給 / 有休残:</span>
+              <span class="font-medium text-slate-700">¥${s.hourly_wage.toLocaleString()} / <span class="font-bold text-teal-700">${s.paid_leave_remaining}日</span></span>
+            </div>
+          </div>
+
+          <div class="pt-1">
+            <button onclick="openConditionModal(${s.id})"
+              class="w-full py-1.5 rounded-xl bg-white border border-slate-200 hover:border-blue-400 hover:text-blue-600 text-[11px] font-bold text-slate-700 shadow-2xs transition flex items-center justify-center space-x-1">
+              <i data-lucide="edit-3" class="w-3 h-3"></i>
+              <span>勤務条件を変更</span>
+            </button>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+      if (window.lucide) lucide.createIcons();
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  function openConditionModal(userId) {
+    const s = staffConditionsData.find(x => x.id === userId);
+    if (!s) return;
+    document.getElementById('cond-user-id').value = s.id;
+    document.getElementById('cond-modal-name').textContent = `${s.full_name} さんの勤務条件`;
+    document.getElementById('cond-modal-color-dot').style.backgroundColor = s.color;
+    document.getElementById('cond-default-shift').value = s.default_shift;
+    document.getElementById('cond-hourly-wage').value = s.hourly_wage;
+    document.getElementById('cond-paid-leave').value = s.paid_leave_remaining;
+
+    const offDays = (s.fixed_off_weekdays || '').split(',').map(x => x.trim());
+    document.querySelectorAll('input[name="off-weekday"]').forEach(cb => {
+      cb.checked = offDays.includes(cb.value);
+    });
+
+    document.getElementById('condition-edit-modal').classList.remove('hidden');
+  }
+
+  function closeConditionModal() {
+    document.getElementById('condition-edit-modal').classList.add('hidden');
+  }
+
+  async function handleSaveCondition(e) {
+    e.preventDefault();
+    const userId = document.getElementById('cond-user-id').value;
+    const defaultShift = document.getElementById('cond-default-shift').value;
+    const hourlyWage = parseInt(document.getElementById('cond-hourly-wage').value || '0', 10);
+    const paidLeave = parseFloat(document.getElementById('cond-paid-leave').value || '0');
+
+    const checkedDays = [];
+    document.querySelectorAll('input[name="off-weekday"]:checked').forEach(cb => {
+      checkedDays.push(cb.value);
+    });
+    const fixedOffWeekdays = checkedDays.join(',');
+
+    try {
+      const res = await fetch(`/api/admin/staff/${userId}/condition`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          default_shift: defaultShift,
+          fixed_off_weekdays: fixedOffWeekdays,
+          hourly_wage: hourlyWage,
+          paid_leave_remaining: paidLeave
+        })
+      });
+      if (res.ok) {
+        showToast('勤務条件を保存しました');
+        closeConditionModal();
+        loadStaffConditions();
+        loadAdminShifts();
+      } else {
+        showToast('保存に失敗しました', 'error');
+      }
+    } catch (err) {
+      showToast('エラーが発生しました', 'error');
+    }
+  }
+
+  // --- 2. シフト表 PDFワンクリック保存 ---
+  async function downloadAdminPDF() {
+    const btn = document.getElementById('btn-admin-pdf');
+    const originalHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>PDF作成中...</span>';
+      if (window.lucide) lucide.createIcons();
+    }
+
+    showToast('A4横向きシフト表PDFを作成しています...', 'info');
+
+    try {
+      const element = document.createElement('div');
+      element.className = 'p-6 bg-white text-slate-900';
+      element.style.width = '1120px';
+
+      const title = document.createElement('div');
+      title.className = 'text-center mb-4';
+      title.innerHTML = `
+        <h1 class="text-2xl font-black text-slate-900 tracking-wide">リリー薬局 月間シフト編成表（${adminYear}年${adminMonth}月）</h1>
+        <p class="text-xs text-slate-500 mt-1">発行日: ${new Date().toLocaleDateString('ja-JP')} | A4横公式シフト表</p>
+      `;
+      element.appendChild(title);
+
+      // 編成テーブルのクローン
+      const tableClone = document.querySelector('.overflow-x-auto').cloneNode(true);
+      tableClone.className = 'border border-slate-300 rounded-xl overflow-hidden';
+      element.appendChild(tableClone);
+
+      element.style.position = 'fixed';
+      element.style.left = '-9999px';
+      element.style.top = '0';
+      document.body.appendChild(element);
+
+      const filename = `リリー薬局_月間シフト表_${adminYear}年${adminMonth}月.pdf`;
+      const opt = {
+        margin:       [8, 8, 8, 8],
+        filename:     filename,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
+      };
+
+      if (window.html2pdf) {
+        await html2pdf().set(opt).from(element).save();
+        showToast('PDFをダウンロードしました！', 'success');
+      } else {
+        window.print();
+      }
+
+      document.body.removeChild(element);
+    } catch (err) {
+      console.error('PDF生成エラー:', err);
+      showToast('PDF生成に失敗したため、印刷画面を開きます', 'error');
+      window.print();
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+        if (window.lucide) lucide.createIcons();
+      }
+    }
+  }
+
+  // --- 3. LINE共有・連絡文コピー ---
+  async function openShareTextModal() {
+    const modal = document.getElementById('share-text-modal');
+    modal.classList.remove('hidden');
+    document.getElementById('share-text-area').value = 'シフト共有テキストを生成中...';
+
+    try {
+      const res = await fetch(`/api/admin/shifts/share-text?year=${adminYear}&month=${adminMonth}`);
+      if (!res.ok) return;
+      shareTextData = await res.json();
+
+      // スタッフ選択肢を生成
+      const sel = document.getElementById('share-staff-select');
+      sel.innerHTML = '';
+      (shareTextData.by_staff || []).forEach(st => {
+        const opt = document.createElement('option');
+        opt.value = st.user_id;
+        opt.textContent = `${st.user_name} さん（出勤: ${st.days_count}日）`;
+        sel.appendChild(opt);
+      });
+
+      selectShareTab(activeShareTab);
+    } catch (e) {
+      document.getElementById('share-text-area').value = 'テキストの生成に失敗しました';
+    }
+  }
+
+  function closeShareTextModal() {
+    document.getElementById('share-text-modal').classList.add('hidden');
+  }
+
+  function selectShareTab(tab) {
+    activeShareTab = tab;
+    const btnGroup = document.getElementById('tab-share-group');
+    const btnStaff = document.getElementById('tab-share-staff');
+    const staffWrapper = document.getElementById('share-staff-select-wrapper');
+
+    if (tab === 'group') {
+      btnGroup.className = 'px-3 py-1.5 rounded-xl bg-emerald-600 text-white shadow-2xs';
+      btnStaff.className = 'px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200';
+      staffWrapper.classList.add('hidden');
+      document.getElementById('share-text-area').value = shareTextData ? shareTextData.full_text : '';
+    } else {
+      btnStaff.className = 'px-3 py-1.5 rounded-xl bg-emerald-600 text-white shadow-2xs';
+      btnGroup.className = 'px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200';
+      staffWrapper.classList.remove('hidden');
+      renderStaffShareText();
+    }
+  }
+
+  function renderStaffShareText() {
+    if (!shareTextData) return;
+    const userId = parseInt(document.getElementById('share-staff-select').value, 10);
+    const item = (shareTextData.by_staff || []).find(x => x.user_id === userId);
+    document.getElementById('share-text-area').value = item ? item.text : '';
+  }
+
+  async function copyShareText() {
+    const text = document.getElementById('share-text-area').value;
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast('クリップボードにコピーしました！LINEへ貼り付けられます✨');
+    } catch (e) {
+      const area = document.getElementById('share-text-area');
+      area.select();
+      document.execCommand('copy');
+      showToast('テキストをコピーしました');
+    }
+  }
+
+  // --- 4. 有休年5日取得義務コンプライアンス判定 ---
+  async function loadCompliance() {
+    const container = document.getElementById('compliance-summary-container');
+    try {
+      const res = await fetch(`/api/admin/compliance/paid-leave?year=${adminYear}`);
+      if (!res.ok) return;
+      const data = await res.json();
+
+      let bannerClass = 'bg-emerald-50 border-emerald-200 text-emerald-800';
+      let bannerIcon = 'shield-check';
+      let bannerMsg = '全スタッフが法定有休（年5日取得義務）を順調に消化しています';
+
+      if (data.action_required_count > 0) {
+        bannerClass = 'bg-rose-50 border-rose-200 text-rose-800';
+        bannerIcon = 'alert-triangle';
+        bannerMsg = `【要対応】年5日取得義務の未達懸念スタッフが ${data.action_required_count} 名います。計画的付与をご検討ください。`;
+      } else if (data.in_progress_count > 0) {
+        bannerClass = 'bg-amber-50 border-amber-200 text-amber-800';
+        bannerIcon = 'clock';
+        bannerMsg = `有休取得進行中（現在 ${data.in_progress_count} 名が計画的取得中）`;
+      }
+
+      let html = `
+        <div class="p-3 rounded-2xl border ${bannerClass} flex items-center space-x-2 text-xs font-bold mb-4">
+          <i data-lucide="${bannerIcon}" class="w-4 h-4 shrink-0"></i>
+          <span>${bannerMsg}</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      `;
+
+      data.staff.forEach(s => {
+        const isAchieved = s.status === 'ACHIEVED';
+        const isAction = s.status === 'ACTION_REQUIRED';
+        const statusBadge = isAchieved
+          ? '<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">達成 🟢</span>'
+          : (isAction
+            ? '<span class="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[10px] font-bold">要取得 🔴</span>'
+            : '<span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold">進行中 🟡</span>');
+
+        const barColor = isAchieved ? 'bg-emerald-500' : (isAction ? 'bg-rose-500' : 'bg-amber-500');
+
+        html += `
+          <div class="p-3 rounded-2xl border border-slate-100 bg-slate-50/50 space-y-2">
+            <div class="flex items-center justify-between">
+              <div class="font-bold text-xs text-slate-800">${s.full_name}</div>
+              ${statusBadge}
+            </div>
+            <div>
+              <div class="flex items-center justify-between text-[11px] text-slate-500 mb-1">
+                <span>取得: <strong class="text-slate-800">${s.used_days}日</strong> / 5日</span>
+                <span>有休残: <strong>${s.remaining_days}日</strong></span>
+              </div>
+              <div class="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                <div class="${barColor} h-1.5 rounded-full transition-all duration-300" style="width: ${s.legal_progress_percent}%"></div>
+              </div>
+            </div>
+            <div class="text-[10px] text-slate-500 truncate">${s.warning_message || ''}</div>
+          </div>
+        `;
+      });
+
+      html += '</div>';
+      container.innerHTML = html;
+      if (window.lucide) lucide.createIcons();
+    } catch (e) {
+      console.error(e);
     }
   }
 
