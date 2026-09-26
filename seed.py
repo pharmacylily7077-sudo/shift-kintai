@@ -47,19 +47,19 @@ INITIAL_STAFF = [
         "full_name": "山中 久美",
         "position": models.Position.CLERK,
         "employment_type": models.EmploymentType.PARTTIME,
-        "default_shift": models.ShiftType.AM,   # 午前診/午後診
+        "default_shift": models.ShiftType.FULL,
         "username": "yamanaka",
         "password": "yamanaka1234",
         "is_admin": False,
         "evaluation_color": "#1e3a8a", # 濃いめの青、ネイビーブルー
         "fixed_off_weekdays": "1,6", # 火曜・日曜休み
     },
-    # 調剤補助（赤・成長グラデーション系統）
+    # 調剤補助
     {
         "full_name": "小林 彩乃",
         "position": models.Position.ASSISTANT,
         "employment_type": models.EmploymentType.PARTTIME,
-        "default_shift": models.ShiftType.SECOND,  # 後半
+        "default_shift": models.ShiftType.FULL,
         "username": "kobayashi",
         "password": "kobayashi1234",
         "is_admin": False,
@@ -70,7 +70,7 @@ INITIAL_STAFF = [
         "full_name": "本間 まや",
         "position": models.Position.ASSISTANT,
         "employment_type": models.EmploymentType.PARTTIME,
-        "default_shift": models.ShiftType.FIRST,   # 前半
+        "default_shift": models.ShiftType.FULL,
         "username": "honma",
         "password": "honma1234",
         "is_admin": False,

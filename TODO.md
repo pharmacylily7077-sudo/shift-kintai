@@ -27,4 +27,8 @@
 - [x] 9. マイページ週間スケジュールのリアル祝日・個人定休動的同期（モック静的水曜公休バグの完全根絶）
   - 検証: `PYTHONPATH=. ./venv/bin/pytest tests/test_myroom_french.py`
 
+- [x] 10. 就業時間パターンのシンプル化（出勤か休日のみ：木曜午前・土曜午前・平日全日）
+  - 検証: `PYTHONPATH=. ./venv/bin/pytest tests/test_app.py`
+
+
 

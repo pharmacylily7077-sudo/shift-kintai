@@ -145,13 +145,12 @@ def auto_generate_shifts(
     db: Session = Depends(get_db)
 ):
     """
-    固定休日（日祝休日・火曜休み・木曜休みなど）と個別シフトルールに応じた月間一括自動生成
-    ※ 日曜・祝日は全員一斉休み
-    ※ 土曜日は全員午前診 (AM)
-    ※ 本間は木曜日午前診 (AM)
-    ※ 小林は火曜日は午前診 (AM)
-    ※ 家田、寺内、山中、本間は火曜日休み
-    ※ 小林は木曜日休み
+    就業時間体系（出勤か休日のみ）に応じた月間シフト一括自動生成
+    ※ 日曜・祝日: 全員一斉休み
+    ※ 土曜日: 出勤者全員「午前診 (AM: 9:00〜13:00)」
+    ※ 木曜日: 出勤者全員「午前だけ (AM: 9:00〜13:00)」
+    ※ 月・火・水・金: 出勤者全員「全日 (FULL: 9:00〜19:00)」
+    ※ 各スタッフの固定定休日は休日判定
     """
     _, days_in_month = calendar.monthrange(req.year, req.month)
     users = db.query(models.User).filter(models.User.is_active == True).all()

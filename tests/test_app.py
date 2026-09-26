@@ -82,18 +82,17 @@ def test_sunday_and_holidays_off_and_rules(client):
         for s in sat_shifts:
             assert s.shift_type == models.ShiftType.AM
 
-    # 新ルール2: 本間さんは木曜日「午前診 (AM)」
-    u_honma = db.query(models.User).filter(models.User.username == "honma").first()
+    # 新ルール2: 木曜日は出勤者全員「午前診 (AM)」
     for thur in [date(2026, 9, 3), date(2026, 9, 10), date(2026, 9, 17), date(2026, 9, 24)]:
-        h_shift = db.query(models.Shift).filter(models.Shift.user_id == u_honma.id, models.Shift.date == thur).first()
-        assert h_shift is not None
-        assert h_shift.shift_type == models.ShiftType.AM
+        thur_shifts = db.query(models.Shift).filter(models.Shift.date == thur).all()
+        for s in thur_shifts:
+            assert s.shift_type == models.ShiftType.AM
 
-    # 新ルール3: 小林さんは火曜日「午前診 (AM)」
-    for tue in [date(2026, 9, 1), date(2026, 9, 8), date(2026, 9, 15), date(2026, 9, 29)]:
-        k_shift = db.query(models.Shift).filter(models.Shift.user_id == u_koba.id, models.Shift.date == tue).first()
-        assert k_shift is not None
-        assert k_shift.shift_type == models.ShiftType.AM
+    # 新ルール3: その他の平日（月・火・水・金）の出勤者は全員「全日 (FULL)」
+    for mon in [date(2026, 9, 7), date(2026, 9, 14), date(2026, 9, 28)]:
+        mon_shifts = db.query(models.Shift).filter(models.Shift.date == mon).all()
+        for s in mon_shifts:
+            assert s.shift_type == models.ShiftType.FULL
 
     db.close()
 
