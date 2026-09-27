@@ -41,9 +41,9 @@ def test_update_staff_condition(admin_client):
     finally:
         db.close()
 
-    # 寺内さんの定休日に水曜日(2)を追加、時給を1600円に変更
+    # 寺内さんの定休日に水曜日(2)を追加、基本シフトをPM（午後診）、時給を1600円に変更
     payload = {
-        "default_shift": "FIRST",
+        "default_shift": "PM",
         "fixed_off_weekdays": "1,2,6", # 火・水・日
         "hourly_wage": 1600,
         "paid_leave_remaining": 8.5
@@ -52,7 +52,7 @@ def test_update_staff_condition(admin_client):
     assert res.status_code == 200
     res_data = res.json()
     assert res_data["success"] is True
-    assert res_data["default_shift"] == "FIRST"
+    assert res_data["default_shift"] == "PM"
     assert res_data["fixed_off_weekdays"] == "1,2,6"
     assert res_data["hourly_wage"] == 1600
     assert res_data["paid_leave_remaining"] == 8.5
@@ -61,7 +61,7 @@ def test_update_staff_condition(admin_client):
     res_get = admin_client.get("/api/admin/staff/conditions")
     assert res_get.status_code == 200
     updated = next(s for s in res_get.json()["staff"] if s["id"] == user_id)
-    assert updated["default_shift"] == "FIRST"
+    assert updated["default_shift"] == "PM"
     assert "水" in updated["fixed_off_labels"]
     assert updated["hourly_wage"] == 1600
 
