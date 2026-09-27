@@ -1,10 +1,17 @@
 """
 shift_rules.py - リリー薬局 シフトルール判定モジュール
-【現場の3大就業時間パターン ＋ 休日】
-1. 全日 (FULL): 9:00〜19:00 (休憩60分)
-2. 午前診 (AM): 9:00〜13:00 (休憩なし) ※木曜日・土曜日は出勤者全員午前診
-3. 午後診 (PM): 15:00〜19:00 (休憩なし)
-4. 休日 (OFF): 日曜・祝日は全員一斉休み、各スタッフ固有の定休日は休み
+1. 日曜・祝日: 休局（全員一斉休み）
+2. スタッフ固有の定休日 (fixed_off_weekdays):
+   - 三宅: 日曜(6)
+   - 家田、寺内、山中、本間: 火曜(1)、日曜(6)
+   - 小林: 木曜(3)、日曜(6)
+3. 土曜日: 出勤者全員「午前診 (AM: 9:00〜13:00)」
+4. 木曜日: 出勤者「午前だけ (AM: 9:00〜13:00)」（本間は午前診、小林は定休日）
+5. 火曜日: 小林 彩乃 は「午前診 (AM: 9:00〜13:00)」
+6. その他の出勤日: 各スタッフの個別基本シフト (default_shift)
+   - 小林 彩乃: 後半 (SECOND: 10:00〜19:00 / 休憩60分)
+   - 本間 まや: 前半 (FIRST: 9:00〜18:00 / 休憩60分)
+   - 三宅・家田・寺内・山中: 全日 (FULL: 9:00〜19:00 / 休憩60分)
 """
 from datetime import date
 from typing import Optional
@@ -30,10 +37,15 @@ def calculate_shift_type(user: models.User, d: date) -> Optional[models.ShiftTyp
     if d.weekday() == 5:
         return models.ShiftType.AM
 
-    # 4. 木曜日は出勤者全員「午前だけ (AM: 9:00〜13:00)」
+    # 4. 木曜日は出勤者「午前だけ (AM: 9:00〜13:00)」
     if d.weekday() == 3:
         return models.ShiftType.AM
 
-    # 5. その他の出勤日 (月・火・水・金) は全員「全日 (FULL: 9:00〜19:00)」
+    # 5. 小林 彩乃 は火曜日「午前診 (AM: 9:00〜13:00)」
+    if user.username == "kobayashi" and d.weekday() == 1:
+        return models.ShiftType.AM
+
+    # 6. その他の出勤日 (月・水・金など通常出勤日) は各スタッフの基本シフト
+    # (小林: 後半 10:00〜19:00 / 本間: 前半 9:00〜18:00 / 三宅・家田・寺内・山中: 全日 9:00〜19:00)
     return user.default_shift if user.default_shift else models.ShiftType.FULL
 

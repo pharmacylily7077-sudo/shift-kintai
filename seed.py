@@ -59,7 +59,7 @@ INITIAL_STAFF = [
         "full_name": "小林 彩乃",
         "position": models.Position.ASSISTANT,
         "employment_type": models.EmploymentType.PARTTIME,
-        "default_shift": models.ShiftType.FULL,
+        "default_shift": models.ShiftType.SECOND, # 後半 (10:00〜19:00)
         "username": "kobayashi",
         "password": "kobayashi1234",
         "is_admin": False,
@@ -70,7 +70,7 @@ INITIAL_STAFF = [
         "full_name": "本間 まや",
         "position": models.Position.ASSISTANT,
         "employment_type": models.EmploymentType.PARTTIME,
-        "default_shift": models.ShiftType.FULL,
+        "default_shift": models.ShiftType.FIRST,  # 前半 (9:00〜18:00)
         "username": "honma",
         "password": "honma1234",
         "is_admin": False,
@@ -105,10 +105,11 @@ def seed_data():
                 db.add(user)
             else:
                 existing.full_name = staff["full_name"]
+                existing.default_shift = staff["default_shift"]
                 existing.evaluation_color = staff.get("evaluation_color")
                 existing.fixed_off_weekdays = staff.get("fixed_off_weekdays", "6")
         db.commit()
-        print("✅ 初期データ投入完了（評価カラー同期済み）")
+        print("✅ 初期データ投入完了（スタッフ個別シフト＆評価カラー同期済み）")
 
         # 月間シフトが未生成の場合、今月と翌月のシフトを自動初期生成
         from datetime import date
