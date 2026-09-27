@@ -78,7 +78,8 @@ class ScheduleRecordRequest(BaseModel):
 class LeaveApplyRequest(BaseModel):
     date: str  # YYYY-MM-DD
     request_type: str = "ADVANCE"  # URGENT / ADVANCE
-    leave_type: str = "OFF"  # OFF / PAID_LEAVE
+    leave_type: str = "OFF"  # OFF / PAID_LEAVE / OVERTIME
+    overtime_hours: Optional[float] = None
     reason: Optional[str] = ""
 
 
@@ -146,8 +147,10 @@ def get_my_dashboard(
         models.Shift.user_id == current_user.id,
         models.Shift.date >= start_of_month,
         models.Shift.date <= end_of_month,
-        models.Shift.shift_type == models.ShiftType.OFF,
-        models.Shift.note.like("%有休%")
+        (
+            (models.Shift.shift_type == models.ShiftType.PAID_LEAVE) |
+            ((models.Shift.shift_type == models.ShiftType.OFF) & models.Shift.note.like("%有休%"))
+        )
     ).count()
 
     # 5. 体調サマリー（直近7日）
@@ -492,19 +495,26 @@ def get_budget_records(
     ]
 
 
-# --- 5. 休暇申請（スタッフから管理者へ直送・他スタッフ完全遮断） ---
+# --- 5. 休暇・残業申請（スタッフから管理者へ直送・他スタッフ完全遮断） ---
 @router.post("/leave-requests")
 def submit_leave_request(
     data: LeaveApplyRequest,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    if data.leave_type == "OVERTIME":
+        if not data.reason or not data.reason.strip():
+            raise HTTPException(status_code=400, detail="残業申請には理由の入力が必須です。")
+        if not data.overtime_hours or data.overtime_hours <= 0:
+            raise HTTPException(status_code=400, detail="残業予定時間を指定してください。")
+
     target_date = date.fromisoformat(data.date)
     item = models.LeaveRequest(
         user_id=current_user.id,
         date=target_date,
         request_type=data.request_type,
         leave_type=data.leave_type,
+        overtime_hours=data.overtime_hours if data.leave_type == "OVERTIME" else None,
         reason=data.reason or "",
         status=models.RequestStatus.PENDING
     )
@@ -528,6 +538,7 @@ def get_my_leave_requests(
             "date": it.date.isoformat(),
             "request_type": it.request_type,
             "leave_type": it.leave_type,
+            "overtime_hours": it.overtime_hours,
             "reason": it.reason,
             "status": it.status.value,
             "admin_note": it.admin_note,

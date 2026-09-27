@@ -56,6 +56,13 @@ def init_db():
         except Exception:
             pass
 
+        # leave_requests.overtime_hours の追加 (残業時間)
+        try:
+            conn.execute(text("ALTER TABLE leave_requests ADD COLUMN overtime_hours FLOAT"))
+            conn.commit()
+        except Exception:
+            pass
+
 def get_db():
     db = SessionLocal()
     try:

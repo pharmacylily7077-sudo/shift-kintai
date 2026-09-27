@@ -279,7 +279,9 @@
       <button onclick="setModalShift('SECOND')" class="py-2.5 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-bold text-xs">後半 (10-19)</button>
       <button onclick="setModalShift('AM')" class="py-2.5 rounded-xl border border-cyan-200 bg-cyan-50 hover:bg-cyan-100 text-cyan-800 font-bold text-xs">午前診 (9-13)</button>
       <button onclick="setModalShift('PM')" class="py-2.5 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-800 font-bold text-xs">午後診 (15-19)</button>
-      <button onclick="setModalShift('OFF')" class="py-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold text-xs">休み (OFF)</button>
+      <button onclick="setModalShift('OFF')" class="py-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold text-xs">公休 (OFF)</button>
+      <button onclick="setModalShift('PAID_LEAVE')" class="py-2.5 rounded-xl border border-teal-300 bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold text-xs">🏖️ 有休</button>
+      <button onclick="setModalShift('HOPE_OFF')" class="py-2.5 rounded-xl border border-fuchsia-300 bg-fuchsia-50 hover:bg-fuchsia-100 text-fuchsia-800 font-bold text-xs">☕ 希休</button>
     </div>
     <button onclick="closeModal()" class="w-full py-2 rounded-xl text-xs text-slate-400 hover:text-slate-600">キャンセル</button>
   </div>
@@ -571,6 +573,8 @@
     AM: 'bg-cyan-100 text-cyan-800',
     PM: 'bg-purple-100 text-purple-800',
     OFF: 'bg-slate-50 text-slate-300',
+    PAID_LEAVE: 'bg-teal-100 text-teal-800 font-black border border-teal-300',
+    HOPE_OFF: 'bg-fuchsia-100 text-fuchsia-800 font-black border border-fuchsia-300',
   };
 
   const SHIFT_TEXT = {
@@ -580,6 +584,8 @@
     AM: '午前',
     PM: '午後',
     OFF: '休',
+    PAID_LEAVE: '有休',
+    HOPE_OFF: '希休',
   };
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -766,19 +772,50 @@
         const isPending = r.status === 'PENDING';
         const card = document.createElement('div');
         card.className = 'p-3 rounded-2xl border border-slate-100 bg-slate-50 space-y-2';
+
+        let typeBadge = '';
+        let typeDetail = '';
+        if (r.leave_type === 'PAID_LEAVE') {
+          typeBadge = '<span class="px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 font-bold text-[10px]">🏖️ 有給休暇</span>';
+          typeDetail = '有休（給与満額支給・残日数1日消化）';
+        } else if (r.leave_type === 'OVERTIME') {
+          typeBadge = `<span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 font-bold text-[10px]">⏰ 残業申請 (${r.overtime_hours || 0}時間)</span>`;
+          typeDetail = `残業時間: ${r.overtime_hours || 0}時間`;
+        } else {
+          typeBadge = '<span class="px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-bold text-[10px]">☕ 希望休</span>';
+          typeDetail = '希望休（公休）';
+        }
+
+        let statusBadge = '';
+        if (r.status === 'APPROVED') {
+          statusBadge = '<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">承認済</span>';
+        } else if (r.status === 'REJECTED') {
+          statusBadge = '<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800">却下</span>';
+        } else {
+          statusBadge = '<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">承認待ち</span>';
+        }
+
         card.innerHTML = `
           <div class="flex items-center justify-between">
-            <div class="font-bold text-xs text-slate-800">${r.user_name} (${r.position_label})</div>
-            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${isPending ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-600'}">${r.status}</span>
+            <div class="font-bold text-xs text-slate-800 flex items-center space-x-1.5">
+              <span>${r.user_name}</span>
+              <span class="text-[10px] text-slate-400 font-normal">(${r.position_label})</span>
+              ${typeBadge}
+            </div>
+            ${statusBadge}
           </div>
-          <div class="text-xs text-slate-600">
-            <span class="font-bold">${r.date}</span> (${r.leave_type === 'PAID_LEAVE' ? '有給休暇' : '希望休'})
-            ${r.reason ? `<div class="text-slate-500 mt-0.5">理由: ${r.reason}</div>` : ''}
+          <div class="text-xs text-slate-600 bg-white p-2 rounded-xl border border-slate-100">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-slate-800">${r.date}</span>
+              <span class="text-[11px] text-slate-500">${typeDetail}</span>
+            </div>
+            ${r.reason ? `<div class="text-slate-700 mt-1 font-medium"><span class="text-slate-400 text-[10px]">理由:</span> ${r.reason}</div>` : ''}
+            ${r.admin_note ? `<div class="text-amber-800 mt-1 text-[11px]"><span class="text-slate-400 text-[10px]">管理者返信:</span> ${r.admin_note}</div>` : ''}
           </div>
           ${isPending ? `
           <div class="flex items-center justify-end space-x-2 pt-1">
-            <button onclick="reviewLeave(${r.id}, 'REJECTED')" class="px-2.5 py-1 rounded-lg bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 text-[11px] font-bold">却下</button>
-            <button onclick="reviewLeave(${r.id}, 'APPROVED')" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold shadow-2xs">承認する</button>
+            <button onclick="reviewLeave(${r.id}, 'REJECTED')" class="px-2.5 py-1 rounded-lg bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 text-[11px] font-bold transition">却下</button>
+            <button onclick="reviewLeave(${r.id}, 'APPROVED')" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold shadow-2xs transition">承認する</button>
           </div>` : ''}
         `;
         box.appendChild(card);

@@ -25,7 +25,9 @@ class ShiftType(str, enum.Enum):
     PM = "PM"           # 午後診 15:00-19:00
     FIRST = "FIRST"     # 前半 9:00-18:00
     SECOND = "SECOND"   # 後半 10:00-19:00
-    OFF = "OFF"         # 休み
+    OFF = "OFF"         # 休み (公休)
+    PAID_LEAVE = "PAID_LEAVE" # 有給休暇
+    HOPE_OFF = "HOPE_OFF"     # 希望休 (公休)
 
 
 class ClockStatus(str, enum.Enum):
@@ -132,6 +134,8 @@ class Shift(Base):
             ShiftType.FIRST: "9:00〜18:00",
             ShiftType.SECOND: "10:00〜19:00",
             ShiftType.OFF: "休み",
+            ShiftType.PAID_LEAVE: "有給休暇",
+            ShiftType.HOPE_OFF: "希望休",
         }
         return ranges.get(self.shift_type, "")
 
@@ -144,6 +148,8 @@ class Shift(Base):
             ShiftType.FIRST: "前半",
             ShiftType.SECOND: "後半",
             ShiftType.OFF: "休み",
+            ShiftType.PAID_LEAVE: "有休",
+            ShiftType.HOPE_OFF: "希休",
         }
         return labels.get(self.shift_type, "")
 
@@ -205,7 +211,8 @@ class LeaveRequest(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     date = Column(Date, nullable=False)
     request_type = Column(String(20), default="ADVANCE")  # URGENT/ADVANCE
-    leave_type = Column(String(20), default="OFF")         # OFF/PAID_LEAVE
+    leave_type = Column(String(20), default="OFF")         # OFF/PAID_LEAVE/OVERTIME
+    overtime_hours = Column(Float, nullable=True)          # 残業時間 (例: 1.0, 1.5, 2.0)
     reason = Column(Text, default="")
     status = Column(SAEnum(RequestStatus), default=RequestStatus.PENDING)
     admin_note = Column(Text, default="")

@@ -146,25 +146,82 @@ def auto_generate_shifts(
 ):
     """
     就業時間体系（出勤か休日のみ）に応じた月間シフト一括自動生成
-    ※ 日曜・祝日: 全員一斉休み
-    ※ 土曜日: 出勤者全員「午前診 (AM: 9:00〜13:00)」
-    ※ 木曜日: 出勤者全員「午前だけ (AM: 9:00〜13:00)」
-    ※ 月・火・水・金: 出勤者全員「全日 (FULL: 9:00〜19:00)」
-    ※ 各スタッフの固定定休日は休日判定
+    ※ 承認済みの有休・希望休申請、および既存の有休・希望休シフトは上書き消去せず完全保護・維持されます。
     """
     _, days_in_month = calendar.monthrange(req.year, req.month)
+    start_date = date(req.year, req.month, 1)
+    end_date = date(req.year, req.month, days_in_month)
     users = db.query(models.User).filter(models.User.is_active == True).all()
 
+    # 1. 保護対象の (user_id, date) を収集
+    # (a) 承認済みの休暇申請 (有休または希望休)
+    approved_leaves = db.query(models.LeaveRequest).filter(
+        models.LeaveRequest.date >= start_date,
+        models.LeaveRequest.date <= end_date,
+        models.LeaveRequest.status == models.RequestStatus.APPROVED,
+        models.LeaveRequest.leave_type.in_(["PAID_LEAVE", "OFF"])
+    ).all()
+    protected_shifts = {}  # (user_id, date) -> shift_type_enum
+    for al in approved_leaves:
+        st = models.ShiftType.PAID_LEAVE if al.leave_type == "PAID_LEAVE" else models.ShiftType.HOPE_OFF
+        protected_shifts[(al.user_id, al.date)] = st
+
+    # (b) 既存シフトに登録済みの有休または希望休
+    existing_special = db.query(models.Shift).filter(
+        models.Shift.date >= start_date,
+        models.Shift.date <= end_date,
+        models.Shift.shift_type.in_([models.ShiftType.PAID_LEAVE, models.ShiftType.HOPE_OFF])
+    ).all()
+    for es in existing_special:
+        if (es.user_id, es.date) not in protected_shifts:
+            protected_shifts[(es.user_id, es.date)] = es.shift_type
+
+    # 2. 上書きモードの場合、保護対象外のシフトのみを削除
     if req.overwrite:
-        db.query(models.Shift).filter(
-            models.Shift.date >= date(req.year, req.month, 1),
-            models.Shift.date <= date(req.year, req.month, days_in_month)
-        ).delete()
+        month_shifts = db.query(models.Shift).filter(
+            models.Shift.date >= start_date,
+            models.Shift.date <= end_date
+        ).all()
+        for s in month_shifts:
+            if (s.user_id, s.date) not in protected_shifts:
+                db.delete(s)
+        db.flush()
 
     generated_count = 0
+    # 3. 日付×ユーザーごとのシフト生成ループ
     for day in range(1, days_in_month + 1):
         d = date(req.year, req.month, day)
         for u in users:
+            pair = (u.id, d)
+            if pair in protected_shifts:
+                # 保護対象: 既存の有休・希望休シフトを確認し、無ければ作成
+                existing_shift = db.query(models.Shift).filter(
+                    models.Shift.user_id == u.id,
+                    models.Shift.date == d
+                ).first()
+                target_type = protected_shifts[pair]
+                if not existing_shift:
+                    shift = models.Shift(
+                        user_id=u.id,
+                        date=d,
+                        shift_type=target_type,
+                        note="有休" if target_type == models.ShiftType.PAID_LEAVE else "希望休"
+                    )
+                    db.add(shift)
+                    generated_count += 1
+                elif existing_shift.shift_type != target_type:
+                    existing_shift.shift_type = target_type
+                # 自動生成による上書きはスキップ！
+                continue
+
+            # 保護対象でない場合: 既存シフトがなければ自動判定
+            existing_shift = db.query(models.Shift).filter(
+                models.Shift.user_id == u.id,
+                models.Shift.date == d
+            ).first()
+            if existing_shift:
+                continue
+
             st = calculate_shift_type(u, d)
             if st is None:
                 continue
@@ -182,7 +239,7 @@ def auto_generate_shifts(
     return {
         "success": True,
         "generated_count": generated_count,
-        "message": f"{req.year}年{req.month}月の一括シフトを作成しました（{generated_count}件）"
+        "message": f"{req.year}年{req.month}月の一括シフトを作成しました（{generated_count}件・承認済み休日保持）"
     }
 
 
@@ -191,7 +248,7 @@ def get_leave_requests(
     admin: models.User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
-    """届いた休暇申請一覧（管理者のみ閲覧可能・他スタッフからは遮断）"""
+    """届いた休暇・残業申請一覧（管理者のみ閲覧可能・他スタッフからは遮断）"""
     reqs = db.query(models.LeaveRequest).order_by(models.LeaveRequest.created_at.desc()).all()
     return [
         {
@@ -202,6 +259,7 @@ def get_leave_requests(
             "date": r.date.isoformat(),
             "request_type": r.request_type,
             "leave_type": r.leave_type,
+            "overtime_hours": r.overtime_hours,
             "reason": r.reason,
             "status": r.status.value,
             "admin_note": r.admin_note,
@@ -218,7 +276,7 @@ def review_leave_request(
     admin: models.User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
-    """休暇申請の個別承認・却下（プライベート通知対応）"""
+    """休暇・残業申請の個別承認・却下（プライベート通知対応＆カレンダー即時反映）"""
     item = db.query(models.LeaveRequest).filter(models.LeaveRequest.id == req_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="申請が見つかりません")
@@ -227,18 +285,62 @@ def review_leave_request(
     item.status = new_status
     item.admin_note = data.admin_note or ""
 
-    # 承認された場合はシフトを自動でOFFまたは有休に更新
+    target_user = db.query(models.User).filter(models.User.id == item.user_id).first()
+
+    # 承認時のシフト反映＆有休残日数計算
     if new_status == models.RequestStatus.APPROVED:
         existing_shift = db.query(models.Shift).filter(
             models.Shift.user_id == item.user_id,
             models.Shift.date == item.date
         ).first()
-        if existing_shift:
-            db.delete(existing_shift)
+
+        if item.leave_type == "PAID_LEAVE":
+            if existing_shift:
+                existing_shift.shift_type = models.ShiftType.PAID_LEAVE
+                existing_shift.note = f"有休 ({item.reason})" if item.reason else "有休"
+            else:
+                new_shift = models.Shift(
+                    user_id=item.user_id,
+                    date=item.date,
+                    shift_type=models.ShiftType.PAID_LEAVE,
+                    note=f"有休 ({item.reason})" if item.reason else "有休"
+                )
+                db.add(new_shift)
+
+            # 有休残日数を1日消化（下限0.0）
+            if target_user:
+                target_user.paid_leave_remaining = max(0.0, (target_user.paid_leave_remaining or 0.0) - 1.0)
+
+        elif item.leave_type == "OFF":
+            if existing_shift:
+                existing_shift.shift_type = models.ShiftType.HOPE_OFF
+                existing_shift.note = f"希望休 ({item.reason})" if item.reason else "希望休"
+            else:
+                new_shift = models.Shift(
+                    user_id=item.user_id,
+                    date=item.date,
+                    shift_type=models.ShiftType.HOPE_OFF,
+                    note=f"希望休 ({item.reason})" if item.reason else "希望休"
+                )
+                db.add(new_shift)
+
+        elif item.leave_type == "OVERTIME":
+            # 残業申請の承認: 勤務シフトのnoteに残業承認を記録
+            if existing_shift:
+                ot_text = f"[残業承認: {item.overtime_hours}h]"
+                if ot_text not in (existing_shift.note or ""):
+                    existing_shift.note = (existing_shift.note + " " + ot_text).strip()
 
     # スタッフへの個別メッセージを自動送信してプライベート通知
     status_label = "承認" if new_status == models.RequestStatus.APPROVED else "却下"
-    msg_content = f"【申請の確認】{item.date.strftime('%m月%d日')}の休暇申請が{status_label}されました。"
+    if item.leave_type == "PAID_LEAVE":
+        type_str = "有給休暇申請"
+    elif item.leave_type == "OVERTIME":
+        type_str = f"残業申請（{item.overtime_hours or ''}時間）"
+    else:
+        type_str = "希望休申請"
+
+    msg_content = f"【申請の確認】{item.date.strftime('%m月%d日')}の{type_str}が{status_label}されました。"
     if data.admin_note:
         msg_content += f"\nメッセージ: {data.admin_note}"
 

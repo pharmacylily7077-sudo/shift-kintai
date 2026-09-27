@@ -101,7 +101,9 @@
     PM: '午後診',
     FIRST: '前半',
     SECOND: '後半',
-    OFF: '休み'
+    OFF: '休み',
+    PAID_LEAVE: '有休',
+    HOPE_OFF: '希休'
   };
 
   async function loadCalendar() {
@@ -175,11 +177,22 @@
       day.shifts.forEach(s => {
         if (s.shift_type === 'OFF') return;
         const badge = document.createElement('div');
-        badge.className = 'text-[10px] sm:text-xs font-bold px-1 py-0.5 rounded-lg mb-0.5 truncate text-white leading-tight';
-        badge.style.backgroundColor = s.color;
         const shiftName = s.shift_label || SHIFT_LABELS[s.shift_type] || '';
-        badge.title = `${s.full_name}: ${shiftName} (${s.time_range})`;
-        badge.textContent = `${s.full_name} (${shiftName})`;
+
+        if (s.shift_type === 'PAID_LEAVE') {
+          badge.className = 'text-[10px] sm:text-xs font-bold px-1 py-0.5 rounded-lg mb-0.5 truncate leading-tight bg-teal-600 text-white shadow-2xs';
+          badge.title = `${s.full_name}: 有給休暇`;
+          badge.textContent = `${s.full_name} (有休)`;
+        } else if (s.shift_type === 'HOPE_OFF') {
+          badge.className = 'text-[10px] sm:text-xs font-bold px-1 py-0.5 rounded-lg mb-0.5 truncate leading-tight bg-purple-600 text-white shadow-2xs';
+          badge.title = `${s.full_name}: 希望休`;
+          badge.textContent = `${s.full_name} (希休)`;
+        } else {
+          badge.className = 'text-[10px] sm:text-xs font-bold px-1 py-0.5 rounded-lg mb-0.5 truncate text-white leading-tight';
+          badge.style.backgroundColor = s.color;
+          badge.title = `${s.full_name}: ${shiftName} (${s.time_range})`;
+          badge.textContent = `${s.full_name} (${shiftName})`;
+        }
         cell.appendChild(badge);
       });
 
