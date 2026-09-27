@@ -63,6 +63,7 @@ class User(Base):
     hourly_wage = Column(Integer, default=0)
     paid_leave_remaining = Column(Float, default=0.0)
     fixed_off_weekdays = Column(String(50), default="6") # "6" = 日曜休み (0=月 ... 6=日)
+    weekly_shift_pattern = Column(Text, nullable=True) # 曜日別シフトJSON (例: {"0":"SECOND","1":"FIRST",...})
 
     created_at = Column(DateTime, default=datetime.utcnow)
 

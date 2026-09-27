@@ -49,6 +49,13 @@ def init_db():
         except Exception:
             pass
 
+        # users.weekly_shift_pattern の追加 (曜日別シフトJSON)
+        try:
+            conn.execute(text("ALTER TABLE users ADD COLUMN weekly_shift_pattern TEXT"))
+            conn.commit()
+        except Exception:
+            pass
+
 def get_db():
     db = SessionLocal()
     try:

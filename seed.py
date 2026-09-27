@@ -19,6 +19,7 @@ INITIAL_STAFF = [
         "is_admin": True,
         "evaluation_color": "#064e3b", # 黒に近い緑
         "fixed_off_weekdays": "6", # 日曜休み
+        "weekly_shift_pattern": '{"0":"FULL","1":"FULL","2":"FULL","3":"FULL","4":"FULL","5":"AM","6":"OFF"}',
     },
     {
         "full_name": "家田 知美",
@@ -30,6 +31,7 @@ INITIAL_STAFF = [
         "is_admin": False,
         "evaluation_color": "#10b981", # 綺麗な緑、エメラルドグリーン
         "fixed_off_weekdays": "1,6", # 火曜・日曜休み
+        "weekly_shift_pattern": '{"0":"FULL","1":"OFF","2":"FULL","3":"FULL","4":"FULL","5":"AM","6":"OFF"}',
     },
     # 調剤事務（青系統）
     {
@@ -42,6 +44,7 @@ INITIAL_STAFF = [
         "is_admin": False,
         "evaluation_color": "#2563eb", # ロイヤルブルー
         "fixed_off_weekdays": "1,6", # 火曜・日曜休み
+        "weekly_shift_pattern": '{"0":"FULL","1":"OFF","2":"FULL","3":"FULL","4":"FULL","5":"AM","6":"OFF"}',
     },
     {
         "full_name": "山中 久美",
@@ -53,6 +56,7 @@ INITIAL_STAFF = [
         "is_admin": False,
         "evaluation_color": "#1e3a8a", # 濃いめの青、ネイビーブルー
         "fixed_off_weekdays": "1,6", # 火曜・日曜休み
+        "weekly_shift_pattern": '{"0":"FULL","1":"OFF","2":"FULL","3":"FULL","4":"FULL","5":"AM","6":"OFF"}',
     },
     # 調剤補助
     {
@@ -65,6 +69,7 @@ INITIAL_STAFF = [
         "is_admin": False,
         "evaluation_color": "#8b5cf6", # ビビッドなバイオレット
         "fixed_off_weekdays": "3,6", # 木曜・日曜休み
+        "weekly_shift_pattern": '{"0":"SECOND","1":"FIRST","2":"SECOND","3":"OFF","4":"SECOND","5":"AM","6":"OFF"}',
     },
     {
         "full_name": "本間 まや",
@@ -76,6 +81,7 @@ INITIAL_STAFF = [
         "is_admin": False,
         "evaluation_color": "#f43f5e", # 赤に近いピンク
         "fixed_off_weekdays": "1,6", # 火曜・日曜休み
+        "weekly_shift_pattern": '{"0":"FIRST","1":"OFF","2":"FIRST","3":"AM","4":"FIRST","5":"AM","6":"OFF"}',
     },
 ]
 
@@ -100,6 +106,7 @@ def seed_data():
                     is_admin=staff["is_admin"],
                     evaluation_color=staff.get("evaluation_color"),
                     fixed_off_weekdays=staff.get("fixed_off_weekdays", "6"),
+                    weekly_shift_pattern=staff.get("weekly_shift_pattern"),
                     is_active=True,
                 )
                 db.add(user)
@@ -108,8 +115,9 @@ def seed_data():
                 existing.default_shift = staff["default_shift"]
                 existing.evaluation_color = staff.get("evaluation_color")
                 existing.fixed_off_weekdays = staff.get("fixed_off_weekdays", "6")
+                existing.weekly_shift_pattern = staff.get("weekly_shift_pattern")
         db.commit()
-        print("✅ 初期データ投入完了（スタッフ個別シフト＆評価カラー同期済み）")
+        print("✅ 初期データ投入完了（スタッフ個別シフト＆曜日別パターン同期済み）")
 
         # 月間シフトが未生成の場合、今月と翌月のシフトを自動初期生成
         from datetime import date

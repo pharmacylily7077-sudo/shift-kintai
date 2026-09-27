@@ -477,6 +477,7 @@ class StaffConditionItem(BaseModel):
     shift_time_range: str
     fixed_off_weekdays: str  # 例: "1,6" (火曜・日曜)
     fixed_off_labels: List[str]  # 例: ["火", "日"]
+    weekly_shift_pattern: Optional[str] = None # 曜日別シフトJSON
     color: str
     hourly_wage: int
     paid_leave_remaining: float
@@ -488,6 +489,7 @@ class StaffConditionsResponse(BaseModel):
 class StaffConditionUpdateRequest(BaseModel):
     default_shift: Optional[str] = None  # FULL / FIRST / SECOND / AM / PM
     fixed_off_weekdays: Optional[str] = None  # "1,6" 等
+    weekly_shift_pattern: Optional[str] = None # 曜日別シフトJSON (例: {"0":"SECOND","1":"FIRST",...})
     hourly_wage: Optional[int] = None
     paid_leave_remaining: Optional[float] = None
     employment_type: Optional[str] = None  # FULLTIME / PARTTIME

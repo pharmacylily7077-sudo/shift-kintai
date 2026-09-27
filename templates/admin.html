@@ -348,11 +348,94 @@
     <form onsubmit="handleSaveCondition(event)" class="space-y-4">
       <input type="hidden" id="cond-user-id">
 
-      <!-- 基本シフト区分（現場パターン） -->
+      <!-- 曜日別 勤務シフト設定（月〜土） -->
+      <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-2.5">
+        <div class="flex items-center justify-between">
+          <label class="block text-xs font-black text-slate-800">📅 曜日別 通常勤務シフト設定</label>
+          <span class="text-[10px] text-blue-600 font-bold">※ここで自由に設定可能！</span>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          <!-- 月曜 -->
+          <div class="bg-white p-2 rounded-xl border border-slate-200">
+            <span class="block text-[11px] font-bold text-slate-700 mb-1">月曜日</span>
+            <select id="cond-dow-0" class="w-full text-xs font-bold p-1.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-blue-500">
+              <option value="FULL">全日 (9-19)</option>
+              <option value="FIRST">前半 (9-18)</option>
+              <option value="SECOND">後半 (10-19)</option>
+              <option value="AM">午前診 (9-13)</option>
+              <option value="PM">午後診 (15-19)</option>
+              <option value="OFF">休み (公休)</option>
+            </select>
+          </div>
+          <!-- 火曜 -->
+          <div class="bg-white p-2 rounded-xl border border-slate-200">
+            <span class="block text-[11px] font-bold text-amber-600 mb-1">火曜日</span>
+            <select id="cond-dow-1" class="w-full text-xs font-bold p-1.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-blue-500">
+              <option value="FULL">全日 (9-19)</option>
+              <option value="FIRST">前半 (9-18)</option>
+              <option value="SECOND">後半 (10-19)</option>
+              <option value="AM">午前診 (9-13)</option>
+              <option value="PM">午後診 (15-19)</option>
+              <option value="OFF">休み (公休)</option>
+            </select>
+          </div>
+          <!-- 水曜 -->
+          <div class="bg-white p-2 rounded-xl border border-slate-200">
+            <span class="block text-[11px] font-bold text-slate-700 mb-1">水曜日</span>
+            <select id="cond-dow-2" class="w-full text-xs font-bold p-1.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-blue-500">
+              <option value="FULL">全日 (9-19)</option>
+              <option value="FIRST">前半 (9-18)</option>
+              <option value="SECOND">後半 (10-19)</option>
+              <option value="AM">午前診 (9-13)</option>
+              <option value="PM">午後診 (15-19)</option>
+              <option value="OFF">休み (公休)</option>
+            </select>
+          </div>
+          <!-- 木曜 -->
+          <div class="bg-white p-2 rounded-xl border border-slate-200">
+            <span class="block text-[11px] font-bold text-purple-600 mb-1">木曜日</span>
+            <select id="cond-dow-3" class="w-full text-xs font-bold p-1.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-blue-500">
+              <option value="FULL">全日 (9-19)</option>
+              <option value="FIRST">前半 (9-18)</option>
+              <option value="SECOND">後半 (10-19)</option>
+              <option value="AM">午前診 (9-13)</option>
+              <option value="PM">午後診 (15-19)</option>
+              <option value="OFF">休み (公休)</option>
+            </select>
+          </div>
+          <!-- 金曜 -->
+          <div class="bg-white p-2 rounded-xl border border-slate-200">
+            <span class="block text-[11px] font-bold text-slate-700 mb-1">金曜日</span>
+            <select id="cond-dow-4" class="w-full text-xs font-bold p-1.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-blue-500">
+              <option value="FULL">全日 (9-19)</option>
+              <option value="FIRST">前半 (9-18)</option>
+              <option value="SECOND">後半 (10-19)</option>
+              <option value="AM">午前診 (9-13)</option>
+              <option value="PM">午後診 (15-19)</option>
+              <option value="OFF">休み (公休)</option>
+            </select>
+          </div>
+          <!-- 土曜 -->
+          <div class="bg-white p-2 rounded-xl border border-slate-200">
+            <span class="block text-[11px] font-bold text-blue-600 mb-1">土曜日</span>
+            <select id="cond-dow-5" class="w-full text-xs font-bold p-1.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-blue-500">
+              <option value="FULL">全日 (9-19)</option>
+              <option value="FIRST">前半 (9-18)</option>
+              <option value="SECOND">後半 (10-19)</option>
+              <option value="AM">午前診 (9-13)</option>
+              <option value="PM">午後診 (15-19)</option>
+              <option value="OFF">休み (公休)</option>
+            </select>
+          </div>
+        </div>
+        <p class="text-[10px] text-slate-400">※ 日曜・国民の祝日は休局（一斉休み）です。ここで設定した曜日シフトが月間シフト自動生成時にそのまま反映されます。</p>
+      </div>
+
+      <!-- 基本シフト区分（予備） -->
       <div>
-        <label class="block text-xs font-bold text-slate-700 mb-1">基本シフト区分（通常勤務パターン）</label>
+        <label class="block text-xs font-bold text-slate-700 mb-1">基本シフト区分（通常勤務形態）</label>
         <select id="cond-default-shift" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none">
-          <option value="FULL">全日 (9:00〜19:00 / 休憩60分) ※木曜・土曜は午前診</option>
+          <option value="FULL">全日 (9:00〜19:00 / 休憩60分)</option>
           <option value="FIRST">前半 (9:00〜18:00 / 休憩60分)</option>
           <option value="SECOND">後半 (10:00〜19:00 / 休憩60分)</option>
           <option value="AM">午前診 (9:00〜13:00 / 休憩なし)</option>
@@ -360,9 +443,9 @@
         </select>
       </div>
 
-      <!-- 固定定休日 -->
+      <!-- 固定定休日（曜日別シフトで「休み」を選択すると自動連動） -->
       <div>
-        <label class="block text-xs font-bold text-slate-700 mb-1">固定定休日（チェックした曜日は公休判定）</label>
+        <label class="block text-xs font-bold text-slate-700 mb-1">固定定休日（公休判定曜日）</label>
         <div class="grid grid-cols-7 gap-1 text-center">
           <label class="p-2 rounded-xl border border-slate-200 text-xs font-bold cursor-pointer hover:bg-slate-50 flex flex-col items-center">
             <span>月</span>
@@ -390,10 +473,9 @@
           </label>
           <label class="p-2 rounded-xl border border-slate-200 text-xs font-bold cursor-pointer hover:bg-slate-50 flex flex-col items-center">
             <span class="text-rose-500">日</span>
-            <input type="checkbox" name="off-weekday" value="6" class="mt-1">
+            <input type="checkbox" name="off-weekday" value="6" class="mt-1" checked disabled>
           </label>
         </div>
-        <p class="text-[10px] text-slate-400 mt-1">※ 日曜・祝日および土曜午前診、木曜/火曜午前診の特例は自動制御されます</p>
       </div>
 
       <!-- 設定時給 & 有休残日数 -->
@@ -742,6 +824,24 @@
         const offText = s.fixed_off_labels.length > 0 ? s.fixed_off_labels.join('・') + '曜日' : 'なし（毎日出勤可能）';
         const card = document.createElement('div');
         card.className = 'p-4 rounded-2xl border border-slate-100 bg-slate-50/70 hover:bg-slate-50 transition space-y-3';
+        
+        let dowBadgeHtml = '';
+        if (s.weekly_shift_pattern) {
+          try {
+            const wp = JSON.parse(s.weekly_shift_pattern);
+            const dows = ['月','火','水','木','金','土'];
+            const stShort = { FULL:'全', FIRST:'前', SECOND:'後', AM:'AM', PM:'PM', OFF:'休' };
+            dowBadgeHtml = '<div class="grid grid-cols-6 gap-0.5 text-center text-[9px] font-bold mt-1 bg-slate-100 p-1 rounded-lg">';
+            dows.forEach((d, idx) => {
+              const val = wp[String(idx)] || 'OFF';
+              const isOff = val === 'OFF';
+              const col = isOff ? 'text-slate-400 bg-white/40' : 'text-blue-700 bg-white shadow-2xs';
+              dowBadgeHtml += `<div class="p-0.5 rounded ${col}"><div class="text-[8px] text-slate-400">${d}</div><div>${stShort[val] || val}</div></div>`;
+            });
+            dowBadgeHtml += '</div>';
+          } catch(e){}
+        }
+
         card.innerHTML = `
           <div class="flex items-center justify-between">
             <div class="flex items-center space-x-2">
@@ -765,6 +865,7 @@
               <span class="text-slate-400">固定定休日:</span>
               <span class="font-bold text-amber-700">${offText}</span>
             </div>
+            ${dowBadgeHtml}
             <div class="flex items-center justify-between text-[11px]">
               <span class="text-slate-400">時給 / 有休残:</span>
               <span class="font-medium text-slate-700">¥${s.hourly_wage.toLocaleString()} / <span class="font-bold text-teal-700">${s.paid_leave_remaining}日</span></span>
@@ -775,7 +876,7 @@
             <button onclick="openConditionModal(${s.id})"
               class="w-full py-1.5 rounded-xl bg-white border border-slate-200 hover:border-blue-400 hover:text-blue-600 text-[11px] font-bold text-slate-700 shadow-2xs transition flex items-center justify-center space-x-1">
               <i data-lucide="edit-3" class="w-3 h-3"></i>
-              <span>勤務条件を変更</span>
+              <span>曜日別シフト・条件を変更</span>
             </button>
           </div>
         `;
@@ -791,19 +892,57 @@
     const s = staffConditionsData.find(x => x.id === userId);
     if (!s) return;
     document.getElementById('cond-user-id').value = s.id;
-    document.getElementById('cond-modal-name').textContent = `${s.full_name} さんの勤務条件`;
+    document.getElementById('cond-modal-name').textContent = `${s.full_name} さんの勤務条件・シフト設定`;
     document.getElementById('cond-modal-color-dot').style.backgroundColor = s.color;
     document.getElementById('cond-default-shift').value = s.default_shift;
     document.getElementById('cond-hourly-wage').value = s.hourly_wage;
     document.getElementById('cond-paid-leave').value = s.paid_leave_remaining;
 
+    // 曜日別シフトの復元
+    let pattern = {};
+    if (s.weekly_shift_pattern) {
+      try {
+        pattern = JSON.parse(s.weekly_shift_pattern);
+      } catch (e) {}
+    }
     const offDays = (s.fixed_off_weekdays || '').split(',').map(x => x.trim());
+
+    for (let dow = 0; dow <= 5; dow++) {
+      const el = document.getElementById(`cond-dow-${dow}`);
+      if (el) {
+        if (pattern[String(dow)]) {
+          el.value = pattern[String(dow)];
+        } else if (offDays.includes(String(dow))) {
+          el.value = 'OFF';
+        } else if (dow === 5) {
+          el.value = 'AM';
+        } else {
+          el.value = s.default_shift || 'FULL';
+        }
+      }
+    }
+
     document.querySelectorAll('input[name="off-weekday"]').forEach(cb => {
       cb.checked = offDays.includes(cb.value);
     });
 
     document.getElementById('condition-edit-modal').classList.remove('hidden');
   }
+
+  // 曜日別セレクトの変更時に定休日チェックボックスと連動
+  document.addEventListener('DOMContentLoaded', () => {
+    for (let dow = 0; dow <= 5; dow++) {
+      const el = document.getElementById(`cond-dow-${dow}`);
+      if (el) {
+        el.addEventListener('change', () => {
+          const cb = document.querySelector(`input[name="off-weekday"][value="${dow}"]`);
+          if (cb) {
+            cb.checked = (el.value === 'OFF');
+          }
+        });
+      }
+    }
+  });
 
   function closeConditionModal() {
     document.getElementById('condition-edit-modal').classList.add('hidden');
@@ -816,10 +955,20 @@
     const hourlyWage = parseInt(document.getElementById('cond-hourly-wage').value || '0', 10);
     const paidLeave = parseFloat(document.getElementById('cond-paid-leave').value || '0');
 
+    // 曜日別シフトパターンの収集
+    const weeklyPattern = {};
     const checkedDays = [];
-    document.querySelectorAll('input[name="off-weekday"]:checked').forEach(cb => {
-      checkedDays.push(cb.value);
-    });
+    for (let dow = 0; dow <= 5; dow++) {
+      const el = document.getElementById(`cond-dow-${dow}`);
+      const val = el ? el.value : 'FULL';
+      weeklyPattern[String(dow)] = val;
+      if (val === 'OFF') {
+        checkedDays.push(String(dow));
+      }
+    }
+    weeklyPattern["6"] = "OFF"; // 日曜は休局
+    checkedDays.push("6");
+
     const fixedOffWeekdays = checkedDays.join(',');
 
     try {
@@ -828,13 +977,14 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           default_shift: defaultShift,
+          weekly_shift_pattern: JSON.stringify(weeklyPattern),
           fixed_off_weekdays: fixedOffWeekdays,
           hourly_wage: hourlyWage,
           paid_leave_remaining: paidLeave
         })
       });
       if (res.ok) {
-        showToast('勤務条件を保存しました');
+        showToast('勤務条件（曜日別シフト設定）を保存しました');
         closeConditionModal();
         loadStaffConditions();
         loadAdminShifts();

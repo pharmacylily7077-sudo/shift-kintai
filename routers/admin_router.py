@@ -312,6 +312,7 @@ def get_staff_conditions(
             shift_time_range=u.shift_time_range,
             fixed_off_weekdays=u.fixed_off_weekdays or "6",
             fixed_off_labels=off_labels,
+            weekly_shift_pattern=u.weekly_shift_pattern,
             color=u.evaluation_color or u.position_color,
             hourly_wage=u.hourly_wage or 0,
             paid_leave_remaining=u.paid_leave_remaining or 0.0,
@@ -327,7 +328,7 @@ def update_staff_condition(
     admin: models.User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
-    """スタッフ個人の勤務条件（シフト区分・定休曜日・時給・有休）を更新保存"""
+    """スタッフ個人の勤務条件（シフト区分・曜日別シフト・定休曜日・時給・有休）を更新保存"""
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="スタッフが見つかりません")
@@ -338,7 +339,19 @@ def update_staff_condition(
         except ValueError:
             raise HTTPException(status_code=400, detail="無効なシフト区分です")
 
-    if data.fixed_off_weekdays is not None:
+    if data.weekly_shift_pattern is not None:
+        user.weekly_shift_pattern = data.weekly_shift_pattern
+        # 曜日別シフトで OFF になっている曜日を fixed_off_weekdays に自動同期
+        import json
+        try:
+            pattern = json.loads(data.weekly_shift_pattern)
+            if isinstance(pattern, dict):
+                off_w = [str(k) for k, v in pattern.items() if v == "OFF"]
+                if off_w:
+                    user.fixed_off_weekdays = ",".join(sorted(off_w))
+        except Exception:
+            pass
+    elif data.fixed_off_weekdays is not None:
         user.fixed_off_weekdays = data.fixed_off_weekdays
 
     if data.hourly_wage is not None:
@@ -361,10 +374,11 @@ def update_staff_condition(
         "user_id": user.id,
         "full_name": user.full_name,
         "default_shift": user.default_shift.value,
+        "weekly_shift_pattern": user.weekly_shift_pattern,
         "fixed_off_weekdays": user.fixed_off_weekdays,
         "hourly_wage": user.hourly_wage,
         "paid_leave_remaining": user.paid_leave_remaining,
-        "message": f"{user.full_name}さんの勤務条件を更新しました"
+        "message": f"{user.full_name}さんの勤務条件（曜日別シフト設定）を更新しました"
     }
 
 

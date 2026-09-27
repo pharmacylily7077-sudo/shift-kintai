@@ -37,11 +37,28 @@ def calculate_shift_type(user: models.User, d: date) -> Optional[models.ShiftTyp
     指定されたスタッフと日付に対するシフト種別を判定して返す。
     休日の場合は None を返す。
     """
-    # 1. 日曜・祝日は全員一斉休み
+    # 1. 日曜・祝日は全員一斉休み（休局）
     if is_sunday_or_holiday(d):
         return None
 
-    # 2. 定休日判定 (0=月, 1=火, 2=水, 3=木, 4=金, 5=土, 6=日)
+    # 2. スタッフ固有の曜日別シフトパターン (weekly_shift_pattern) が設定されている場合【最優先】
+    if user.weekly_shift_pattern:
+        import json
+        try:
+            pattern = json.loads(user.weekly_shift_pattern) if isinstance(user.weekly_shift_pattern, str) else user.weekly_shift_pattern
+            if isinstance(pattern, dict):
+                st_val = pattern.get(str(d.weekday()))
+                if st_val == "OFF":
+                    return None
+                elif st_val:
+                    try:
+                        return models.ShiftType(st_val)
+                    except ValueError:
+                        pass
+        except Exception:
+            pass
+
+    # 3. 定休日判定 (0=月, 1=火, 2=水, 3=木, 4=金, 5=土, 6=日)
     weekday_str = str(d.weekday())
     off_days = [x.strip() for x in (user.fixed_off_weekdays or "6").split(",")]
     if weekday_str in off_days:
