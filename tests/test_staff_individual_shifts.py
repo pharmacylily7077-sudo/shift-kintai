@@ -23,44 +23,52 @@ def test_all_staff_shift_spec_integrity():
         assert users["honma"].default_shift == models.ShiftType.FIRST      # 前半 (9:00〜18:00)
 
         # 2. 小林彩乃さんの勤務判定
-        # 火曜日: 午前診 (AM)
-        assert calculate_shift_type(users["kobayashi"], date(2026, 9, 1)) == models.ShiftType.AM
-        # 水曜日: 後半 (SECOND)
+        # 火曜日: 前半 (FIRST: 9:00〜18:00) ※火曜は前半と全日
+        assert calculate_shift_type(users["kobayashi"], date(2026, 9, 1)) == models.ShiftType.FIRST
+        # 水曜日: 後半 (SECOND: 10:00〜19:00)
         assert calculate_shift_type(users["kobayashi"], date(2026, 9, 2)) == models.ShiftType.SECOND
         # 木曜日: 定休日 (None)
         assert calculate_shift_type(users["kobayashi"], date(2026, 9, 3)) is None
-        # 金曜日: 後半 (SECOND)
+        # 金曜日: 後半 (SECOND: 10:00〜19:00)
         assert calculate_shift_type(users["kobayashi"], date(2026, 9, 4)) == models.ShiftType.SECOND
-        # 土曜日: 午前診 (AM)
+        # 土曜日: 午前診 (AM: 9:00〜13:00)
         assert calculate_shift_type(users["kobayashi"], date(2026, 9, 5)) == models.ShiftType.AM
         # 日曜日: 定休日 (None)
         assert calculate_shift_type(users["kobayashi"], date(2026, 9, 6)) is None
-        # 月曜日: 後半 (SECOND)
+        # 月曜日: 後半 (SECOND: 10:00〜19:00)
         assert calculate_shift_type(users["kobayashi"], date(2026, 9, 7)) == models.ShiftType.SECOND
 
         # 3. 本間まやさんの勤務判定
         # 火曜日: 定休日 (None)
         assert calculate_shift_type(users["honma"], date(2026, 9, 1)) is None
-        # 水曜日: 前半 (FIRST)
+        # 水曜日: 前半 (FIRST: 9:00〜18:00)
         assert calculate_shift_type(users["honma"], date(2026, 9, 2)) == models.ShiftType.FIRST
-        # 木曜日: 午前診 (AM)
+        # 木曜日: 午前診 (AM: 9:00〜13:00) ※木曜は午前と全日
         assert calculate_shift_type(users["honma"], date(2026, 9, 3)) == models.ShiftType.AM
-        # 金曜日: 前半 (FIRST)
+        # 金曜日: 前半 (FIRST: 9:00〜18:00)
         assert calculate_shift_type(users["honma"], date(2026, 9, 4)) == models.ShiftType.FIRST
-        # 土曜日: 午前診 (AM)
+        # 土曜日: 午前診 (AM: 9:00〜13:00)
         assert calculate_shift_type(users["honma"], date(2026, 9, 5)) == models.ShiftType.AM
         # 日曜日: 定休日 (None)
         assert calculate_shift_type(users["honma"], date(2026, 9, 6)) is None
-        # 月曜日: 前半 (FIRST)
+        # 月曜日: 前半 (FIRST: 9:00〜18:00)
         assert calculate_shift_type(users["honma"], date(2026, 9, 7)) == models.ShiftType.FIRST
 
-        # 4. 木曜日の出勤者全員午前診判定
-        assert calculate_shift_type(users["miyake"], date(2026, 9, 3)) == models.ShiftType.AM
-        assert calculate_shift_type(users["ieda"], date(2026, 9, 3)) == models.ShiftType.AM
-        assert calculate_shift_type(users["terauchi"], date(2026, 9, 3)) == models.ShiftType.AM
-        assert calculate_shift_type(users["yamanaka"], date(2026, 9, 3)) == models.ShiftType.AM
-        assert calculate_shift_type(users["honma"], date(2026, 9, 3)) == models.ShiftType.AM
-        assert calculate_shift_type(users["kobayashi"], date(2026, 9, 3)) is None # 木曜定休
+        # 4. 木曜日の「午前と全日」判定
+        assert calculate_shift_type(users["miyake"], date(2026, 9, 3)) == models.ShiftType.FULL # 全日
+        assert calculate_shift_type(users["ieda"], date(2026, 9, 3)) == models.ShiftType.FULL   # 全日
+        assert calculate_shift_type(users["terauchi"], date(2026, 9, 3)) == models.ShiftType.FULL # 全日
+        assert calculate_shift_type(users["yamanaka"], date(2026, 9, 3)) == models.ShiftType.FULL # 全日
+        assert calculate_shift_type(users["honma"], date(2026, 9, 3)) == models.ShiftType.AM    # 午前診
+        assert calculate_shift_type(users["kobayashi"], date(2026, 9, 3)) is None              # 木曜定休
+
+        # 4-2. 火曜日の「前半と全日」判定
+        assert calculate_shift_type(users["miyake"], date(2026, 9, 1)) == models.ShiftType.FULL   # 全日
+        assert calculate_shift_type(users["kobayashi"], date(2026, 9, 1)) == models.ShiftType.FIRST # 前半
+        assert calculate_shift_type(users["ieda"], date(2026, 9, 1)) is None                    # 火曜定休
+        assert calculate_shift_type(users["terauchi"], date(2026, 9, 1)) is None                # 火曜定休
+        assert calculate_shift_type(users["yamanaka"], date(2026, 9, 1)) is None                # 火曜定休
+        assert calculate_shift_type(users["honma"], date(2026, 9, 1)) is None                   # 火曜定休
 
         # 5. 土曜日の出勤者全員午前診判定
         for u in users.values():

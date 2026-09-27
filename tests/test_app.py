@@ -82,17 +82,32 @@ def test_sunday_and_holidays_off_and_rules(client):
         for s in sat_shifts:
             assert s.shift_type == models.ShiftType.AM
 
-    # 新ルール2: 木曜日は出勤者全員「午前診 (AM)」(小林さんは木曜定休、本間さんや三宅さん等はAM)
+    # 新ルール2: 木曜日は「午前と全日」(本間さんはAM、三宅・家田・寺内・山中は全日FULL、小林さんは木曜定休)
     for thur in [date(2026, 9, 3), date(2026, 9, 10), date(2026, 9, 17), date(2026, 9, 24)]:
-        thur_shifts = db.query(models.Shift).filter(models.Shift.date == thur).all()
-        for s in thur_shifts:
-            assert s.shift_type == models.ShiftType.AM
+        # 本間まや: 午前診 (AM)
+        u_honma = db.query(models.User).filter(models.User.username == "honma").first()
+        h_shift = db.query(models.Shift).filter(models.Shift.user_id == u_honma.id, models.Shift.date == thur).first()
+        assert h_shift is not None
+        assert h_shift.shift_type == models.ShiftType.AM
 
-    # 新ルール3: 小林彩乃さんは火曜日「午前診 (AM)」
+        # 三宅智之: 全日 (FULL)
+        u_miyake = db.query(models.User).filter(models.User.username == "miyake").first()
+        m_shift = db.query(models.Shift).filter(models.Shift.user_id == u_miyake.id, models.Shift.date == thur).first()
+        assert m_shift is not None
+        assert m_shift.shift_type == models.ShiftType.FULL
+
+    # 新ルール3: 火曜日は「前半と全日」(小林彩乃さんは前半FIRST、三宅智之さんは全日FULL、他4名は火曜定休)
     for tue in [date(2026, 9, 1), date(2026, 9, 8), date(2026, 9, 15), date(2026, 9, 29)]:
+        # 小林彩乃: 前半 (FIRST)
         k_shift = db.query(models.Shift).filter(models.Shift.user_id == u_koba.id, models.Shift.date == tue).first()
         assert k_shift is not None
-        assert k_shift.shift_type == models.ShiftType.AM
+        assert k_shift.shift_type == models.ShiftType.FIRST
+
+        # 三宅智之: 全日 (FULL)
+        u_miyake = db.query(models.User).filter(models.User.username == "miyake").first()
+        m_shift = db.query(models.Shift).filter(models.Shift.user_id == u_miyake.id, models.Shift.date == tue).first()
+        assert m_shift is not None
+        assert m_shift.shift_type == models.ShiftType.FULL
 
     # 新ルール4: 平日通常出勤日の個別シフト検証 (小林: 後半 SECOND, 本間: 前半 FIRST, 他: 全日 FULL)
     u_honma = db.query(models.User).filter(models.User.username == "honma").first()
