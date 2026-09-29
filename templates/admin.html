@@ -20,6 +20,10 @@
           <i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-500"></i>
           <span>シフト表</span>
         </a>
+        <button onclick="openAdminOvertimeModal()" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-bold transition flex items-center space-x-1 shadow-xs">
+          <i data-lucide="key-round" class="w-3.5 h-3.5"></i>
+          <span>🔐 パスワード残業申請</span>
+        </button>
         <button onclick="openShareTextModal()" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition flex items-center space-x-1 shadow-xs">
           <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
           <span>💬 LINE共有</span>
@@ -212,14 +216,14 @@
     <!-- 5. スタッフへのプライベート個別連絡 & 休暇申請確認 -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       
-      <!-- 休暇申請の確認パネル -->
-      <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-100 space-y-4">
+      <!-- 個別休暇・有休・残業申請の確認パネル -->
+      <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-100 space-y-4" id="admin-leave-requests-panel">
         <div class="flex items-center justify-between border-b border-slate-50 pb-3">
           <div class="flex items-center space-x-2">
-            <span class="text-lg">🏖️</span>
+            <span class="text-lg">🏖️⏰</span>
             <div>
-              <h3 class="font-bold text-slate-900 text-sm">個別休暇・有休申請の確認</h3>
-              <p class="text-[11px] text-slate-400">他スタッフには見えないプライベート処理</p>
+              <h3 class="font-bold text-slate-900 text-sm">個別休暇・有休・残業申請の確認（管理者承認制）</h3>
+              <p class="text-[11px] text-slate-400">残業理由・内容を確認して承認。承認後にシフト・通知へ即時反映</p>
             </div>
           </div>
           <button onclick="loadLeaveRequests()" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400">
@@ -494,12 +498,112 @@
         </div>
       </div>
 
+      <!-- パスワード再設定（任意） -->
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">ログインパスワード（変更する場合のみ入力）</label>
+        <input type="password" id="cond-password" placeholder="変更しない場合は空欄のまま"
+          class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        <p class="text-[10px] text-slate-400 mt-0.5">※ 4文字以上で新しいパスワードに変更されます</p>
+      </div>
+
       <div class="flex items-center space-x-2 pt-2">
         <button type="button" onclick="closeConditionModal()"
           class="w-1/3 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50">キャンセル</button>
         <button type="submit"
           class="w-2/3 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition">
           勤務条件を保存する
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 🔐 パスワード残業申請モーダル -->
+<div id="admin-overtime-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+  <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+      <div class="flex items-center space-x-2">
+        <div class="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
+          <i data-lucide="key-round" class="w-4 h-4"></i>
+        </div>
+        <div>
+          <h3 class="font-black text-slate-900 text-sm">🔐 パスワード残業申請</h3>
+          <p class="text-[11px] text-slate-400">店舗端末からスタッフ本人確認を経て残業内容を申請・管理者が承認</p>
+        </div>
+      </div>
+      <button onclick="closeAdminOvertimeModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 font-bold transition">✕</button>
+    </div>
+
+    <form onsubmit="handleAdminOvertimeSubmit(event)" class="space-y-3.5">
+      <!-- スタッフ選択 -->
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">対象スタッフ <span class="text-rose-500">*</span></label>
+        <select id="admin-ot-user" required class="w-full px-3 py-2 rounded-xl border border-amber-200 text-xs font-bold text-slate-800 bg-amber-50/20 focus:ring-2 focus:ring-amber-500 focus:outline-none">
+          <option value="">スタッフを選択してください</option>
+        </select>
+      </div>
+
+      <!-- パスワード入力（本人認証） -->
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">本人確認パスワード <span class="text-rose-500">*</span></label>
+        <div class="relative">
+          <input type="password" id="admin-ot-password" required placeholder="スタッフのパスワード（または管理者PW）"
+            class="w-full px-3 py-2 pr-10 rounded-xl border border-amber-200 text-xs font-semibold focus:ring-2 focus:ring-amber-500 focus:outline-none bg-white">
+          <button type="button" onclick="toggleAdminOtPassword()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs">
+            <i data-lucide="eye" id="admin-ot-eye-icon" class="w-4 h-4"></i>
+          </button>
+        </div>
+        <p class="text-[10px] text-slate-400 mt-1">※ なりすまし防止のため、スタッフ本人のパスワード（または管理者のパスワード）を照合します</p>
+      </div>
+
+      <!-- 日付 & 残業時間 -->
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">残業日付 <span class="text-rose-500">*</span></label>
+          <input type="date" id="admin-ot-date" required
+            class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold focus:ring-2 focus:ring-amber-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">残業予定時間 <span class="text-rose-500">*</span></label>
+          <select id="admin-ot-hours" required
+            class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            <option value="0.5">30分 (0.5時間)</option>
+            <option value="1.0" selected>1時間 (1.0時間)</option>
+            <option value="1.5">1時間30分 (1.5時間)</option>
+            <option value="2.0">2時間 (2.0時間)</option>
+            <option value="2.5">2時間30分 (2.5時間)</option>
+            <option value="3.0">3時間 (3.0時間)</option>
+            <option value="4.0">4時間 (4.0時間)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 残業内容・理由 -->
+      <div>
+        <div class="flex items-center justify-between mb-1">
+          <label class="block text-xs font-bold text-slate-700">残業内容・理由 <span class="text-rose-500">*</span></label>
+          <span class="text-[10px] text-slate-400">タップで自動入力</span>
+        </div>
+        <!-- 定型ボタングループ -->
+        <div class="flex flex-wrap gap-1.5 mb-2">
+          <button type="button" onclick="setAdminOvertimeReason('急患対応・処方箋集中のため')" class="text-[10px] px-2 py-1 rounded-lg bg-amber-100/70 text-amber-900 hover:bg-amber-200 font-semibold transition">急患・処方箋集中</button>
+          <button type="button" onclick="setAdminOvertimeReason('調剤監査・混雑対応のため')" class="text-[10px] px-2 py-1 rounded-lg bg-amber-100/70 text-amber-900 hover:bg-amber-200 font-semibold transition">監査・調剤混雑</button>
+          <button type="button" onclick="setAdminOvertimeReason('薬歴記入・疑義照会対応のため')" class="text-[10px] px-2 py-1 rounded-lg bg-amber-100/70 text-amber-900 hover:bg-amber-200 font-semibold transition">薬歴・疑義照会</button>
+          <button type="button" onclick="setAdminOvertimeReason('月末棚卸・薬品発注業務のため')" class="text-[10px] px-2 py-1 rounded-lg bg-amber-100/70 text-amber-900 hover:bg-amber-200 font-semibold transition">棚卸・発注業務</button>
+          <button type="button" onclick="setAdminOvertimeReason('レセプト点検・集計締め作業のため')" class="text-[10px] px-2 py-1 rounded-lg bg-amber-100/70 text-amber-900 hover:bg-amber-200 font-semibold transition">レセプト点検・締め</button>
+        </div>
+        <textarea id="admin-ot-reason" rows="2" required placeholder="残業内容や発生理由を具体的に記入してください（管理者が確認・承認します）"
+          class="w-full px-3 py-2 rounded-xl border border-amber-200 text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none"></textarea>
+      </div>
+
+      <!-- 送信ボタン -->
+      <div class="flex items-center space-x-2 pt-2">
+        <button type="button" onclick="closeAdminOvertimeModal()"
+          class="w-1/3 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50">キャンセル</button>
+        <button type="submit" id="btn-admin-ot-submit"
+          class="w-2/3 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-xs shadow-md transition flex items-center justify-center space-x-1.5">
+          <i data-lucide="send" class="w-3.5 h-3.5"></i>
+          <span>残業内容を送信して申請する</span>
         </button>
       </div>
     </form>
@@ -726,15 +830,127 @@
 
   function populateStaffSelect(users) {
     const sel = document.getElementById('msg-to-user');
-    sel.innerHTML = '<option value="">選択してください</option>';
+    const otSel = document.getElementById('admin-ot-user');
+    if (sel) sel.innerHTML = '<option value="">選択してください</option>';
+    if (otSel) otSel.innerHTML = '<option value="">スタッフを選択してください</option>';
     users.forEach(u => {
       if (!u.is_admin) {
-        const opt = document.createElement('option');
-        opt.value = u.id;
-        opt.textContent = `${u.full_name} (${u.position_label})`;
-        sel.appendChild(opt);
+        if (sel) {
+          const opt = document.createElement('option');
+          opt.value = u.id;
+          opt.textContent = `${u.full_name} (${u.position_label})`;
+          sel.appendChild(opt);
+        }
+        if (otSel) {
+          const otOpt = document.createElement('option');
+          otOpt.value = u.id;
+          otOpt.textContent = `${u.full_name} (${u.position_label})`;
+          otSel.appendChild(otOpt);
+        }
       }
     });
+  }
+
+  // --- 🔐 パスワード残業申請モーダル制御 ---
+  function openAdminOvertimeModal() {
+    const modal = document.getElementById('admin-overtime-modal');
+    if (!modal) return;
+    
+    // 日付を当日に初期化
+    const today = new Date().toISOString().slice(0, 10);
+    const dateInput = document.getElementById('admin-ot-date');
+    if (dateInput) dateInput.value = today;
+
+    // パスワード・理由をクリア
+    const pwInput = document.getElementById('admin-ot-password');
+    if (pwInput) pwInput.value = '';
+    const reasonInput = document.getElementById('admin-ot-reason');
+    if (reasonInput) reasonInput.value = '';
+
+    // スタッフ選択ドロップダウンの再確認
+    if (adminData && adminData.users) {
+      populateStaffSelect(adminData.users);
+    }
+
+    modal.classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function closeAdminOvertimeModal() {
+    const modal = document.getElementById('admin-overtime-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  function toggleAdminOtPassword() {
+    const pwInput = document.getElementById('admin-ot-password');
+    if (!pwInput) return;
+    pwInput.type = pwInput.type === 'password' ? 'text' : 'password';
+  }
+
+  function setAdminOvertimeReason(text) {
+    const area = document.getElementById('admin-ot-reason');
+    if (!area) return;
+    if (area.value) {
+      area.value += ' ' + text;
+    } else {
+      area.value = text;
+    }
+  }
+
+  async function handleAdminOvertimeSubmit(e) {
+    e.preventDefault();
+    const userId = parseInt(document.getElementById('admin-ot-user').value, 10);
+    const password = document.getElementById('admin-ot-password').value;
+    const date = document.getElementById('admin-ot-date').value;
+    const hours = parseFloat(document.getElementById('admin-ot-hours').value);
+    const reason = document.getElementById('admin-ot-reason').value.trim();
+
+    if (!userId) {
+      showToast('対象スタッフを選択してください', 'error');
+      return;
+    }
+    if (!password) {
+      showToast('本人確認パスワードを入力してください', 'error');
+      return;
+    }
+    if (!reason) {
+      showToast('残業内容・理由を記入してください', 'error');
+      return;
+    }
+
+    const btn = document.getElementById('btn-admin-ot-submit');
+    if (btn) btn.disabled = true;
+
+    try {
+      const res = await fetch('/api/admin/overtime-apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: userId,
+          password: password,
+          date: date,
+          overtime_hours: hours,
+          reason: reason
+        })
+      });
+
+      const resData = await res.json();
+      if (res.ok) {
+        showToast(resData.message || '残業申請を受け付けました');
+        closeAdminOvertimeModal();
+        await loadLeaveRequests();
+        const panel = document.getElementById('admin-leave-requests-panel');
+        if (panel) {
+          panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else {
+        showToast(resData.detail || '残業申請に失敗しました', 'error');
+      }
+    } catch (err) {
+      showToast('エラーが発生しました', 'error');
+    } finally {
+      if (btn) btn.disabled = false;
+    }
   }
 
   async function handleSendMessage(e) {
@@ -775,12 +991,14 @@
 
         let typeBadge = '';
         let typeDetail = '';
+        let isOvertime = r.leave_type === 'OVERTIME';
+
         if (r.leave_type === 'PAID_LEAVE') {
           typeBadge = '<span class="px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 font-bold text-[10px]">🏖️ 有給休暇</span>';
           typeDetail = '有休（給与満額支給・残日数1日消化）';
-        } else if (r.leave_type === 'OVERTIME') {
-          typeBadge = `<span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 font-bold text-[10px]">⏰ 残業申請 (${r.overtime_hours || 0}時間)</span>`;
-          typeDetail = `残業時間: ${r.overtime_hours || 0}時間`;
+        } else if (isOvertime) {
+          typeBadge = `<span class="px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-[10px] shadow-2xs">⏰ 残業申請 (${r.overtime_hours || 0}h)</span>`;
+          typeDetail = `残業時間: ${r.overtime_hours || 0} 時間`;
         } else {
           typeBadge = '<span class="px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-bold text-[10px]">☕ 希望休</span>';
           typeDetail = '希望休（公休）';
@@ -792,8 +1010,26 @@
         } else if (r.status === 'REJECTED') {
           statusBadge = '<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800">却下</span>';
         } else {
-          statusBadge = '<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">承認待ち</span>';
+          statusBadge = '<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 animate-pulse">承認待ち</span>';
         }
+
+        let reasonContent = '';
+        if (r.reason) {
+          if (isOvertime) {
+            reasonContent = `
+              <div class="mt-2 p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-slate-800">
+                <div class="text-[10px] font-bold text-amber-800 flex items-center space-x-1 mb-1">
+                  <span>📝 残業内容・理由:</span>
+                </div>
+                <div class="text-xs font-bold text-slate-900 leading-relaxed">${r.reason}</div>
+              </div>
+            `;
+          } else {
+            reasonContent = `<div class="text-slate-700 mt-1 font-medium"><span class="text-slate-400 text-[10px]">理由:</span> ${r.reason}</div>`;
+          }
+        }
+
+        card.className = `p-3 rounded-2xl border ${isOvertime && isPending ? 'border-amber-300 bg-amber-50/30 ring-1 ring-amber-200' : 'border-slate-100 bg-slate-50'} space-y-2 transition-all`;
 
         card.innerHTML = `
           <div class="flex items-center justify-between">
@@ -804,18 +1040,21 @@
             </div>
             ${statusBadge}
           </div>
-          <div class="text-xs text-slate-600 bg-white p-2 rounded-xl border border-slate-100">
+          <div class="text-xs text-slate-600 bg-white p-2.5 rounded-xl border border-slate-100">
             <div class="flex items-center justify-between">
               <span class="font-bold text-slate-800">${r.date}</span>
-              <span class="text-[11px] text-slate-500">${typeDetail}</span>
+              <span class="text-[11px] font-semibold ${isOvertime ? 'text-amber-800' : 'text-slate-500'}">${typeDetail}</span>
             </div>
-            ${r.reason ? `<div class="text-slate-700 mt-1 font-medium"><span class="text-slate-400 text-[10px]">理由:</span> ${r.reason}</div>` : ''}
-            ${r.admin_note ? `<div class="text-amber-800 mt-1 text-[11px]"><span class="text-slate-400 text-[10px]">管理者返信:</span> ${r.admin_note}</div>` : ''}
+            ${reasonContent}
+            ${r.admin_note ? `<div class="text-amber-800 mt-1.5 text-[11px] bg-slate-50 p-1.5 rounded-lg border border-slate-100"><span class="text-slate-400 text-[10px] font-bold">管理者返信:</span> ${r.admin_note}</div>` : ''}
           </div>
           ${isPending ? `
           <div class="flex items-center justify-end space-x-2 pt-1">
             <button onclick="reviewLeave(${r.id}, 'REJECTED')" class="px-2.5 py-1 rounded-lg bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 text-[11px] font-bold transition">却下</button>
-            <button onclick="reviewLeave(${r.id}, 'APPROVED')" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold shadow-2xs transition">承認する</button>
+            <button onclick="reviewLeave(${r.id}, 'APPROVED')" class="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold shadow-xs transition flex items-center space-x-1">
+              <i data-lucide="check" class="w-3 h-3"></i>
+              <span>承認する</span>
+            </button>
           </div>` : ''}
         `;
         box.appendChild(card);
@@ -934,6 +1173,9 @@
     document.getElementById('cond-default-shift').value = s.default_shift;
     document.getElementById('cond-hourly-wage').value = s.hourly_wage;
     document.getElementById('cond-paid-leave').value = s.paid_leave_remaining;
+    if (document.getElementById('cond-password')) {
+      document.getElementById('cond-password').value = '';
+    }
 
     // 曜日別シフトの復元
     let pattern = {};
@@ -991,6 +1233,7 @@
     const defaultShift = document.getElementById('cond-default-shift').value;
     const hourlyWage = parseInt(document.getElementById('cond-hourly-wage').value || '0', 10);
     const paidLeave = parseFloat(document.getElementById('cond-paid-leave').value || '0');
+    const newPassword = document.getElementById('cond-password') ? document.getElementById('cond-password').value.trim() : '';
 
     // 曜日別シフトパターンの収集
     const weeklyPattern = {};
@@ -1008,17 +1251,22 @@
 
     const fixedOffWeekdays = checkedDays.join(',');
 
+    const payload = {
+      default_shift: defaultShift,
+      weekly_shift_pattern: JSON.stringify(weeklyPattern),
+      fixed_off_weekdays: fixedOffWeekdays,
+      hourly_wage: hourlyWage,
+      paid_leave_remaining: paidLeave
+    };
+    if (newPassword) {
+      payload.new_password = newPassword;
+    }
+
     try {
       const res = await fetch(`/api/admin/staff/${userId}/condition`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          default_shift: defaultShift,
-          weekly_shift_pattern: JSON.stringify(weeklyPattern),
-          fixed_off_weekdays: fixedOffWeekdays,
-          hourly_wage: hourlyWage,
-          paid_leave_remaining: paidLeave
-        })
+        body: JSON.stringify(payload)
       });
       if (res.ok) {
         showToast('勤務条件（曜日別シフト設定）を保存しました');

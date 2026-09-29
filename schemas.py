@@ -493,4 +493,14 @@ class StaffConditionUpdateRequest(BaseModel):
     hourly_wage: Optional[int] = None
     paid_leave_remaining: Optional[float] = None
     employment_type: Optional[str] = None  # FULLTIME / PARTTIME
+    new_password: Optional[str] = None
+
+
+class AdminOvertimeApplyRequest(BaseModel):
+    user_id: int
+    password: str
+    date: str  # YYYY-MM-DD
+    overtime_hours: float
+    reason: str
+
 

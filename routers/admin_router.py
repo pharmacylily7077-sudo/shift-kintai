@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 import models
 import schemas
-from auth import get_admin_user
+from auth import get_admin_user, verify_password, hash_password
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -356,6 +356,62 @@ def review_leave_request(
     return {"success": True, "status": item.status.value}
 
 
+@router.post("/overtime-apply")
+def admin_apply_overtime(
+    data: schemas.AdminOvertimeApplyRequest,
+    admin: models.User = Depends(get_admin_user),
+    db: Session = Depends(get_db)
+):
+    """管理者メニューからのパスワード認証付き残業申請（店舗端末等での本人確認申請）"""
+    target_user = db.query(models.User).filter(models.User.id == data.user_id).first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="対象スタッフが見つかりません")
+
+    # 本人確認: スタッフ本人のパスワード、またはログイン中管理者のパスワードを検証
+    is_valid_staff = verify_password(data.password, target_user.password_hash)
+    is_valid_admin = verify_password(data.password, admin.password_hash)
+    if not (is_valid_staff or is_valid_admin):
+        raise HTTPException(status_code=400, detail="パスワードが正しくありません")
+
+    # 残業時間チェック
+    if not data.overtime_hours or data.overtime_hours <= 0:
+        raise HTTPException(status_code=400, detail="残業時間を正しく選択してください")
+
+    # 残業内容・理由チェック
+    reason = (data.reason or "").strip()
+    if not reason:
+        raise HTTPException(status_code=400, detail="残業内容（理由）を必ず記載してください")
+
+    try:
+        req_date = datetime.strptime(data.date, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="日付形式が正しくありません (YYYY-MM-DD)")
+
+    # 新規 LeaveRequest 作成（承認待ち PENDING）
+    leave_req = models.LeaveRequest(
+        user_id=target_user.id,
+        date=req_date,
+        request_type="FULL",
+        leave_type="OVERTIME",
+        overtime_hours=data.overtime_hours,
+        reason=reason,
+        status=models.RequestStatus.PENDING,
+    )
+    db.add(leave_req)
+    db.commit()
+    db.refresh(leave_req)
+
+    return {
+        "success": True,
+        "message": f"{target_user.full_name} さんの残業申請（{data.overtime_hours}時間）を受け付けました。承認待ちリストに登録されました。",
+        "request_id": leave_req.id,
+        "user_name": target_user.full_name,
+        "date": leave_req.date.isoformat(),
+        "overtime_hours": leave_req.overtime_hours,
+        "reason": leave_req.reason,
+    }
+
+
 @router.post("/messages")
 def send_private_message(
     data: MessageSendRequest,
@@ -467,6 +523,11 @@ def update_staff_condition(
             user.employment_type = models.EmploymentType(data.employment_type)
         except ValueError:
             pass
+
+    if data.new_password:
+        pw_str = data.new_password.strip()
+        if len(pw_str) >= 4:
+            user.password_hash = hash_password(pw_str)
 
     db.commit()
     db.refresh(user)
