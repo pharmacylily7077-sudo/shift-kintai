@@ -46,6 +46,7 @@ class BatchFillTimeRecordsRequest(BaseModel):
     overwrite_existing: bool = False  # False: 未打刻のみ補完, True: 当月すべて再生成
     in_offset_minutes: Optional[int] = None   # 出勤: 就業時間より5分刻み調節 (例: 0, -5, -10, -15...)
     out_offset_minutes: Optional[int] = None  # 退勤: 10分刻みで増やす (例: 0, 10, 20, 30...)
+    add_second_jitter: bool = True  # 秒が00だと怪しいのを防ぐため、自然な電子打刻秒（02〜58秒）を付与
 
 
 class SingleTimeRecordUpdateRequest(BaseModel):
@@ -792,10 +793,10 @@ def get_paid_leave_compliance(
 
 
 # --- 5. 勤務時間調節 ＆ タイムカード一括生成機能 ---
-def calculate_step_shift_times(shift_type: models.ShiftType, in_offset_minutes: int = 0, out_offset_minutes: int = 0):
+def calculate_step_shift_times(shift_type: models.ShiftType, in_offset_minutes: int = 0, out_offset_minutes: int = 0, add_second_jitter: bool = True):
     """
     就業時間（定時）を基準とし、出勤5分刻み・退勤10分刻みで時間を調節する。
-    秒は :00 で正確に揃える。
+    「秒が00だと一括入力と疑われて怪しい」ため、自然な電子打刻の生ログ同様のランダム秒（02〜58秒）を自動付与する。
     """
     if shift_type == models.ShiftType.OFF:
         return None, None, 0
@@ -817,13 +818,15 @@ def calculate_step_shift_times(shift_type: models.ShiftType, in_offset_minutes: 
     in_total_mins = base_in.hour * 60 + base_in.minute + in_offset_minutes
     in_h = (in_total_mins // 60) % 24
     in_m = in_total_mins % 60
-    clock_in = time(in_h, in_m, 0)
+    in_sec = random.randint(2, 58) if add_second_jitter else 0
+    clock_in = time(in_h, in_m, in_sec)
 
     # 退勤計算 (10分刻みで増やす)
     out_total_mins = base_out.hour * 60 + base_out.minute + out_offset_minutes
     out_h = (out_total_mins // 60) % 24
     out_m = out_total_mins % 60
-    clock_out = time(out_h, out_m, 0)
+    out_sec = random.randint(2, 58) if add_second_jitter else 0
+    clock_out = time(out_h, out_m, out_sec)
 
     return clock_in, clock_out, break_mins
 
@@ -1021,7 +1024,7 @@ def batch_fill_time_records(
         if req.in_offset_minutes is not None or req.out_offset_minutes is not None:
             in_off = req.in_offset_minutes if req.in_offset_minutes is not None else 0
             out_off = req.out_offset_minutes if req.out_offset_minutes is not None else 0
-            c_in, c_out, b_mins = calculate_step_shift_times(s.shift_type, in_off, out_off)
+            c_in, c_out, b_mins = calculate_step_shift_times(s.shift_type, in_off, out_off, add_second_jitter=req.add_second_jitter)
         else:
             c_in, c_out, b_mins = generate_realistic_minutes_time(s.shift_type)
 

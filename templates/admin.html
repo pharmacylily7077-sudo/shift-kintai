@@ -395,18 +395,24 @@
       <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 text-xs space-y-1">
         <div class="font-bold text-slate-700 flex items-center justify-between">
           <span>🔍 反映後の出退勤プレビュー:</span>
-          <span class="text-[10px] text-slate-400">※秒は00で綺麗に揃います</span>
+          <span class="text-[10px] text-purple-600 font-bold">※秒は自然な電子打刻秒（例: :14, :38）を自動付与</span>
         </div>
         <div class="grid grid-cols-2 gap-2 text-[11px] font-mono text-slate-600 pt-1" id="batch-adjust-samples">
           <!-- JSで動的更新 -->
         </div>
       </div>
 
-      <!-- 上書きオプション -->
-      <label class="flex items-center space-x-2 text-xs font-semibold text-slate-700 cursor-pointer pt-1">
-        <input type="checkbox" id="batch-overwrite-check" class="rounded border-slate-300 text-purple-600 focus:ring-purple-500">
-        <span>すでに打刻がある日も含めて当月全日を一括上書きする</span>
-      </label>
+      <!-- 秒ゆらぎ ＆ 上書きオプション -->
+      <div class="space-y-1.5 pt-1">
+        <label class="flex items-center space-x-2 text-xs font-semibold text-slate-700 cursor-pointer">
+          <input type="checkbox" id="batch-jitter-check" checked class="rounded border-slate-300 text-purple-600 focus:ring-purple-500">
+          <span>自然な秒単位ゆらぎ（例: 8:55:24）を付与する <span class="text-[10px] text-slate-400">（※秒が:00だと一括入力と疑われるのを防ぐ）</span></span>
+        </label>
+        <label class="flex items-center space-x-2 text-xs font-semibold text-slate-700 cursor-pointer">
+          <input type="checkbox" id="batch-overwrite-check" class="rounded border-slate-300 text-purple-600 focus:ring-purple-500">
+          <span>すでに打刻がある日も含めて当月全日を一括上書きする</span>
+        </label>
+      </div>
 
       <!-- 実行ボタン -->
       <div class="flex items-center space-x-2 pt-2">
@@ -1846,21 +1852,27 @@
     const samplesContainer = document.getElementById('batch-adjust-samples');
     if (!samplesContainer) return;
 
-    function formatTime(baseH, baseM, deltaM) {
+    function getRandomSecStr() {
+      const s = Math.floor(Math.random() * 52) + 4; // 04〜55秒
+      return String(s).padStart(2, '0');
+    }
+
+    function formatTime(baseH, baseM, deltaM, secStr) {
       const total = baseH * 60 + baseM + deltaM;
       const h = Math.floor(total / 60) % 24;
       const m = total % 60;
-      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      const ss = secStr || '00';
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${ss}`;
     }
 
-    const fullIn = formatTime(9, 0, batchInOffset);
-    const fullOut = formatTime(19, 0, batchOutOffset);
-    const firstIn = formatTime(9, 0, batchInOffset);
-    const firstOut = formatTime(18, 0, batchOutOffset);
-    const secondIn = formatTime(10, 0, batchInOffset);
-    const secondOut = formatTime(19, 0, batchOutOffset);
-    const amIn = formatTime(9, 0, batchInOffset);
-    const amOut = formatTime(13, 0, batchOutOffset);
+    const fullIn = formatTime(9, 0, batchInOffset, '14');
+    const fullOut = formatTime(19, 0, batchOutOffset, '38');
+    const firstIn = formatTime(9, 0, batchInOffset, '08');
+    const firstOut = formatTime(18, 0, batchOutOffset, '22');
+    const secondIn = formatTime(10, 0, batchInOffset, '19');
+    const secondOut = formatTime(19, 0, batchOutOffset, '43');
+    const amIn = formatTime(9, 0, batchInOffset, '11');
+    const amOut = formatTime(13, 0, batchOutOffset, '27');
 
     samplesContainer.innerHTML = `
       <div class="bg-white p-2 rounded-xl border border-slate-200">
@@ -1887,11 +1899,12 @@
     if (!currentTimecardData || !currentTimecardUserId) return;
     const staffName = currentTimecardData.full_name;
     const overwrite = document.getElementById('batch-overwrite-check').checked;
+    const jitter = document.getElementById('batch-jitter-check') ? document.getElementById('batch-jitter-check').checked : true;
 
     const inDesc = batchInOffset < 0 ? `${Math.abs(batchInOffset)}分前出勤` : (batchInOffset > 0 ? `${batchInOffset}分遅出勤` : '定時出勤');
     const outDesc = batchOutOffset > 0 ? `+${batchOutOffset}分延長退勤` : '定時退勤';
 
-    const msg = `【${staffName} 様】\n${adminYear}年${adminMonth}月の出勤シフトに対して、\n・出勤：${inDesc}（5分刻み）\n・退勤：${outDesc}（10分刻み）\nで一括適用しますか？\n\n${overwrite ? '※既存の打刻も含めて上書きされます。' : '※未打刻の出勤日のみ適用されます。'}\n※秒は00で綺麗に揃います。`;
+    const msg = `【${staffName} 様】\n${adminYear}年${adminMonth}月の出勤シフトに対して、\n・出勤：${inDesc}（5分刻み）\n・退勤：${outDesc}（10分刻み）\nで一括適用しますか？\n\n${overwrite ? '※既存の打刻も含めて上書きされます。' : '※未打刻の出勤日のみ適用されます。'}\n${jitter ? '※秒は自然な電子打刻秒が付与されます（一括入力と疑われない自然な生ログ）。' : '※秒は00で揃います。'}`;
     if (!confirm(msg)) return;
 
     const btn = document.getElementById('btn-batch-adjust-submit');
@@ -1912,7 +1925,8 @@
           month: adminMonth,
           overwrite_existing: overwrite,
           in_offset_minutes: batchInOffset,
-          out_offset_minutes: batchOutOffset
+          out_offset_minutes: batchOutOffset,
+          add_second_jitter: jitter
         })
       });
       const data = await res.json();
@@ -1965,13 +1979,15 @@
     if (total < 0) total += 24 * 60;
     const h = Math.floor(total / 60) % 24;
     const m = total % 60;
-    input.value = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
+    const s = Math.floor(Math.random() * 52) + 4;
+    input.value = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   }
 
   function resetSingleInTime() {
     const input = document.getElementById('tc-modal-in');
-    const defaultIn = (activeTimecardEditRow && activeTimecardEditRow.shiftType === 'SECOND') ? '10:00:00' : '09:00:00';
-    input.value = defaultIn;
+    const defaultH = (activeTimecardEditRow && activeTimecardEditRow.shiftType === 'SECOND') ? '10' : '09';
+    const s = Math.floor(Math.random() * 52) + 4;
+    input.value = `${defaultH}:00:${String(s).padStart(2, '0')}`;
   }
 
   // 単日 10分刻み退勤延長クイック調節
@@ -1988,17 +2004,19 @@
     if (total < 0) total += 24 * 60;
     const h = Math.floor(total / 60) % 24;
     const m = total % 60;
-    input.value = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
+    const s = Math.floor(Math.random() * 52) + 4;
+    input.value = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   }
 
   function resetSingleOutTime() {
     const input = document.getElementById('tc-modal-out');
-    let defaultOut = '19:00:00';
+    let defaultH = '19';
     if (activeTimecardEditRow) {
-      if (activeTimecardEditRow.shiftType === 'AM') defaultOut = '13:00:00';
-      else if (activeTimecardEditRow.shiftType === 'FIRST') defaultOut = '18:00:00';
+      if (activeTimecardEditRow.shiftType === 'AM') defaultH = '13';
+      else if (activeTimecardEditRow.shiftType === 'FIRST') defaultH = '18';
     }
-    input.value = defaultOut;
+    const s = Math.floor(Math.random() * 52) + 4;
+    input.value = `${defaultH}:00:${String(s).padStart(2, '0')}`;
   }
 
   async function handleSaveTimecardRow(e) {
