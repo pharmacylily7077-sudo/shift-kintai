@@ -171,7 +171,7 @@ def test_batch_fill_5min_in_and_10min_out_step_adjustments(admin_client):
         "overwrite": True
     })
 
-    # 5分前出勤 (-5分) ＆ 20分延長残業 (+20分) で自然な秒付きで一括適用
+    # 5分前出勤 (-5分) ＆ 20分延長残業 (+20分) で自然な分・秒ゆらぎ付きで一括適用 (デフォルトで分・秒ゆらぎON)
     res = admin_client.post("/api/admin/time-records/batch-fill", json={
         "user_id": k_id,
         "year": 2026,
@@ -179,7 +179,8 @@ def test_batch_fill_5min_in_and_10min_out_step_adjustments(admin_client):
         "overwrite_existing": True,
         "in_offset_minutes": -5,
         "out_offset_minutes": 20,
-        "add_second_jitter": True
+        "add_second_jitter": True,
+        "add_minute_jitter": True
     })
     assert res.status_code == 200
     d = res.json()
@@ -191,40 +192,54 @@ def test_batch_fill_5min_in_and_10min_out_step_adjustments(admin_client):
     res_tc = admin_client.get(f"/api/admin/time-records/monthly?user_id={k_id}&year=2026&month=10")
     assert res_tc.status_code == 200
     days = res_tc.json()["days"]
+    worked_days = [x for x in days if x["clock_in"] and x["clock_out"]]
 
-    # 10/2 (金) は SECOND (定時 10:00〜19:00) -> 5分前出勤(09:55:xx) / 20分延長(19:20:xx)
+    # 「分が全部一緒」になっていないことの検証
+    all_in_minutes = [int(x["clock_in"].split(":")[1]) for x in worked_days]
+    all_out_minutes = [int(x["clock_out"].split(":")[1]) for x in worked_days]
+    all_in_seconds = [int(x["clock_in"].split(":")[2]) for x in worked_days]
+    all_out_seconds = [int(x["clock_out"].split(":")[2]) for x in worked_days]
+
+    # 出勤分数・退勤分数が日ごとに自然にばらついていること（3種類以上の分数が出現）
+    assert len(set(all_in_minutes)) >= 3, f"出勤分が日ごとに分散していること: {all_in_minutes}"
+    assert len(set(all_out_minutes)) >= 3, f"退勤分が日ごとに分散していること: {all_out_minutes}"
+
+    # 秒数も日ごとに自然にばらついていること
+    assert len(set(all_in_seconds)) >= 3, f"出勤秒が自然に分散していること: {all_in_seconds}"
+    assert len(set(all_out_seconds)) >= 3, f"退勤秒が自然に分散していること: {all_out_seconds}"
+
+    # 10/2 (金) は SECOND (定時 10:00〜19:00) -> 5分前出勤基準(09:52〜09:57) / 20分延長基準(19:17〜19:24)
     day_2 = next(x for x in days if x["day"] == 2)
-    assert day_2["clock_in"].startswith("09:55:")
-    assert day_2["clock_out"].startswith("19:20:")
-    assert day_2["clock_in"] != "09:55:00", "秒が00でなく自然な打刻秒が付与されていること"
-    assert day_2["clock_out"] != "19:20:00", "秒が00でなく自然な打刻秒が付与されていること"
-    assert day_2["break_minutes"] == 60
+    in_h, in_m, in_s = map(int, day_2["clock_in"].split(":"))
+    out_h, out_m, out_s = map(int, day_2["clock_out"].split(":"))
+    assert in_h == 9 and 52 <= in_m <= 58, f"出勤が定時前(9:52〜9:58): {day_2['clock_in']}"
+    assert out_h == 19 and 17 <= out_m <= 25, f"退勤が20分延長付近(19:17〜19:25): {day_2['clock_out']}"
+    assert in_s != 0, "秒が00でないこと"
+    assert out_s != 0, "秒が00でないこと"
 
-    # 10/3 (土) は AM (定時 9:00〜13:00) -> 5分前出勤(08:55:xx) / 20分延長(13:20:xx)
+    # 10/3 (土) は AM (定時 9:00〜13:00)
     day_3 = next(x for x in days if x["day"] == 3)
-    assert day_3["clock_in"].startswith("08:55:")
-    assert day_3["clock_out"].startswith("13:20:")
+    in_h3, in_m3, _ = map(int, day_3["clock_in"].split(":"))
+    out_h3, out_m3, _ = map(int, day_3["clock_out"].split(":"))
+    assert in_h3 == 8 and 52 <= in_m3 <= 58
+    assert out_h3 == 13 and 17 <= out_m3 <= 25
     assert day_3["break_minutes"] == 0
 
-    # 10/6 (火) は FIRST (定時 9:00〜18:00) -> 5分前出勤(08:55:xx) / 20分延長(18:20:xx)
-    day_6 = next(x for x in days if x["day"] == 6)
-    assert day_6["clock_in"].startswith("08:55:")
-    assert day_6["clock_out"].startswith("18:20:")
-    assert day_6["break_minutes"] == 60
-
-    # add_second_jitter=False の場合は 00 秒になることも検証
-    res_no_jitter = admin_client.post("/api/admin/time-records/batch-fill", json={
+    # add_minute_jitter=False, add_second_jitter=False の場合は完全に固定（09:55:00 / 19:20:00）になることも検証
+    res_fixed = admin_client.post("/api/admin/time-records/batch-fill", json={
         "user_id": k_id,
         "year": 2026,
         "month": 10,
         "overwrite_existing": True,
         "in_offset_minutes": -5,
         "out_offset_minutes": 20,
-        "add_second_jitter": False
+        "add_second_jitter": False,
+        "add_minute_jitter": False
     })
-    assert res_no_jitter.status_code == 200
-    res_tc_nj = admin_client.get(f"/api/admin/time-records/monthly?user_id={k_id}&year=2026&month=10")
-    day_2_nj = next(x for x in res_tc_nj.json()["days"] if x["day"] == 2)
-    assert day_2_nj["clock_in"] == "09:55:00"
-    assert day_2_nj["clock_out"] == "19:20:00"
+    assert res_fixed.status_code == 200
+    res_tc_fixed = admin_client.get(f"/api/admin/time-records/monthly?user_id={k_id}&year=2026&month=10")
+    day_2_fixed = next(x for x in res_tc_fixed.json()["days"] if x["day"] == 2)
+    assert day_2_fixed["clock_in"] == "09:55:00"
+    assert day_2_fixed["clock_out"] == "19:20:00"
+
 

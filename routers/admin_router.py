@@ -47,6 +47,7 @@ class BatchFillTimeRecordsRequest(BaseModel):
     in_offset_minutes: Optional[int] = None   # 出勤: 就業時間より5分刻み調節 (例: 0, -5, -10, -15...)
     out_offset_minutes: Optional[int] = None  # 退勤: 10分刻みで増やす (例: 0, 10, 20, 30...)
     add_second_jitter: bool = True  # 秒が00だと怪しいのを防ぐため、自然な電子打刻秒（02〜58秒）を付与
+    add_minute_jitter: bool = True  # 分が全部一緒だと怪しいのを防ぐため、日ごとに自然な分ゆらぎ（-3〜+3分程度）を付与
 
 
 class SingleTimeRecordUpdateRequest(BaseModel):
@@ -793,10 +794,17 @@ def get_paid_leave_compliance(
 
 
 # --- 5. 勤務時間調節 ＆ タイムカード一括生成機能 ---
-def calculate_step_shift_times(shift_type: models.ShiftType, in_offset_minutes: int = 0, out_offset_minutes: int = 0, add_second_jitter: bool = True):
+def calculate_step_shift_times(
+    shift_type: models.ShiftType,
+    in_offset_minutes: int = 0,
+    out_offset_minutes: int = 0,
+    add_second_jitter: bool = True,
+    add_minute_jitter: bool = True
+):
     """
     就業時間（定時）を基準とし、出勤5分刻み・退勤10分刻みで時間を調節する。
-    「秒が00だと一括入力と疑われて怪しい」ため、自然な電子打刻の生ログ同様のランダム秒（02〜58秒）を自動付与する。
+    「分が全部一緒だと怪しい・ひどい」ため、日ごとに自然な分ゆらぎ（-3〜+3分程度）を付与。
+    「秒が00だと一括入力と疑われて怪しい」ため、自然な電子打刻の生ログ同様のランダム秒（02〜58秒）を付与。
     """
     if shift_type == models.ShiftType.OFF:
         return None, None, 0
@@ -814,21 +822,45 @@ def calculate_step_shift_times(shift_type: models.ShiftType, in_offset_minutes: 
 
     base_in, base_out, break_mins = base_times[shift_type]
 
-    # 出勤計算 (就業時間より5分刻みで調節)
-    in_total_mins = base_in.hour * 60 + base_in.minute + in_offset_minutes
+    # 出勤計算 (就業時間より5分刻みで調節 ＋ 自然な日別分ゆらぎ)
+    actual_in_offset = in_offset_minutes
+    if add_minute_jitter:
+        if in_offset_minutes < 0:
+            # 前出勤 (例: -5分前なら -8分〜-3分前でばらつき、始業時間を超えて遅刻にならない)
+            jitter_m = random.randint(-3, 2)
+            actual_in_offset = min(in_offset_minutes + jitter_m, -1)
+        elif in_offset_minutes == 0:
+            # 定時出勤 (0分) の場合、ジャスト固定は不自然で遅刻も避けるため、-6分〜-1分前に自然に散らす
+            actual_in_offset = random.randint(-6, -1)
+        else:
+            # 遅出勤 (例: +5分)
+            actual_in_offset = in_offset_minutes + random.randint(-2, 2)
+
+    in_total_mins = base_in.hour * 60 + base_in.minute + actual_in_offset
     in_h = (in_total_mins // 60) % 24
     in_m = in_total_mins % 60
     in_sec = random.randint(2, 58) if add_second_jitter else 0
     clock_in = time(in_h, in_m, in_sec)
 
-    # 退勤計算 (10分刻みで増やす)
-    out_total_mins = base_out.hour * 60 + base_out.minute + out_offset_minutes
+    # 退勤計算 (10分刻みで増やす ＋ 自然な日別分ゆらぎ)
+    actual_out_offset = out_offset_minutes
+    if add_minute_jitter:
+        if out_offset_minutes == 0:
+            # 定時退勤 (0分) の場合、ジャスト固定は不自然なので片付け等で +2〜+7分に散らす
+            actual_out_offset = random.randint(2, 7)
+        else:
+            # 延長退勤 (例: +10分, +20分...) の場合、基準の前後 (-3〜+4分) に自然に散らす
+            jitter_m = random.randint(-3, 4)
+            actual_out_offset = max(out_offset_minutes + jitter_m, 1)
+
+    out_total_mins = base_out.hour * 60 + base_out.minute + actual_out_offset
     out_h = (out_total_mins // 60) % 24
     out_m = out_total_mins % 60
     out_sec = random.randint(2, 58) if add_second_jitter else 0
     clock_out = time(out_h, out_m, out_sec)
 
     return clock_in, clock_out, break_mins
+
 
 
 def generate_realistic_minutes_time(shift_type: models.ShiftType):
@@ -1024,7 +1056,13 @@ def batch_fill_time_records(
         if req.in_offset_minutes is not None or req.out_offset_minutes is not None:
             in_off = req.in_offset_minutes if req.in_offset_minutes is not None else 0
             out_off = req.out_offset_minutes if req.out_offset_minutes is not None else 0
-            c_in, c_out, b_mins = calculate_step_shift_times(s.shift_type, in_off, out_off, add_second_jitter=req.add_second_jitter)
+            c_in, c_out, b_mins = calculate_step_shift_times(
+                s.shift_type,
+                in_off,
+                out_off,
+                add_second_jitter=req.add_second_jitter,
+                add_minute_jitter=req.add_minute_jitter
+            )
         else:
             c_in, c_out, b_mins = generate_realistic_minutes_time(s.shift_type)
 
