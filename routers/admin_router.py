@@ -44,6 +44,8 @@ class BatchFillTimeRecordsRequest(BaseModel):
     year: int
     month: int
     overwrite_existing: bool = False  # False: 未打刻のみ補完, True: 当月すべて再生成
+    in_offset_minutes: Optional[int] = None   # 出勤: 就業時間より5分刻み調節 (例: 0, -5, -10, -15...)
+    out_offset_minutes: Optional[int] = None  # 退勤: 10分刻みで増やす (例: 0, 10, 20, 30...)
 
 
 class SingleTimeRecordUpdateRequest(BaseModel):
@@ -789,7 +791,43 @@ def get_paid_leave_compliance(
     )
 
 
-# --- 5. 小林・本間専用「リアル秒単位ゆらぎ」一括打刻支援 ＆ タイムカード機能 ---
+# --- 5. 勤務時間調節 ＆ タイムカード一括生成機能 ---
+def calculate_step_shift_times(shift_type: models.ShiftType, in_offset_minutes: int = 0, out_offset_minutes: int = 0):
+    """
+    就業時間（定時）を基準とし、出勤5分刻み・退勤10分刻みで時間を調節する。
+    秒は :00 で正確に揃える。
+    """
+    if shift_type == models.ShiftType.OFF:
+        return None, None, 0
+
+    base_times = {
+        models.ShiftType.FIRST: (time(9, 0), time(18, 0), 60),
+        models.ShiftType.SECOND: (time(10, 0), time(19, 0), 60),
+        models.ShiftType.AM: (time(9, 0), time(13, 0), 0),
+        models.ShiftType.PM: (time(15, 0), time(19, 0), 0),
+        models.ShiftType.FULL: (time(9, 0), time(19, 0), 60),
+    }
+
+    if shift_type not in base_times:
+        return None, None, 0
+
+    base_in, base_out, break_mins = base_times[shift_type]
+
+    # 出勤計算 (就業時間より5分刻みで調節)
+    in_total_mins = base_in.hour * 60 + base_in.minute + in_offset_minutes
+    in_h = (in_total_mins // 60) % 24
+    in_m = in_total_mins % 60
+    clock_in = time(in_h, in_m, 0)
+
+    # 退勤計算 (10分刻みで増やす)
+    out_total_mins = base_out.hour * 60 + base_out.minute + out_offset_minutes
+    out_h = (out_total_mins // 60) % 24
+    out_m = out_total_mins % 60
+    clock_out = time(out_h, out_m, 0)
+
+    return clock_in, clock_out, break_mins
+
+
 def generate_realistic_minutes_time(shift_type: models.ShiftType):
     """
     現場の実態（毎日早く来て準備し、残業もして帰る）に即した完全ランダムな一桁分刻み＋秒単位の出退勤時刻を生成。
@@ -980,7 +1018,13 @@ def batch_fill_time_records(
             if existing.clock_in and existing.clock_out:
                 continue
 
-        c_in, c_out, b_mins = generate_realistic_minutes_time(s.shift_type)
+        if req.in_offset_minutes is not None or req.out_offset_minutes is not None:
+            in_off = req.in_offset_minutes if req.in_offset_minutes is not None else 0
+            out_off = req.out_offset_minutes if req.out_offset_minutes is not None else 0
+            c_in, c_out, b_mins = calculate_step_shift_times(s.shift_type, in_off, out_off)
+        else:
+            c_in, c_out, b_mins = generate_realistic_minutes_time(s.shift_type)
+
         if not c_in or not c_out:
             continue
 
@@ -1004,10 +1048,18 @@ def batch_fill_time_records(
         filled_count += 1
 
     db.commit()
+
+    if req.in_offset_minutes is not None or req.out_offset_minutes is not None:
+        in_desc = f"{abs(req.in_offset_minutes or 0)}分前出勤" if (req.in_offset_minutes or 0) < 0 else (f"{req.in_offset_minutes}分遅出勤" if (req.in_offset_minutes or 0) > 0 else "定時出勤")
+        out_desc = f"+{req.out_offset_minutes or 0}分退勤" if (req.out_offset_minutes or 0) > 0 else "定時退勤"
+        msg = f"{target_user.full_name}さんの{req.year}年{req.month}月タイムカードを一括調節しました（{in_desc}・{out_desc} / 計{filled_count}日分）"
+    else:
+        msg = f"{target_user.full_name}さんの{req.year}年{req.month}月タイムカードをリアル秒単位ゆらぎで一括生成しました（{filled_count}日分）"
+
     return {
         "success": True,
         "filled_count": filled_count,
-        "message": f"{target_user.full_name}さんの{req.year}年{req.month}月タイムカードをリアル秒単位ゆらぎで一括生成しました（{filled_count}日分）"
+        "message": msg
     }
 
 

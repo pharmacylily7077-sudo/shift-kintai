@@ -112,10 +112,10 @@
 
         <!-- アクションボタン群 -->
         <div class="flex flex-wrap items-center gap-2">
-          <button onclick="runBatchFillTimeRecords()" id="btn-batch-fill"
-            class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold text-xs shadow-xs transition flex items-center space-x-1.5">
-            <i data-lucide="zap" class="w-3.5 h-3.5"></i>
-            <span>⚡ リアル秒単位ゆらぎで一括打刻</span>
+          <button onclick="openBatchTimeAdjustModal()" id="btn-batch-fill"
+            class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs shadow-xs transition flex items-center space-x-1.5" title="就業時間より5分刻み出勤・10分刻み退勤延長を一括調節">
+            <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5"></i>
+            <span>⏱️ 一括勤務時間・打刻調節</span>
           </button>
           <button onclick="downloadTimecardPDF()" id="btn-timecard-pdf"
             class="px-3 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-xs transition flex items-center space-x-1">
@@ -304,7 +304,125 @@
   </div>
 </div>
 
-<!-- タイムカード打刻編集モーダル（1分刻み） -->
+<!-- ⏱️ 一括勤務時間・打刻調節モーダル（5分刻み出勤 ＆ 10分刻み退勤延長） -->
+<div id="batch-time-adjust-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+  <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+      <div class="flex items-center space-x-2">
+        <div class="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold">
+          <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>
+        </div>
+        <div>
+          <h3 class="font-black text-slate-900 text-sm">⏱️ 一括勤務時間・打刻調節</h3>
+          <p class="text-[11px] text-slate-400" id="batch-adjust-target-label">対象スタッフ・対象月</p>
+        </div>
+      </div>
+      <button onclick="closeBatchTimeAdjustModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 font-bold transition">✕</button>
+    </div>
+
+    <form onsubmit="handleExecuteBatchTimeAdjust(event)" class="space-y-4">
+      <!-- 出勤時間調節 (5分刻み) -->
+      <div class="bg-purple-50/40 p-3.5 rounded-2xl border border-purple-100 space-y-2">
+        <div class="flex items-center justify-between">
+          <label class="block text-xs font-black text-slate-800">
+            🚶 出勤時刻の調節 <span class="text-[10px] text-purple-600 font-bold">（就業時間より5分刻み）</span>
+          </label>
+          <span id="batch-in-preview" class="text-xs font-black text-purple-700 font-mono">定時ちょうど (0分)</span>
+        </div>
+        <!-- クイック選択ボタングループ -->
+        <div class="grid grid-cols-5 gap-1.5" id="batch-in-btn-group">
+          <button type="button" onclick="setBatchInOffset(-20)" class="btn-batch-in text-[10px] py-1.5 rounded-lg border border-slate-200 bg-white font-bold hover:bg-purple-50 transition">-20分</button>
+          <button type="button" onclick="setBatchInOffset(-15)" class="btn-batch-in text-[10px] py-1.5 rounded-lg border border-slate-200 bg-white font-bold hover:bg-purple-50 transition">-15分</button>
+          <button type="button" onclick="setBatchInOffset(-10)" class="btn-batch-in text-[10px] py-1.5 rounded-lg border border-slate-200 bg-white font-bold hover:bg-purple-50 transition">-10分</button>
+          <button type="button" onclick="setBatchInOffset(-5)" class="btn-batch-in text-[10px] py-1.5 rounded-lg border border-slate-200 bg-white font-bold hover:bg-purple-50 transition">-5分</button>
+          <button type="button" onclick="setBatchInOffset(0)" class="btn-batch-in text-[10px] py-1.5 rounded-lg border border-purple-600 bg-purple-600 text-white font-bold transition">定時 (0m)</button>
+        </div>
+        <!-- ドロップダウン選択 -->
+        <div class="flex items-center space-x-2 pt-1">
+          <span class="text-[11px] text-slate-500 font-bold">詳細選択:</span>
+          <select id="batch-in-offset-select" onchange="setBatchInOffset(parseInt(this.value, 10))"
+            class="flex-1 px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-purple-500">
+            <option value="-30">30分前出勤 (例: 8:30 / 9:30)</option>
+            <option value="-25">25分前出勤 (例: 8:35 / 9:35)</option>
+            <option value="-20">20分前出勤 (例: 8:40 / 9:40)</option>
+            <option value="-15">15分前出勤 (例: 8:45 / 9:45)</option>
+            <option value="-10">10分前出勤 (例: 8:50 / 9:50)</option>
+            <option value="-5">5分前出勤 (例: 8:55 / 9:55)</option>
+            <option value="0" selected>定時出勤 (0分) (例: 9:00 / 10:00)</option>
+            <option value="5">5分遅出勤 (例: 9:05 / 10:05)</option>
+            <option value="10">10分遅出勤 (例: 9:10 / 10:10)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 退勤時間調節 (10分刻みで増やす) -->
+      <div class="bg-amber-50/40 p-3.5 rounded-2xl border border-amber-100 space-y-2">
+        <div class="flex items-center justify-between">
+          <label class="block text-xs font-black text-slate-800">
+            🏠 退勤時刻の調節 <span class="text-[10px] text-amber-700 font-bold">（10分刻みで増やす / 残業）</span>
+          </label>
+          <span id="batch-out-preview" class="text-xs font-black text-amber-800 font-mono">定時ちょうど (+0分)</span>
+        </div>
+        <!-- クイック選択ボタングループ -->
+        <div class="grid grid-cols-6 gap-1.5" id="batch-out-btn-group">
+          <button type="button" onclick="setBatchOutOffset(0)" class="btn-batch-out text-[10px] py-1.5 rounded-lg border border-amber-600 bg-amber-600 text-white font-bold transition">定時 (+0m)</button>
+          <button type="button" onclick="setBatchOutOffset(10)" class="btn-batch-out text-[10px] py-1.5 rounded-lg border border-slate-200 bg-white font-bold hover:bg-amber-50 transition">+10分</button>
+          <button type="button" onclick="setBatchOutOffset(20)" class="btn-batch-out text-[10px] py-1.5 rounded-lg border border-slate-200 bg-white font-bold hover:bg-amber-50 transition">+20分</button>
+          <button type="button" onclick="setBatchOutOffset(30)" class="btn-batch-out text-[10px] py-1.5 rounded-lg border border-slate-200 bg-white font-bold hover:bg-amber-50 transition">+30分</button>
+          <button type="button" onclick="setBatchOutOffset(40)" class="btn-batch-out text-[10px] py-1.5 rounded-lg border border-slate-200 bg-white font-bold hover:bg-amber-50 transition">+40分</button>
+          <button type="button" onclick="setBatchOutOffset(60)" class="btn-batch-out text-[10px] py-1.5 rounded-lg border border-slate-200 bg-white font-bold hover:bg-amber-50 transition">+60分</button>
+        </div>
+        <!-- ドロップダウン選択 -->
+        <div class="flex items-center space-x-2 pt-1">
+          <span class="text-[11px] text-slate-500 font-bold">詳細選択:</span>
+          <select id="batch-out-offset-select" onchange="setBatchOutOffset(parseInt(this.value, 10))"
+            class="flex-1 px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500">
+            <option value="0" selected>定時退勤 (+0分) (例: 18:00 / 19:00 / 13:00)</option>
+            <option value="10">+10分延長 (例: 18:10 / 19:10 / 13:10)</option>
+            <option value="20">+20分延長 (例: 18:20 / 19:20 / 13:20)</option>
+            <option value="30">+30分延長 (例: 18:30 / 19:30 / 13:30)</option>
+            <option value="40">+40分延長 (例: 18:40 / 19:40 / 13:40)</option>
+            <option value="50">+50分延長 (例: 18:50 / 19:50 / 13:50)</option>
+            <option value="60">+60分延長 (例: 19:00 / 20:00 / 14:00)</option>
+            <option value="70">+70分延長 (例: 19:10 / 20:10 / 14:10)</option>
+            <option value="80">+80分延長 (例: 19:20 / 20:20 / 14:20)</option>
+            <option value="90">+90分延長 (例: 19:30 / 20:30 / 14:30)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- プレビュー表示 -->
+      <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 text-xs space-y-1">
+        <div class="font-bold text-slate-700 flex items-center justify-between">
+          <span>🔍 反映後の出退勤プレビュー:</span>
+          <span class="text-[10px] text-slate-400">※秒は00で綺麗に揃います</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-[11px] font-mono text-slate-600 pt-1" id="batch-adjust-samples">
+          <!-- JSで動的更新 -->
+        </div>
+      </div>
+
+      <!-- 上書きオプション -->
+      <label class="flex items-center space-x-2 text-xs font-semibold text-slate-700 cursor-pointer pt-1">
+        <input type="checkbox" id="batch-overwrite-check" class="rounded border-slate-300 text-purple-600 focus:ring-purple-500">
+        <span>すでに打刻がある日も含めて当月全日を一括上書きする</span>
+      </label>
+
+      <!-- 実行ボタン -->
+      <div class="flex items-center space-x-2 pt-2">
+        <button type="button" onclick="closeBatchTimeAdjustModal()"
+          class="w-1/3 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50">キャンセル</button>
+        <button type="submit" id="btn-batch-adjust-submit"
+          class="w-2/3 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-md transition flex items-center justify-center space-x-1.5">
+          <i data-lucide="check" class="w-3.5 h-3.5"></i>
+          <span>この設定で一括適用する</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- タイムカード打刻編集モーダル（5分刻み・10分刻みクイック対応） -->
 <div id="timecard-edit-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 hidden">
   <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl space-y-4">
     <div class="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -320,14 +438,28 @@
 
       <div class="grid grid-cols-2 gap-3">
         <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">出勤時刻 (秒単位まで)</label>
+          <label class="block text-xs font-bold text-slate-700 mb-1">出勤時刻</label>
           <input type="time" id="tc-modal-in" step="1"
             class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold focus:ring-2 focus:ring-purple-500 focus:outline-none">
+          <!-- 5分刻みクイック調節ボタン -->
+          <div class="flex flex-wrap gap-1 mt-1.5">
+            <button type="button" onclick="adjustSingleInTime(-10)" class="text-[10px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 hover:bg-purple-100 font-bold border border-purple-200 transition" title="10分前出勤">-10m</button>
+            <button type="button" onclick="adjustSingleInTime(-5)" class="text-[10px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 hover:bg-purple-100 font-bold border border-purple-200 transition" title="5分前出勤">-5m</button>
+            <button type="button" onclick="resetSingleInTime()" class="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold border border-slate-200 transition" title="就業定時">定時</button>
+            <button type="button" onclick="adjustSingleInTime(5)" class="text-[10px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 hover:bg-purple-100 font-bold border border-purple-200 transition" title="5分後">+5m</button>
+          </div>
         </div>
         <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">退勤時刻 (秒単位まで)</label>
+          <label class="block text-xs font-bold text-slate-700 mb-1">退勤時刻</label>
           <input type="time" id="tc-modal-out" step="1"
             class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold focus:ring-2 focus:ring-purple-500 focus:outline-none">
+          <!-- 10分刻みクイック調節ボタン -->
+          <div class="flex flex-wrap gap-1 mt-1.5">
+            <button type="button" onclick="resetSingleOutTime()" class="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold border border-slate-200 transition" title="就業定時">定時</button>
+            <button type="button" onclick="adjustSingleOutTime(10)" class="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 hover:bg-amber-100 font-bold border border-amber-200 transition" title="10分延長">+10m</button>
+            <button type="button" onclick="adjustSingleOutTime(20)" class="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 hover:bg-amber-100 font-bold border border-amber-200 transition" title="20分延長">+20m</button>
+            <button type="button" onclick="adjustSingleOutTime(30)" class="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 hover:bg-amber-100 font-bold border border-amber-200 transition" title="30分延長">+30m</button>
+          </div>
         </div>
       </div>
 
@@ -1572,7 +1704,7 @@
       if (s.worked_days === 0) {
         summaryBadges.innerHTML = `
           <span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500">実働: 0日（未打刻）</span>
-          <span class="text-xs text-purple-600 font-bold">※右上の「⚡ リアル秒単位ゆらぎで一括打刻」で一括入力できます</span>
+          <span class="text-xs text-purple-600 font-bold">※右上の「⏱️ 一括勤務時間・打刻調節」で出勤（5分刻み）・退勤（10分刻み）を一括設定できます</span>
         `;
       } else {
         summaryBadges.innerHTML = `
@@ -1611,7 +1743,7 @@
               ${d.work_hours_str}
             </td>
             <td class="p-2.5 text-center">
-              <button onclick="openTimecardModal('${d.date}', '${d.clock_in}', '${d.clock_out}', ${d.break_minutes})"
+              <button onclick="openTimecardModal('${d.date}', '${d.clock_in}', '${d.clock_out}', ${d.break_minutes}, '${d.shift_type}')"
                 class="px-2 py-1 rounded-lg bg-white border border-slate-200 hover:border-purple-400 hover:text-purple-600 text-[11px] font-bold shadow-2xs transition">
                 ✏️ 編集
               </button>
@@ -1628,17 +1760,145 @@
     }
   }
 
-  async function runBatchFillTimeRecords() {
+  // --- ⏱️ 5分刻み出勤 ＆ 10分刻み退勤延長 一括調節制御 ---
+  let batchInOffset = 0;   // 就業時間より5分刻み (例: 0, -5, -10, -15...)
+  let batchOutOffset = 0;  // 10分刻みで増やす (例: 0, 10, 20, 30...)
+
+  function openBatchTimeAdjustModal() {
     if (!currentTimecardData) return;
     const staffName = currentTimecardData.full_name;
-    const msg = `【${staffName} 様】\n${adminYear}年${adminMonth}月のシフト出勤日に対して、早め出勤・残業の実態に即した「秒単位のリアルな電子打刻ゆらぎ」で一括生成しますか？\n\n※ 毎日00分や30分ではなく、生のタイムレコーダーと同様の自然なゆらぎ（例: 8:51:24〜18:14:48 等）で秒まで自動生成されます。\n※ ログや修正痕跡は一切残りません。`;
+    const targetLabel = document.getElementById('batch-adjust-target-label');
+    if (targetLabel) {
+      targetLabel.textContent = `【${staffName} 様】 ${adminYear}年${adminMonth}月分`;
+    }
+    setBatchInOffset(0);
+    setBatchOutOffset(0);
+    const chk = document.getElementById('batch-overwrite-check');
+    if (chk) chk.checked = false;
+    document.getElementById('batch-time-adjust-modal').classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function closeBatchTimeAdjustModal() {
+    document.getElementById('batch-time-adjust-modal').classList.add('hidden');
+  }
+
+  function setBatchInOffset(offset) {
+    batchInOffset = offset;
+    const sel = document.getElementById('batch-in-offset-select');
+    if (sel) sel.value = String(offset);
+
+    // ボタンスタイル更新
+    const btns = document.querySelectorAll('#batch-in-btn-group .btn-batch-in');
+    btns.forEach(b => {
+      const isMatch = (offset === 0 && b.textContent.includes('定時')) ||
+                      (offset < 0 && b.textContent.includes(`${offset}分`)) ||
+                      (offset > 0 && b.textContent.includes(`+${offset}分`));
+      if (isMatch) {
+        b.className = 'btn-batch-in text-[10px] py-1.5 rounded-lg border border-purple-600 bg-purple-600 text-white font-bold transition';
+      } else {
+        b.className = 'btn-batch-in text-[10px] py-1.5 rounded-lg border border-slate-200 bg-white font-bold hover:bg-purple-50 transition';
+      }
+    });
+
+    const preview = document.getElementById('batch-in-preview');
+    if (preview) {
+      if (offset < 0) {
+        preview.textContent = `${Math.abs(offset)}分前出勤 (${offset}分)`;
+      } else if (offset > 0) {
+        preview.textContent = `${offset}分遅出勤 (+${offset}分)`;
+      } else {
+        preview.textContent = '定時ちょうど (0分)';
+      }
+    }
+    updateBatchPreview();
+  }
+
+  function setBatchOutOffset(offset) {
+    batchOutOffset = offset;
+    const sel = document.getElementById('batch-out-offset-select');
+    if (sel) sel.value = String(offset);
+
+    // ボタンスタイル更新
+    const btns = document.querySelectorAll('#batch-out-btn-group .btn-batch-out');
+    btns.forEach(b => {
+      const isMatch = (offset === 0 && b.textContent.includes('定時')) ||
+                      (offset > 0 && b.textContent.includes(`+${offset}分`));
+      if (isMatch) {
+        b.className = 'btn-batch-out text-[10px] py-1.5 rounded-lg border border-amber-600 bg-amber-600 text-white font-bold transition';
+      } else {
+        b.className = 'btn-batch-out text-[10px] py-1.5 rounded-lg border border-slate-200 bg-white font-bold hover:bg-amber-50 transition';
+      }
+    });
+
+    const preview = document.getElementById('batch-out-preview');
+    if (preview) {
+      if (offset > 0) {
+        preview.textContent = `+${offset}分延長残業`;
+      } else {
+        preview.textContent = '定時退勤 (+0分)';
+      }
+    }
+    updateBatchPreview();
+  }
+
+  function updateBatchPreview() {
+    const samplesContainer = document.getElementById('batch-adjust-samples');
+    if (!samplesContainer) return;
+
+    function formatTime(baseH, baseM, deltaM) {
+      const total = baseH * 60 + baseM + deltaM;
+      const h = Math.floor(total / 60) % 24;
+      const m = total % 60;
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    }
+
+    const fullIn = formatTime(9, 0, batchInOffset);
+    const fullOut = formatTime(19, 0, batchOutOffset);
+    const firstIn = formatTime(9, 0, batchInOffset);
+    const firstOut = formatTime(18, 0, batchOutOffset);
+    const secondIn = formatTime(10, 0, batchInOffset);
+    const secondOut = formatTime(19, 0, batchOutOffset);
+    const amIn = formatTime(9, 0, batchInOffset);
+    const amOut = formatTime(13, 0, batchOutOffset);
+
+    samplesContainer.innerHTML = `
+      <div class="bg-white p-2 rounded-xl border border-slate-200">
+        <span class="text-emerald-700 font-bold block mb-0.5">全日 (9-19):</span>
+        <span class="text-slate-800 font-bold">${fullIn} 〜 ${fullOut}</span>
+      </div>
+      <div class="bg-white p-2 rounded-xl border border-slate-200">
+        <span class="text-amber-700 font-bold block mb-0.5">前半 (9-18):</span>
+        <span class="text-slate-800 font-bold">${firstIn} 〜 ${firstOut}</span>
+      </div>
+      <div class="bg-white p-2 rounded-xl border border-slate-200">
+        <span class="text-indigo-700 font-bold block mb-0.5">後半 (10-19):</span>
+        <span class="text-slate-800 font-bold">${secondIn} 〜 ${secondOut}</span>
+      </div>
+      <div class="bg-white p-2 rounded-xl border border-slate-200">
+        <span class="text-cyan-700 font-bold block mb-0.5">午前 (9-13):</span>
+        <span class="text-slate-800 font-bold">${amIn} 〜 ${amOut}</span>
+      </div>
+    `;
+  }
+
+  async function handleExecuteBatchTimeAdjust(e) {
+    e.preventDefault();
+    if (!currentTimecardData || !currentTimecardUserId) return;
+    const staffName = currentTimecardData.full_name;
+    const overwrite = document.getElementById('batch-overwrite-check').checked;
+
+    const inDesc = batchInOffset < 0 ? `${Math.abs(batchInOffset)}分前出勤` : (batchInOffset > 0 ? `${batchInOffset}分遅出勤` : '定時出勤');
+    const outDesc = batchOutOffset > 0 ? `+${batchOutOffset}分延長退勤` : '定時退勤';
+
+    const msg = `【${staffName} 様】\n${adminYear}年${adminMonth}月の出勤シフトに対して、\n・出勤：${inDesc}（5分刻み）\n・退勤：${outDesc}（10分刻み）\nで一括適用しますか？\n\n${overwrite ? '※既存の打刻も含めて上書きされます。' : '※未打刻の出勤日のみ適用されます。'}\n※秒は00で綺麗に揃います。`;
     if (!confirm(msg)) return;
 
-    const btn = document.getElementById('btn-batch-fill');
+    const btn = document.getElementById('btn-batch-adjust-submit');
     const originalHtml = btn ? btn.innerHTML : '';
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i><span>生成中...</span>';
+      btn.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i><span>一括適用中...</span>';
       if (window.lucide) lucide.createIcons();
     }
 
@@ -1650,15 +1910,18 @@
           user_id: currentTimecardUserId,
           year: adminYear,
           month: adminMonth,
-          overwrite_existing: false
+          overwrite_existing: overwrite,
+          in_offset_minutes: batchInOffset,
+          out_offset_minutes: batchOutOffset
         })
       });
       const data = await res.json();
       if (res.ok) {
-        showToast(data.message || '秒単位のリアル一括打刻を生成しました！');
+        showToast(data.message || '一括勤務時間調節を適用しました！');
+        closeBatchTimeAdjustModal();
         loadTimecard(currentTimecardUserId);
       } else {
-        showToast('一括打刻に失敗しました', 'error');
+        showToast('一括調節に失敗しました', 'error');
       }
     } catch (e) {
       showToast('エラーが発生しました', 'error');
@@ -1671,11 +1934,12 @@
     }
   }
 
-  function openTimecardModal(dateStr, clockIn, clockOut, breakMins) {
+  // --- ✏️ 単日タイムカード手動編集制御 ---
+  function openTimecardModal(dateStr, clockIn, clockOut, breakMins, shiftType) {
     if (!currentTimecardData) return;
-    activeTimecardEditRow = { dateStr };
+    activeTimecardEditRow = { dateStr, shiftType: shiftType || 'FULL' };
     document.getElementById('tc-modal-staff-name').textContent = `${currentTimecardData.full_name} さんの打刻`;
-    document.getElementById('tc-modal-date-label').textContent = `${dateStr} の勤務時間（秒単位まで完全リアル・ログなし）`;
+    document.getElementById('tc-modal-date-label').textContent = `${dateStr} の勤務時間`;
     document.getElementById('tc-modal-date').value = dateStr;
     document.getElementById('tc-modal-in').value = clockIn || '';
     document.getElementById('tc-modal-out').value = clockOut || '';
@@ -1687,6 +1951,54 @@
   function closeTimecardModal() {
     document.getElementById('timecard-edit-modal').classList.add('hidden');
     activeTimecardEditRow = null;
+  }
+
+  // 単日 5分刻み出勤クイック調節
+  function adjustSingleInTime(deltaMin) {
+    const input = document.getElementById('tc-modal-in');
+    let val = input.value;
+    if (!val) {
+      val = (activeTimecardEditRow && activeTimecardEditRow.shiftType === 'SECOND') ? '10:00:00' : '09:00:00';
+    }
+    const parts = val.split(':');
+    let total = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10) + deltaMin;
+    if (total < 0) total += 24 * 60;
+    const h = Math.floor(total / 60) % 24;
+    const m = total % 60;
+    input.value = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
+  }
+
+  function resetSingleInTime() {
+    const input = document.getElementById('tc-modal-in');
+    const defaultIn = (activeTimecardEditRow && activeTimecardEditRow.shiftType === 'SECOND') ? '10:00:00' : '09:00:00';
+    input.value = defaultIn;
+  }
+
+  // 単日 10分刻み退勤延長クイック調節
+  function adjustSingleOutTime(deltaMin) {
+    const input = document.getElementById('tc-modal-out');
+    let val = input.value;
+    if (!val) {
+      if (activeTimecardEditRow && activeTimecardEditRow.shiftType === 'AM') val = '13:00:00';
+      else if (activeTimecardEditRow && activeTimecardEditRow.shiftType === 'FIRST') val = '18:00:00';
+      else val = '19:00:00';
+    }
+    const parts = val.split(':');
+    let total = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10) + deltaMin;
+    if (total < 0) total += 24 * 60;
+    const h = Math.floor(total / 60) % 24;
+    const m = total % 60;
+    input.value = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
+  }
+
+  function resetSingleOutTime() {
+    const input = document.getElementById('tc-modal-out');
+    let defaultOut = '19:00:00';
+    if (activeTimecardEditRow) {
+      if (activeTimecardEditRow.shiftType === 'AM') defaultOut = '13:00:00';
+      else if (activeTimecardEditRow.shiftType === 'FIRST') defaultOut = '18:00:00';
+    }
+    input.value = defaultOut;
   }
 
   async function handleSaveTimecardRow(e) {

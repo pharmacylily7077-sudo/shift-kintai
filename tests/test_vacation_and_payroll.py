@@ -65,6 +65,10 @@ def test_clock_and_payroll_evidence_shield(auth_staff):
     # ステップ1の当日打刻（today）と重複しないよう、当月の別日（todayが1日なら2日、そうでなければ1日）
     target_day = 2 if today.day == 1 else 1
     test_date = date(today.year, today.month, target_day)
+    db.query(models.TimeRecord).filter(
+        models.TimeRecord.user_id == user.id,
+        models.TimeRecord.date == test_date
+    ).delete()
     test_record = models.TimeRecord(
         user_id=user.id,
         date=test_date,

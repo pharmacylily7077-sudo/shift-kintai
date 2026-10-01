@@ -134,6 +134,14 @@ def test_timecard_csv_export(admin_client):
     finally:
         db.close()
 
+    # 先に一括打刻を生成
+    admin_client.post("/api/admin/time-records/batch-fill", json={
+        "user_id": k_id,
+        "year": 2026,
+        "month": 10,
+        "overwrite_existing": True
+    })
+
     res_csv = admin_client.get(f"/api/admin/time-records/export-csv?user_id={k_id}&year=2026&month=10")
     assert res_csv.status_code == 200
     assert res_csv.headers["content-type"] == "text/csv; charset=utf-8"
@@ -144,3 +152,60 @@ def test_timecard_csv_export(admin_client):
     # 秒付き時刻（例: 09:xx:xx）が含まれていること
     import re
     assert re.search(r"\d{2}:\d{2}:\d{2}", content) is not None, "CSV内に秒単位の出退勤時刻が存在すること"
+
+
+def test_batch_fill_5min_in_and_10min_out_step_adjustments(admin_client):
+    """就業時間より5分刻み出勤・10分刻み退勤延長の一括調節テスト"""
+    db = SessionLocal()
+    try:
+        kobayashi = db.query(models.User).filter(models.User.username == "kobayashi").first()
+        assert kobayashi is not None
+        k_id = kobayashi.id
+    finally:
+        db.close()
+
+    # 2026年10月のシフトを再確認
+    admin_client.post("/api/admin/shifts/auto-generate", json={
+        "year": 2026,
+        "month": 10,
+        "overwrite": True
+    })
+
+    # 5分前出勤 (-5分) ＆ 20分延長残業 (+20分) で一括適用
+    res = admin_client.post("/api/admin/time-records/batch-fill", json={
+        "user_id": k_id,
+        "year": 2026,
+        "month": 10,
+        "overwrite_existing": True,
+        "in_offset_minutes": -5,
+        "out_offset_minutes": 20
+    })
+    assert res.status_code == 200
+    d = res.json()
+    assert d["success"] is True
+    assert "5分前出勤" in d["message"]
+    assert "+20分退勤" in d["message"]
+
+    # タイムカード取得
+    res_tc = admin_client.get(f"/api/admin/time-records/monthly?user_id={k_id}&year=2026&month=10")
+    assert res_tc.status_code == 200
+    days = res_tc.json()["days"]
+
+    # 10/2 (金) は SECOND (定時 10:00〜19:00) -> 5分前出勤(09:55:00) / 20分延長(19:20:00)
+    day_2 = next(x for x in days if x["day"] == 2)
+    assert day_2["clock_in"] == "09:55:00"
+    assert day_2["clock_out"] == "19:20:00"
+    assert day_2["break_minutes"] == 60
+
+    # 10/3 (土) は AM (定時 9:00〜13:00) -> 5分前出勤(08:55:00) / 20分延長(13:20:00)
+    day_3 = next(x for x in days if x["day"] == 3)
+    assert day_3["clock_in"] == "08:55:00"
+    assert day_3["clock_out"] == "13:20:00"
+    assert day_3["break_minutes"] == 0
+
+    # 10/6 (火) は FIRST (定時 9:00〜18:00) -> 5分前出勤(08:55:00) / 20分延長(18:20:00)
+    day_6 = next(x for x in days if x["day"] == 6)
+    assert day_6["clock_in"] == "08:55:00"
+    assert day_6["clock_out"] == "18:20:00"
+    assert day_6["break_minutes"] == 60
+
