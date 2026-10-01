@@ -61,9 +61,13 @@ def test_clock_and_payroll_evidence_shield(auth_staff):
     # 3. テスト用の実績レコード（9時間実働 = 8時間通常 + 1時間残業）を注入
     db = SessionLocal()
     user = db.query(models.User).filter(models.User.username == "ieda").first()
+    today = date.today()
+    # ステップ1の当日打刻（today）と重複しないよう、当月の別日（todayが1日なら2日、そうでなければ1日）
+    target_day = 2 if today.day == 1 else 1
+    test_date = date(today.year, today.month, target_day)
     test_record = models.TimeRecord(
         user_id=user.id,
-        date=date(2026, 9, 10),
+        date=test_date,
         clock_in=time(9, 0),
         clock_out=time(19, 0),
         break_start=time(13, 0),
@@ -87,7 +91,7 @@ def test_clock_and_payroll_evidence_shield(auth_staff):
     assert sim["estimated_salary"] >= 18500
     # 詳細内訳リストの検証
     assert len(sim["daily_records"]) > 0
-    rec = [r for r in sim["daily_records"] if r["date"] == "2026-09-10"][0]
+    rec = [r for r in sim["daily_records"] if r["date"] == test_date.isoformat()][0]
     assert rec["clock_in"] == "09:00"
     assert rec["clock_out"] == "19:00"
     assert rec["work_minutes"] == 540

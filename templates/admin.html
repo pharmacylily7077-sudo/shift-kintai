@@ -135,10 +135,23 @@
         </div>
       </div>
 
-      <!-- スタッフ選択タブ（小林・本間 2大タブ＋他スタッフ） -->
-      <div class="flex items-center justify-between flex-wrap gap-2 pt-1">
-        <div class="flex items-center space-x-2 text-xs font-bold" id="timecard-staff-tabs">
-          <!-- JSで小林彩乃・本間まや等のタブを動的生成 -->
+      <!-- スタッフ選択タブ（小林・本間 2大タブ＋他スタッフ） ＆ 対象年月切り替え -->
+      <div class="flex items-center justify-between flex-wrap gap-2 pt-1 border-b border-slate-100 pb-2">
+        <div class="flex items-center space-x-3 flex-wrap gap-2">
+          <!-- タイムカード専用の年月切り替え -->
+          <div class="flex items-center space-x-1 bg-slate-100 px-2.5 py-1 rounded-xl text-xs font-bold text-slate-700 border border-slate-200">
+            <button onclick="changeAdminMonth(-1)" class="p-1 hover:bg-white hover:text-purple-600 rounded-lg transition" title="前月へ">
+              <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+            </button>
+            <span id="timecard-month-label" class="px-1 text-slate-800 font-black">2026年9月分</span>
+            <button onclick="changeAdminMonth(1)" class="p-1 hover:bg-white hover:text-purple-600 rounded-lg transition" title="翌月へ">
+              <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+
+          <div class="flex items-center space-x-2 text-xs font-bold" id="timecard-staff-tabs">
+            <!-- JSで小林彩乃・本間まや等のタブを動的生成 -->
+          </div>
         </div>
 
         <!-- 月間サマリーバッジ -->
@@ -718,6 +731,8 @@
 
   function renderAdminTable(data) {
     document.getElementById('admin-month-label').textContent = `${data.year}年${data.month}月`;
+    const tcMonth = document.getElementById('timecard-month-label');
+    if (tcMonth) tcMonth.textContent = `${data.year}年${data.month}月分`;
 
     // ヘッダー（日付）
     const thead = document.getElementById('admin-table-head');
@@ -1554,11 +1569,18 @@
       currentTimecardData = await res.json();
 
       const s = currentTimecardData.summary;
-      summaryBadges.innerHTML = `
-        <span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700">実働: <strong>${s.worked_days}日</strong></span>
-        <span class="px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800">総労働: <strong>${s.total_work_hours_str}</strong></span>
-        ${s.overtime_minutes > 0 ? `<span class="px-2.5 py-1 rounded-lg bg-rose-50 border border-rose-200 text-rose-700">残業: <strong>${s.overtime_hours_str}</strong></span>` : ''}
-      `;
+      if (s.worked_days === 0) {
+        summaryBadges.innerHTML = `
+          <span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500">実働: 0日（未打刻）</span>
+          <span class="text-xs text-purple-600 font-bold">※右上の「⚡ リアル秒単位ゆらぎで一括打刻」で一括入力できます</span>
+        `;
+      } else {
+        summaryBadges.innerHTML = `
+          <span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700">実働: <strong>${s.worked_days}日</strong></span>
+          <span class="px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800">総労働: <strong>${s.total_work_hours_str}</strong></span>
+          ${s.overtime_minutes > 0 ? `<span class="px-2.5 py-1 rounded-lg bg-rose-50 border border-rose-200 text-rose-700">残業: <strong>${s.overtime_hours_str}</strong></span>` : ''}
+        `;
+      }
 
       let bodyHtml = '';
       currentTimecardData.days.forEach(d => {
