@@ -15,7 +15,7 @@
   - スタッフ専用マイページ: `https://shift-kintai.onrender.com/me`
   - ログイン画面: `https://shift-kintai.onrender.com/login`
 - **GitHubリポジトリ**: `https://github.com/pharmacylily7077-sudo/shift-kintai` (mainブランチ自動デプロイ)
-- **最新コミット**: `50d3cfb` (mainブランチ / GitHubプッシュ済み / 画像・PDF・小林本間タブ完全修復)
+- **最新コミット**: `d662d0e` (mainブランチ / GitHubプッシュ済み / 白紙化根本解消・モーダルオーバーレイ描画)
 - **テスト通過状況**: pytest 全35テスト 100% グリーン通過中 (`PYTHONPATH=. ./venv/bin/pytest`)
 - **技術構成**: FastAPI (Python 3.9+) + SQLAlchemy + Jinja2 + Tailwind CSS + html2pdf.js + html2canvas + PostgreSQL / SQLite WAL
 
