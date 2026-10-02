@@ -118,18 +118,26 @@
 
         <!-- アクションボタン群 -->
         <div class="flex flex-wrap items-center gap-2">
+          <!-- 自動保護ステータスバッジ -->
+          <div class="hidden sm:flex items-center space-x-1 px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold" title="お使いの端末（パソコン）に打刻データを二重自動保存し、消失を防いでいます">
+            <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-600"></i>
+            <span>💾 自動保護中</span>
+          </div>
+
           <button onclick="openBatchTimeAdjustModal()" id="btn-batch-fill"
             class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs shadow-xs transition flex items-center space-x-1.5" title="就業時間より5分刻み出勤・10分刻み退勤延長を一括調節">
             <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5"></i>
             <span>⏱️ 一括勤務時間・打刻調節</span>
           </button>
+
           <button onclick="downloadTimecardImage()" id="btn-timecard-img"
-            class="px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-bold text-xs shadow-xs transition flex items-center space-x-1" title="LINE送信用の高画質画像(PNG)をダウンロード">
-            <i data-lucide="image" class="w-3.5 h-3.5"></i>
-            <span>📸 LINE・画像</span>
+            class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-bold text-xs shadow-md shadow-emerald-200 transition flex items-center space-x-1.5" title="LINE送信用の高画質画像(PNG)をダウンロード（PDFソフト不要・LINEのトーク画面でそのまま見られます）">
+            <i data-lucide="image" class="w-4 h-4"></i>
+            <span>📸 LINE・画像（推奨）</span>
           </button>
+
           <button onclick="downloadTimecardPDF()" id="btn-timecard-pdf"
-            class="px-3 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-xs transition flex items-center space-x-1">
+            class="px-3 py-2 rounded-xl bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs shadow-xs transition flex items-center space-x-1" title="A4サイズPDFとして保存（提出・印刷用）">
             <i data-lucide="file-down" class="w-3.5 h-3.5"></i>
             <span>📄 PDF保存</span>
           </button>
@@ -1801,17 +1809,46 @@
       currentTimecardData = await res.json();
 
       const s = currentTimecardData.summary;
-      if (s.worked_days === 0) {
-        summaryBadges.innerHTML = `
-          <span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500">実働: 0日（未打刻）</span>
-          <span class="text-xs text-purple-600 font-bold">※右上の「⏱️ 一括勤務時間・打刻調節」で出勤（5分刻み）・退勤（10分刻み）を一括設定できます</span>
-        `;
-      } else {
+      const backupKey = `kintai_tc_backup_${userId}_${adminYear}_${adminMonth}`;
+
+      if (s.worked_days > 0) {
+        // 実働データがある場合は端末LocalStorageに自動二重保存（消失を完全防止）
+        try {
+          localStorage.setItem(backupKey, JSON.stringify(currentTimecardData));
+        } catch (err) {
+          console.warn('LocalStorage save error:', err);
+        }
+
         summaryBadges.innerHTML = `
           <span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700">実働: <strong>${s.worked_days}日</strong></span>
           <span class="px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800">総労働: <strong>${s.total_work_hours_str}</strong></span>
           ${s.overtime_minutes > 0 ? `<span class="px-2.5 py-1 rounded-lg bg-rose-50 border border-rose-200 text-rose-700">残業: <strong>${s.overtime_hours_str}</strong></span>` : ''}
         `;
+      } else {
+        // 未打刻の場合、端末内にバックアップがあるかチェック
+        let localBackup = null;
+        try {
+          const raw = localStorage.getItem(backupKey);
+          if (raw) localBackup = JSON.parse(raw);
+        } catch (err) {}
+
+        if (localBackup && localBackup.summary && localBackup.summary.worked_days > 0) {
+          summaryBadges.innerHTML = `
+            <span class="px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold">
+              ⚠️ 未打刻（端末内に${localBackup.summary.worked_days}日分の保存データあり）
+            </span>
+            <button onclick="restoreTimecardFromLocalBackup(${userId})"
+              class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs shadow-xs transition flex items-center space-x-1.5">
+              <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+              <span>💾 端末の保存データから復元</span>
+            </button>
+          `;
+        } else {
+          summaryBadges.innerHTML = `
+            <span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500">実働: 0日（未打刻）</span>
+            <span class="text-xs text-purple-600 font-bold">※右上の「⏱️ 一括勤務時間・打刻調節」で出勤（5分刻み）・退勤（10分刻み）を一括設定できます</span>
+          `;
+        }
       }
 
       let bodyHtml = '';
@@ -1857,6 +1894,60 @@
     } catch (e) {
       console.error(e);
       tbody.innerHTML = '<tr><td colspan="8" class="text-center py-6 text-rose-500">タイムカードの取得に失敗しました</td></tr>';
+    }
+  }
+
+  // --- 💾 端末LocalStorageからのバックアップ復元 ---
+  async function restoreTimecardFromLocalBackup(userId) {
+    const backupKey = `kintai_tc_backup_${userId}_${adminYear}_${adminMonth}`;
+    let localBackup = null;
+    try {
+      const raw = localStorage.getItem(backupKey);
+      if (raw) localBackup = JSON.parse(raw);
+    } catch (err) {}
+
+    if (!localBackup || !localBackup.days) {
+      showToast('端末内に有効なバックアップが見つかりませんでした', 'error');
+      return;
+    }
+
+    const records = localBackup.days
+      .filter(d => d.clock_in && d.clock_out)
+      .map(d => ({
+        date: d.date,
+        clock_in: d.clock_in,
+        clock_out: d.clock_out,
+        break_minutes: d.break_minutes
+      }));
+
+    if (records.length === 0) {
+      showToast('バックアップ内に有効な打刻データがありません', 'error');
+      return;
+    }
+
+    showToast(`端末内の保存データ（${records.length}日分）を復元しています...`, 'info');
+
+    try {
+      const res = await fetch('/api/admin/time-records/batch-restore', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: userId,
+          year: adminYear,
+          month: adminMonth,
+          records: records
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message || '打刻データを完全復元しました！', 'success');
+        loadTimecard(userId);
+      } else {
+        showToast('復元に失敗しました', 'error');
+      }
+    } catch (e) {
+      console.error(e);
+      showToast('復元中にエラーが発生しました', 'error');
     }
   }
 
@@ -2219,10 +2310,12 @@
 
     const container = document.createElement('div');
     container.id = 'timecard-export-render-container';
-    container.style.position = 'absolute';
+    container.style.position = 'fixed';
     container.style.left = '0px';
     container.style.top = '0px';
     container.style.zIndex = '-9999';
+    container.style.opacity = '0.01';
+    container.style.pointerEvents = 'none';
     container.style.width = '800px';
     container.style.backgroundColor = '#ffffff';
     container.appendChild(element);
@@ -2232,6 +2325,11 @@
 
   async function downloadTimecardPDF() {
     if (!currentTimecardData) return;
+    if (currentTimecardData.summary.worked_days === 0) {
+      showToast('⚠️ 打刻データが0件（未打刻）です。先に「⏱️ 一括勤務時間・打刻調節」で出勤・退勤時間を設定してください。', 'error');
+      return;
+    }
+
     const btn = document.getElementById('btn-timecard-pdf');
     const originalHtml = btn ? btn.innerHTML : '';
     if (btn) {
@@ -2287,6 +2385,11 @@
   // --- 📸 LINE用 タイムカード画像保存 (PNG) ---
   async function downloadTimecardImage() {
     if (!currentTimecardData) return;
+    if (currentTimecardData.summary.worked_days === 0) {
+      showToast('⚠️ 打刻データが0件（未打刻）です。先に「⏱️ 一括勤務時間・打刻調節」で出勤・退勤時間を設定してください。', 'error');
+      return;
+    }
+
     const btn = document.getElementById('btn-timecard-img');
     const originalHtml = btn ? btn.innerHTML : '';
     if (btn) {

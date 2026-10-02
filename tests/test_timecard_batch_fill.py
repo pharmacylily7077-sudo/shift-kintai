@@ -243,3 +243,41 @@ def test_batch_fill_5min_in_and_10min_out_step_adjustments(admin_client):
     assert day_2_fixed["clock_out"] == "19:20:00"
 
 
+def test_batch_restore_time_records(admin_client):
+    """端末LocalStorageからのバックアップ打刻データ一括復元APIの検証"""
+    db = SessionLocal()
+    try:
+        honma = db.query(models.User).filter(models.User.username == "honma").first()
+        assert honma is not None
+        h_id = honma.id
+    finally:
+        db.close()
+
+    # 復元データ投入
+    restore_items = [
+        {"date": "2026-10-01", "clock_in": "08:52:15", "clock_out": "13:08:42", "break_minutes": 0},
+        {"date": "2026-10-02", "clock_in": "08:49:33", "clock_out": "18:18:55", "break_minutes": 60},
+    ]
+
+    res = admin_client.post("/api/admin/time-records/batch-restore", json={
+        "user_id": h_id,
+        "year": 2026,
+        "month": 10,
+        "records": restore_items
+    })
+    assert res.status_code == 200
+    data = res.json()
+    assert data["success"] is True
+    assert data["restored_count"] == 2
+
+    # 確認取得
+    res_tc = admin_client.get(f"/api/admin/time-records/monthly?user_id={h_id}&year=2026&month=10")
+    assert res_tc.status_code == 200
+    days = {d["date"]: d for d in res_tc.json()["days"]}
+    assert days["2026-10-01"]["clock_in"] == "08:52:15"
+    assert days["2026-10-01"]["clock_out"] == "13:08:42"
+    assert days["2026-10-02"]["clock_in"] == "08:49:33"
+    assert days["2026-10-02"]["clock_out"] == "18:18:55"
+
+
+

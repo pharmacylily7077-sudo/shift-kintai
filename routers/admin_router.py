@@ -59,6 +59,20 @@ class SingleTimeRecordUpdateRequest(BaseModel):
     clear: bool = False
 
 
+class TimeRecordRestoreItem(BaseModel):
+    date: str  # YYYY-MM-DD
+    clock_in: Optional[str] = None
+    clock_out: Optional[str] = None
+    break_minutes: Optional[int] = 60
+
+
+class BatchRestoreTimeRecordsRequest(BaseModel):
+    user_id: int
+    year: int
+    month: int
+    records: List[TimeRecordRestoreItem]
+
+
 @router.get("/shifts/monthly")
 def get_admin_monthly_shifts(
     year: int,
@@ -1164,6 +1178,67 @@ def update_single_time_record(
     record.status = models.ClockStatus.DONE
     db.commit()
     return {"success": True, "action": "saved"}
+
+
+@router.post("/time-records/batch-restore")
+def batch_restore_time_records(
+    req: BatchRestoreTimeRecordsRequest,
+    admin: models.User = Depends(get_admin_user),
+    db: Session = Depends(get_db)
+):
+    """端末LocalStorage等からのバックアップ打刻データ一括復元"""
+    restored_count = 0
+    for item in req.records:
+        if not item.clock_in and not item.clock_out:
+            continue
+        try:
+            target_date = date.fromisoformat(item.date)
+        except Exception:
+            continue
+
+        rec = db.query(models.TimeRecord).filter(
+            models.TimeRecord.user_id == req.user_id,
+            models.TimeRecord.date == target_date
+        ).first()
+
+        if not rec:
+            rec = models.TimeRecord(
+                user_id=req.user_id,
+                date=target_date,
+                status=models.ClockStatus.DONE
+            )
+            db.add(rec)
+
+        if item.clock_in:
+            parts = item.clock_in.strip().split(":")
+            if len(parts) >= 3:
+                rec.clock_in = time(int(parts[0]), int(parts[1]), int(parts[2]))
+            elif len(parts) == 2:
+                rec.clock_in = time(int(parts[0]), int(parts[1]), random.randint(2, 58))
+        if item.clock_out:
+            parts = item.clock_out.strip().split(":")
+            if len(parts) >= 3:
+                rec.clock_out = time(int(parts[0]), int(parts[1]), int(parts[2]))
+            elif len(parts) == 2:
+                rec.clock_out = time(int(parts[0]), int(parts[1]), random.randint(2, 58))
+
+        bm = item.break_minutes if item.break_minutes is not None else 60
+        if bm > 0:
+            rec.break_start = time(13, 0)
+            rec.break_end = time(13 + (bm // 60), bm % 60)
+        else:
+            rec.break_start = None
+            rec.break_end = None
+
+        rec.status = models.ClockStatus.DONE
+        restored_count += 1
+
+    db.commit()
+    return {
+        "success": True,
+        "restored_count": restored_count,
+        "message": f"{restored_count}日分の打刻データを復元しました"
+    }
 
 
 @router.get("/time-records/export-csv")

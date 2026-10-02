@@ -191,6 +191,47 @@ def seed_data():
                             db.add(rec)
                         db.commit()
                         print(f"✅ 小林彩乃さんの9月確定出勤簿（{len(bdata['kobayashi_records'])}日分）の自動復元完了")
+
+                # 4. 2026年10月確定出勤簿の復元 (スタッフ別・未投入時のみ)
+                if "oct_records" in bdata:
+                    records_by_username = {}
+                    for tr in bdata["oct_records"]:
+                        uname = tr["username"]
+                        if uname not in records_by_username:
+                            records_by_username[uname] = []
+                        records_by_username[uname].append(tr)
+
+                    total_restored_oct = 0
+                    for uname, u_records in records_by_username.items():
+                        u = user_by_uname.get(uname)
+                        if not u:
+                            continue
+                        u_oct_count = db.query(models.TimeRecord).filter(
+                            models.TimeRecord.user_id == u.id,
+                            models.TimeRecord.date >= date(2026, 10, 1),
+                            models.TimeRecord.date <= date(2026, 10, 31)
+                        ).count()
+                        if u_oct_count == 0:
+                            for tr in u_records:
+                                dt = datetime.strptime(tr["date"], "%Y-%m-%d").date()
+                                cin = datetime.strptime(tr["clock_in"][:8], "%H:%M:%S").time() if tr.get("clock_in") else None
+                                cout = datetime.strptime(tr["clock_out"][:8], "%H:%M:%S").time() if tr.get("clock_out") else None
+                                b_start = datetime.strptime(tr["break_start"][:8], "%H:%M:%S").time() if tr.get("break_start") else None
+                                b_end = datetime.strptime(tr["break_end"][:8], "%H:%M:%S").time() if tr.get("break_end") else None
+                                rec = models.TimeRecord(
+                                    user_id=u.id,
+                                    date=dt,
+                                    clock_in=cin,
+                                    clock_out=cout,
+                                    break_start=b_start,
+                                    break_end=b_end,
+                                    status=models.ClockStatus(tr.get("status", "DONE"))
+                                )
+                                db.add(rec)
+                                total_restored_oct += 1
+                    if total_restored_oct > 0:
+                        db.commit()
+                        print(f"✅ 2026年10月確定出勤簿（{total_restored_oct}件）の自動復元完了")
             except Exception as e:
                 print(f"⚠️ バックアップ自動復元エラー: {e}")
 
