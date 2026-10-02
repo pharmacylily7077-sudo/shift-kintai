@@ -1,0 +1,1697 @@
+{
+  "sep_shifts": [
+    {
+      "username": "miyake",
+      "date": "2026-09-01",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-01",
+      "shift_type": "FIRST",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-09-02",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-09-02",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-09-02",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-09-02",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-02",
+      "shift_type": "SECOND",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-09-02",
+      "shift_type": "FIRST",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-09-03",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-09-03",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-09-03",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-09-03",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-09-03",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-09-04",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-09-04",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-09-04",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-09-04",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-04",
+      "shift_type": "SECOND",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-09-04",
+      "shift_type": "FIRST",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-09-05",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-09-05",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-09-05",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-09-05",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-05",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-09-05",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-09-07",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-09-07",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-09-07",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-09-07",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-07",
+      "shift_type": "SECOND",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-09-07",
+      "shift_type": "FIRST",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-09-08",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-08",
+      "shift_type": "FIRST",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-09-09",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-09-09",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-09-09",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-09-09",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-09",
+      "shift_type": "SECOND",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-09-09",
+      "shift_type": "FIRST",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-09-10",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-09-10",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-09-10",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-09-10",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-09-10",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-09-11",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-09-11",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-09-11",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-09-11",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-11",
+      "shift_type": "SECOND",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-09-11",
+      "shift_type": "FIRST",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-09-12",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-09-12",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-09-12",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-09-12",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-12",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-09-12",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-09-14",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-09-14",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-09-14",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-09-14",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-14",
+      "shift_type": "SECOND",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-09-14",
+      "shift_type": "FIRST",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-09-15",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-15",
+      "shift_type": "FIRST",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-09-16",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-09-16",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-09-16",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-09-16",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-16",
+      "shift_type": "SECOND",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-09-16",
+      "shift_type": "FIRST",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-09-17",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-09-17",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-09-17",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-09-17",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-09-17",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-09-18",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-09-18",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-09-18",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-09-18",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-18",
+      "shift_type": "SECOND",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-09-18",
+      "shift_type": "FIRST",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-09-19",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-09-19",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-09-19",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-09-19",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-19",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-09-19",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-09-24",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-09-24",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-09-24",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-09-24",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-09-24",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-09-25",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-09-25",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-09-25",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-09-25",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-25",
+      "shift_type": "SECOND",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-09-25",
+      "shift_type": "FIRST",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-09-26",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-09-26",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-09-26",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-09-26",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-26",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-09-26",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-09-28",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-09-28",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-09-28",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-09-28",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-28",
+      "shift_type": "SECOND",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-09-28",
+      "shift_type": "FIRST",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-09-29",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-29",
+      "shift_type": "FIRST",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-09-30",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-09-30",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-09-30",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-09-30",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-30",
+      "shift_type": "SECOND",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-09-30",
+      "shift_type": "FIRST",
+      "note": ""
+    }
+  ],
+  "kobayashi_records": [
+    {
+      "username": "kobayashi",
+      "date": "2026-09-01",
+      "clock_in": "08:52:06",
+      "clock_out": "18:22:31",
+      "break_start": "13:00:00",
+      "break_end": "14:00:00",
+      "status": "DONE"
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-02",
+      "clock_in": "09:56:47",
+      "clock_out": "19:07:36",
+      "break_start": "13:00:00",
+      "break_end": "14:00:00",
+      "status": "DONE"
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-04",
+      "clock_in": "09:52:58",
+      "clock_out": "19:14:35",
+      "break_start": "13:00:00",
+      "break_end": "14:00:00",
+      "status": "DONE"
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-05",
+      "clock_in": "08:47:51",
+      "clock_out": "13:04:33",
+      "break_start": null,
+      "break_end": null,
+      "status": "DONE"
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-07",
+      "clock_in": "09:55:25",
+      "clock_out": "19:08:49",
+      "break_start": "13:00:00",
+      "break_end": "14:00:00",
+      "status": "DONE"
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-08",
+      "clock_in": "08:52:04",
+      "clock_out": "18:19:25",
+      "break_start": "13:00:00",
+      "break_end": "14:00:00",
+      "status": "DONE"
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-09",
+      "clock_in": "09:53:30",
+      "clock_out": "19:06:42",
+      "break_start": "13:00:00",
+      "break_end": "14:00:00",
+      "status": "DONE"
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-11",
+      "clock_in": "09:50:21",
+      "clock_out": "19:21:07",
+      "break_start": "13:00:00",
+      "break_end": "14:00:00",
+      "status": "DONE"
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-12",
+      "clock_in": "08:49:07",
+      "clock_out": "13:14:14",
+      "break_start": null,
+      "break_end": null,
+      "status": "DONE"
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-14",
+      "clock_in": "09:47:22",
+      "clock_out": "19:20:41",
+      "break_start": "13:00:00",
+      "break_end": "14:00:00",
+      "status": "DONE"
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-15",
+      "clock_in": "08:47:43",
+      "clock_out": "18:10:27",
+      "break_start": "13:00:00",
+      "break_end": "14:00:00",
+      "status": "DONE"
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-16",
+      "clock_in": "09:52:54",
+      "clock_out": "19:14:57",
+      "break_start": "13:00:00",
+      "break_end": "14:00:00",
+      "status": "DONE"
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-18",
+      "clock_in": "09:53:38",
+      "clock_out": "19:14:24",
+      "break_start": "13:00:00",
+      "break_end": "14:00:00",
+      "status": "DONE"
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-19",
+      "clock_in": "08:50:48",
+      "clock_out": "13:12:10",
+      "break_start": null,
+      "break_end": null,
+      "status": "DONE"
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-25",
+      "clock_in": "09:53:53",
+      "clock_out": "19:12:57",
+      "break_start": "13:00:00",
+      "break_end": "14:00:00",
+      "status": "DONE"
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-26",
+      "clock_in": "08:55:47",
+      "clock_out": "13:09:28",
+      "break_start": null,
+      "break_end": null,
+      "status": "DONE"
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-28",
+      "clock_in": "09:54:33",
+      "clock_out": "19:12:57",
+      "break_start": "13:00:00",
+      "break_end": "14:00:00",
+      "status": "DONE"
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-29",
+      "clock_in": "08:51:45",
+      "clock_out": "18:16:23",
+      "break_start": "13:00:00",
+      "break_end": "14:00:00",
+      "status": "DONE"
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-09-30",
+      "clock_in": "09:54:54",
+      "clock_out": "19:06:10",
+      "break_start": "13:00:00",
+      "break_end": "14:00:00",
+      "status": "DONE"
+    }
+  ],
+  "oct_shifts": [
+    {
+      "username": "miyake",
+      "date": "2026-10-01",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-10-01",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-10-01",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-10-01",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-10-01",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-10-02",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-10-02",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-10-02",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-10-02",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-10-02",
+      "shift_type": "SECOND",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-10-02",
+      "shift_type": "FIRST",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-10-03",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-10-03",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-10-03",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-10-03",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-10-03",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-10-03",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-10-05",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-10-05",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-10-05",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-10-05",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-10-05",
+      "shift_type": "SECOND",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-10-05",
+      "shift_type": "FIRST",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-10-06",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-10-06",
+      "shift_type": "FIRST",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-10-07",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-10-07",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-10-07",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-10-07",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-10-07",
+      "shift_type": "SECOND",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-10-07",
+      "shift_type": "FIRST",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-10-08",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-10-08",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-10-08",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-10-08",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-10-08",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-10-09",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-10-09",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-10-09",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-10-09",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-10-09",
+      "shift_type": "SECOND",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-10-09",
+      "shift_type": "FIRST",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-10-10",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-10-10",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-10-10",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-10-10",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-10-10",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-10-10",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-10-13",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-10-13",
+      "shift_type": "FIRST",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-10-14",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-10-14",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-10-14",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-10-14",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-10-14",
+      "shift_type": "SECOND",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-10-14",
+      "shift_type": "FIRST",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-10-15",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-10-15",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-10-15",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-10-15",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-10-15",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-10-16",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-10-16",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-10-16",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-10-16",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-10-16",
+      "shift_type": "SECOND",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-10-16",
+      "shift_type": "FIRST",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-10-17",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-10-17",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-10-17",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-10-17",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-10-17",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-10-17",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-10-19",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-10-19",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-10-19",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-10-19",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-10-19",
+      "shift_type": "SECOND",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-10-19",
+      "shift_type": "FIRST",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-10-20",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-10-20",
+      "shift_type": "FIRST",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-10-21",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-10-21",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-10-21",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-10-21",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-10-21",
+      "shift_type": "SECOND",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-10-21",
+      "shift_type": "FIRST",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-10-22",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-10-22",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-10-22",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-10-22",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-10-22",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-10-23",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-10-23",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-10-23",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-10-23",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-10-23",
+      "shift_type": "SECOND",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-10-23",
+      "shift_type": "FIRST",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-10-24",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-10-24",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-10-24",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-10-24",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-10-24",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-10-24",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-10-26",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-10-26",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-10-26",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-10-26",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-10-26",
+      "shift_type": "SECOND",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-10-26",
+      "shift_type": "FIRST",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-10-27",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-10-27",
+      "shift_type": "FIRST",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-10-28",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-10-28",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-10-28",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-10-28",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-10-28",
+      "shift_type": "SECOND",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-10-28",
+      "shift_type": "FIRST",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-10-29",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-10-29",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-10-29",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-10-29",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-10-29",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-10-30",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-10-30",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-10-30",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-10-30",
+      "shift_type": "FULL",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-10-30",
+      "shift_type": "SECOND",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-10-30",
+      "shift_type": "FIRST",
+      "note": ""
+    },
+    {
+      "username": "miyake",
+      "date": "2026-10-31",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "ieda",
+      "date": "2026-10-31",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "terauchi",
+      "date": "2026-10-31",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "yamanaka",
+      "date": "2026-10-31",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "kobayashi",
+      "date": "2026-10-31",
+      "shift_type": "AM",
+      "note": ""
+    },
+    {
+      "username": "honma",
+      "date": "2026-10-31",
+      "shift_type": "AM",
+      "note": ""
+    }
+  ]
+}

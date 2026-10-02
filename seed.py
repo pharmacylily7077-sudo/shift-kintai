@@ -119,18 +119,83 @@ def seed_data():
         db.commit()
         print("✅ 初期データ投入完了（スタッフ個別シフト＆曜日別パターン同期済み）")
 
-        # 月間シフトが未生成の場合、今月と翌月のシフトを自動初期生成
-        from datetime import date
+        # 確定バックアップデータ (seed_data_backup.json) の自動復元
+        import os
+        import json
+        from datetime import date, time, datetime
         import calendar
         from shift_rules import calculate_shift_type
 
-        today = date.today()
-        target_months = [(today.year, today.month)]
-        if today.month == 12:
-            target_months.append((today.year + 1, 1))
-        else:
-            target_months.append((today.year, today.month + 1))
+        backup_file = os.path.join(os.path.dirname(__file__), "seed_data_backup.json")
+        if os.path.exists(backup_file):
+            try:
+                with open(backup_file, "r", encoding="utf-8") as f:
+                    bdata = json.load(f)
 
+                user_by_uname = {u.username: u for u in db.query(models.User).all()}
+
+                # 1. 2026年9月シフトの復元 (未投入時のみ)
+                sep_shift_count = db.query(models.Shift).filter(
+                    models.Shift.date >= date(2026, 9, 1),
+                    models.Shift.date <= date(2026, 9, 30)
+                ).count()
+                if sep_shift_count == 0 and "sep_shifts" in bdata:
+                    for s_item in bdata["sep_shifts"]:
+                        u = user_by_uname.get(s_item["username"])
+                        if u:
+                            dt = datetime.strptime(s_item["date"], "%Y-%m-%d").date()
+                            st = models.ShiftType(s_item["shift_type"])
+                            db.add(models.Shift(user_id=u.id, date=dt, shift_type=st, note=s_item.get("note", "")))
+                    db.commit()
+                    print(f"✅ 2026年9月確定シフト（{len(bdata['sep_shifts'])}件）の自動復元完了")
+
+                # 2. 2026年10月シフトの復元 (未投入時のみ)
+                oct_shift_count = db.query(models.Shift).filter(
+                    models.Shift.date >= date(2026, 10, 1),
+                    models.Shift.date <= date(2026, 10, 31)
+                ).count()
+                if oct_shift_count == 0 and "oct_shifts" in bdata:
+                    for s_item in bdata["oct_shifts"]:
+                        u = user_by_uname.get(s_item["username"])
+                        if u:
+                            dt = datetime.strptime(s_item["date"], "%Y-%m-%d").date()
+                            st = models.ShiftType(s_item["shift_type"])
+                            db.add(models.Shift(user_id=u.id, date=dt, shift_type=st, note=s_item.get("note", "")))
+                    db.commit()
+                    print(f"✅ 2026年10月確定シフト（{len(bdata['oct_shifts'])}件）の自動復元完了")
+
+                # 3. 小林彩乃さんの2026年9月確定出勤簿の復元 (未投入時のみ)
+                kobayashi = user_by_uname.get("kobayashi")
+                if kobayashi and "kobayashi_records" in bdata:
+                    k_sep_tc_count = db.query(models.TimeRecord).filter(
+                        models.TimeRecord.user_id == kobayashi.id,
+                        models.TimeRecord.date >= date(2026, 9, 1),
+                        models.TimeRecord.date <= date(2026, 9, 30)
+                    ).count()
+                    if k_sep_tc_count == 0:
+                        for tr in bdata["kobayashi_records"]:
+                            dt = datetime.strptime(tr["date"], "%Y-%m-%d").date()
+                            cin = datetime.strptime(tr["clock_in"][:8], "%H:%M:%S").time() if tr["clock_in"] else None
+                            cout = datetime.strptime(tr["clock_out"][:8], "%H:%M:%S").time() if tr["clock_out"] else None
+                            b_start = datetime.strptime(tr["break_start"][:8], "%H:%M:%S").time() if tr.get("break_start") else None
+                            b_end = datetime.strptime(tr["break_end"][:8], "%H:%M:%S").time() if tr.get("break_end") else None
+                            rec = models.TimeRecord(
+                                user_id=kobayashi.id,
+                                date=dt,
+                                clock_in=cin,
+                                clock_out=cout,
+                                break_start=b_start,
+                                break_end=b_end,
+                                status=models.ClockStatus(tr.get("status", "DONE"))
+                            )
+                            db.add(rec)
+                        db.commit()
+                        print(f"✅ 小林彩乃さんの9月確定出勤簿（{len(bdata['kobayashi_records'])}日分）の自動復元完了")
+            except Exception as e:
+                print(f"⚠️ バックアップ自動復元エラー: {e}")
+
+        # 月間シフトが未生成の場合、2026年9月〜12月のシフトを自動初期生成 (未作成月のみ)
+        target_months = [(2026, 9), (2026, 10), (2026, 11), (2026, 12)]
         all_users = db.query(models.User).filter(models.User.is_active == True).all()
         for y, m in target_months:
             _, days_in_month = calendar.monthrange(y, m)
@@ -146,22 +211,10 @@ def seed_data():
                         if st is not None:
                             db.add(models.Shift(user_id=u.id, date=d, shift_type=st, note=""))
                 db.commit()
-                print(f"✅ {y}年{m}月の初期シフト自動生成完了（スタッフカラー反映）")
+                print(f"✅ {y}年{m}月の初期シフト自動生成完了")
 
-        # 既存シフトに対する新ルール（土曜日全員午前診、本間木曜午前診、小林火曜午前診）の同期補正
-        all_existing_shifts = db.query(models.Shift).all()
-        corrected_count = 0
-        for s in all_existing_shifts:
-            user = db.query(models.User).filter(models.User.id == s.user_id).first()
-            if not user:
-                continue
-            expected_st = calculate_shift_type(user, s.date)
-            if expected_st and s.shift_type != expected_st:
-                s.shift_type = expected_st
-                corrected_count += 1
-        if corrected_count > 0:
-            db.commit()
-            print(f"✅ 既存シフト {corrected_count}件 を新シフトルール（土曜AM・本間木曜AM・小林火曜AM）に補正完了")
+        # ※ユーザーが手入力したシフトを勝手に上書き・破壊しないため、既存シフトの強制一括補正ループは廃止。
+
     except Exception as e:
         db.rollback()
         print(f"❌ シードエラー: {e}")

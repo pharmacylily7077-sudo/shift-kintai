@@ -3,10 +3,13 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-DATABASE_URL = os.environ.get(
-    "DATABASE_URL",
-    "sqlite:///./kintai_v2.db"
-)
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if not DATABASE_URL:
+    if os.path.exists("/data") and os.access("/data", os.W_OK):
+        DATABASE_URL = "sqlite:////data/kintai_v2.db"
+    else:
+        DATABASE_URL = "sqlite:///./kintai_v2.db"
+
 
 # PostgreSQL の "postgres://" を "postgresql://" に変換（Render対応）
 if DATABASE_URL.startswith("postgres://"):
