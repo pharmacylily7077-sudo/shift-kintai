@@ -55,11 +55,17 @@
       </div>
 
       <div class="flex flex-wrap items-center gap-2">
+        <button id="btn-admin-img" onclick="downloadAdminImage()"
+          class="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-bold text-xs shadow-xs transition flex items-center space-x-1.5">
+          <i data-lucide="image" class="w-4 h-4"></i>
+          <span>📸 LINE・画像保存</span>
+        </button>
         <button id="btn-admin-pdf" onclick="downloadAdminPDF()"
           class="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-bold text-xs shadow-xs transition flex items-center space-x-1.5">
           <i data-lucide="file-down" class="w-4 h-4"></i>
           <span>📄 シフト表PDF保存</span>
         </button>
+
         <button onclick="runAutoGenerate()" id="btn-auto-gen"
           class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-xs shadow-md shadow-blue-200 hover:shadow-lg transition flex items-center space-x-1.5">
           <i data-lucide="sparkles" class="w-4 h-4"></i>
@@ -117,11 +123,17 @@
             <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5"></i>
             <span>⏱️ 一括勤務時間・打刻調節</span>
           </button>
+          <button onclick="downloadTimecardImage()" id="btn-timecard-img"
+            class="px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-bold text-xs shadow-xs transition flex items-center space-x-1" title="LINE送信用の高画質画像(PNG)をダウンロード">
+            <i data-lucide="image" class="w-3.5 h-3.5"></i>
+            <span>📸 LINE・画像</span>
+          </button>
           <button onclick="downloadTimecardPDF()" id="btn-timecard-pdf"
             class="px-3 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-xs transition flex items-center space-x-1">
             <i data-lucide="file-down" class="w-3.5 h-3.5"></i>
             <span>📄 PDF保存</span>
           </button>
+
           <button onclick="printTimecard()"
             class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition flex items-center space-x-1">
             <i data-lucide="printer" class="w-3.5 h-3.5"></i>
@@ -1441,6 +1453,41 @@
     }
   }
 
+  function buildAdminExportElement() {
+    const element = document.createElement('div');
+    element.className = 'p-6 bg-white text-slate-900';
+    element.style.width = '1120px';
+    element.style.backgroundColor = '#ffffff';
+
+    const title = document.createElement('div');
+    title.className = 'text-center mb-4';
+    title.innerHTML = `
+      <h1 class="text-2xl font-black text-slate-900 tracking-wide">リリー薬局 月間シフト編成表（${adminYear}年${adminMonth}月）</h1>
+      <p class="text-xs text-slate-500 mt-1">発行日: ${new Date().toLocaleDateString('ja-JP')} | A4横公式シフト表</p>
+    `;
+    element.appendChild(title);
+
+    // 編成テーブルのクローン
+    const originalTable = document.querySelector('.overflow-x-auto');
+    if (originalTable) {
+      const tableClone = originalTable.cloneNode(true);
+      tableClone.className = 'border border-slate-300 rounded-xl overflow-hidden bg-white';
+      element.appendChild(tableClone);
+    }
+
+    const container = document.createElement('div');
+    container.id = 'admin-export-render-container';
+    container.style.position = 'absolute';
+    container.style.left = '0px';
+    container.style.top = '0px';
+    container.style.zIndex = '-9999';
+    container.style.width = '1120px';
+    container.style.backgroundColor = '#ffffff';
+    container.appendChild(element);
+
+    return { container, element };
+  }
+
   // --- 2. シフト表 PDFワンクリック保存 ---
   async function downloadAdminPDF() {
     const btn = document.getElementById('btn-admin-pdf');
@@ -1453,51 +1500,41 @@
 
     showToast('A4横向きシフト表PDFを作成しています...', 'info');
 
+    const { container, element } = buildAdminExportElement();
+    document.body.appendChild(container);
+
     try {
-      const element = document.createElement('div');
-      element.className = 'p-6 bg-white text-slate-900';
-      element.style.width = '1120px';
-
-      const title = document.createElement('div');
-      title.className = 'text-center mb-4';
-      title.innerHTML = `
-        <h1 class="text-2xl font-black text-slate-900 tracking-wide">リリー薬局 月間シフト編成表（${adminYear}年${adminMonth}月）</h1>
-        <p class="text-xs text-slate-500 mt-1">発行日: ${new Date().toLocaleDateString('ja-JP')} | A4横公式シフト表</p>
-      `;
-      element.appendChild(title);
-
-      // 編成テーブルのクローン
-      const tableClone = document.querySelector('.overflow-x-auto').cloneNode(true);
-      tableClone.className = 'border border-slate-300 rounded-xl overflow-hidden';
-      element.appendChild(tableClone);
-
-      element.style.position = 'fixed';
-      element.style.left = '-9999px';
-      element.style.top = '0';
-      document.body.appendChild(element);
-
       const filename = `リリー薬局_月間シフト表_${adminYear}年${adminMonth}月.pdf`;
       const opt = {
         margin:       [8, 8, 8, 8],
         filename:     filename,
         image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        html2canvas:  {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          scrollX: 0,
+          scrollY: 0,
+          windowWidth: 1200,
+          backgroundColor: '#ffffff'
+        },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
       };
 
       if (window.html2pdf) {
         await html2pdf().set(opt).from(element).save();
-        showToast('PDFをダウンロードしました！', 'success');
+        showToast('シフト表PDFをダウンロードしました！', 'success');
       } else {
         window.print();
       }
-
-      document.body.removeChild(element);
     } catch (err) {
       console.error('PDF生成エラー:', err);
       showToast('PDF生成に失敗したため、印刷画面を開きます', 'error');
       window.print();
     } finally {
+      if (document.body.contains(container)) {
+        document.body.removeChild(container);
+      }
       if (btn) {
         btn.disabled = false;
         btn.innerHTML = originalHtml;
@@ -1505,6 +1542,56 @@
       }
     }
   }
+
+  // --- 2-2. 📸 LINE用 シフト表画像保存 (PNG) ---
+  async function downloadAdminImage() {
+    const btn = document.getElementById('btn-admin-img');
+    const originalHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>画像作成中...</span>';
+      if (window.lucide) lucide.createIcons();
+    }
+
+    showToast('LINE送信用の高画質画像を作成しています...', 'info');
+
+    const { container, element } = buildAdminExportElement();
+    document.body.appendChild(container);
+
+    try {
+      if (window.html2canvas) {
+        const canvas = await html2canvas(element, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          scrollX: 0,
+          scrollY: 0,
+          windowWidth: 1200,
+          backgroundColor: '#ffffff'
+        });
+        const link = document.createElement('a');
+        link.download = `リリー薬局_月間シフト表_${adminYear}年${adminMonth}月.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        showToast('LINE用画像を保存しました！LINEでそのまま送信できます', 'success');
+      } else {
+        showToast('画像化ライブラリの読み込みに失敗しました', 'error');
+      }
+    } catch (err) {
+      console.error('画像生成エラー:', err);
+      showToast('画像の作成に失敗しました', 'error');
+    } finally {
+      if (document.body.contains(container)) {
+        document.body.removeChild(container);
+      }
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+        if (window.lucide) lucide.createIcons();
+      }
+    }
+  }
+
 
   // --- 3. LINE共有・連絡文コピー ---
   async function openShareTextModal() {
@@ -2094,6 +2181,55 @@
     }
   }
 
+  function buildTimecardExportElement() {
+    const s = currentTimecardData.summary;
+    const element = document.createElement('div');
+    element.className = 'p-6 bg-white text-slate-900';
+    element.style.width = '800px';
+    element.style.backgroundColor = '#ffffff';
+
+    element.innerHTML = `
+      <div class="text-center mb-4 border-b-2 border-slate-900 pb-3">
+        <h1 class="text-2xl font-black tracking-wider text-slate-900">リリー薬局 勤務実績出勤簿（タイムカード）</h1>
+        <div class="flex items-center justify-between text-xs text-slate-600 mt-2 px-2">
+          <span><strong>氏名:</strong> ${currentTimecardData.full_name} 様 (${currentTimecardData.position_label})</span>
+          <span><strong>対象年月:</strong> ${adminYear}年${adminMonth}月分</span>
+          <span><strong>発行日:</strong> ${new Date().toLocaleDateString('ja-JP')}</span>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-around p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs mb-4">
+        <div>出勤日数: <strong class="text-sm font-black text-slate-900">${s.worked_days}日</strong></div>
+        <div>総実労働時間: <strong class="text-sm font-black text-emerald-800">${s.total_work_hours_str}</strong> (${s.total_work_hours}時間)</div>
+        <div>残業時間: <strong class="text-sm font-black text-rose-700">${s.overtime_hours_str}</strong></div>
+      </div>
+    `;
+
+    const originalTable = document.querySelector('#timecard-print-container table');
+    if (originalTable) {
+      const tableClone = originalTable.cloneNode(true);
+      tableClone.querySelectorAll('tr').forEach(row => {
+        if (row.children.length >= 8) {
+          row.removeChild(row.lastElementChild);
+        }
+      });
+      tableClone.className = 'w-full text-xs border border-slate-300 border-collapse bg-white';
+      element.appendChild(tableClone);
+    }
+
+    const container = document.createElement('div');
+    container.id = 'timecard-export-render-container';
+    container.style.position = 'absolute';
+    container.style.left = '0px';
+    container.style.top = '0px';
+    container.style.zIndex = '-9999';
+    container.style.width = '800px';
+    container.style.backgroundColor = '#ffffff';
+    container.appendChild(element);
+
+    return { container, element };
+  }
+
   async function downloadTimecardPDF() {
     if (!currentTimecardData) return;
     const btn = document.getElementById('btn-timecard-pdf');
@@ -2106,49 +2242,24 @@
 
     showToast('タイムカードPDFを作成しています...', 'info');
 
+    const { container, element } = buildTimecardExportElement();
+    document.body.appendChild(container);
+
     try {
-      const s = currentTimecardData.summary;
-      const element = document.createElement('div');
-      element.className = 'p-6 bg-white text-slate-900';
-      element.style.width = '800px';
-
-      element.innerHTML = `
-        <div class="text-center mb-4 border-b-2 border-slate-900 pb-3">
-          <h1 class="text-2xl font-black tracking-wider text-slate-900">リリー薬局 勤務実績出勤簿（タイムカード）</h1>
-          <div class="flex items-center justify-between text-xs text-slate-600 mt-2 px-2">
-            <span><strong>氏名:</strong> ${currentTimecardData.full_name} 様 (${currentTimecardData.position_label})</span>
-            <span><strong>対象年月:</strong> ${adminYear}年${adminMonth}月分</span>
-            <span><strong>発行日:</strong> ${new Date().toLocaleDateString('ja-JP')}</span>
-          </div>
-        </div>
-
-        <div class="flex items-center justify-around p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs mb-4">
-          <div>出勤日数: <strong class="text-sm font-black text-slate-900">${s.worked_days}日</strong></div>
-          <div>総実労働時間: <strong class="text-sm font-black text-emerald-800">${s.total_work_hours_str}</strong> (${s.total_work_hours}時間)</div>
-          <div>残業時間: <strong class="text-sm font-black text-rose-700">${s.overtime_hours_str}</strong></div>
-        </div>
-      `;
-
-      const tableClone = document.querySelector('#timecard-print-container table').cloneNode(true);
-      tableClone.querySelectorAll('tr').forEach(row => {
-        if (row.children.length >= 8) {
-          row.removeChild(row.lastElementChild);
-        }
-      });
-      tableClone.className = 'w-full text-xs border border-slate-300 border-collapse';
-      element.appendChild(tableClone);
-
-      element.style.position = 'fixed';
-      element.style.left = '-9999px';
-      element.style.top = '0';
-      document.body.appendChild(element);
-
       const filename = `リリー薬局_タイムカード_${currentTimecardData.full_name}_${adminYear}年${adminMonth}月.pdf`;
       const opt = {
         margin:       [8, 8, 8, 8],
         filename:     filename,
         image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        html2canvas:  {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          scrollX: 0,
+          scrollY: 0,
+          windowWidth: 900,
+          backgroundColor: '#ffffff'
+        },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
 
@@ -2158,12 +2269,13 @@
       } else {
         window.print();
       }
-
-      document.body.removeChild(element);
     } catch (e) {
       console.error(e);
       showToast('PDF生成エラー', 'error');
     } finally {
+      if (document.body.contains(container)) {
+        document.body.removeChild(container);
+      }
       if (btn) {
         btn.disabled = false;
         btn.innerHTML = originalHtml;
@@ -2171,6 +2283,57 @@
       }
     }
   }
+
+  // --- 📸 LINE用 タイムカード画像保存 (PNG) ---
+  async function downloadTimecardImage() {
+    if (!currentTimecardData) return;
+    const btn = document.getElementById('btn-timecard-img');
+    const originalHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i><span>画像作成中...</span>';
+      if (window.lucide) lucide.createIcons();
+    }
+
+    showToast('LINE送信用のタイムカード画像を作成しています...', 'info');
+
+    const { container, element } = buildTimecardExportElement();
+    document.body.appendChild(container);
+
+    try {
+      if (window.html2canvas) {
+        const canvas = await html2canvas(element, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          scrollX: 0,
+          scrollY: 0,
+          windowWidth: 900,
+          backgroundColor: '#ffffff'
+        });
+        const link = document.createElement('a');
+        link.download = `リリー薬局_タイムカード_${currentTimecardData.full_name}_${adminYear}年${adminMonth}月.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        showToast('LINE用画像を保存しました！LINEでそのまま送信できます', 'success');
+      } else {
+        showToast('画像化ライブラリの読み込みに失敗しました', 'error');
+      }
+    } catch (err) {
+      console.error('画像生成エラー:', err);
+      showToast('画像の作成に失敗しました', 'error');
+    } finally {
+      if (document.body.contains(container)) {
+        document.body.removeChild(container);
+      }
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+        if (window.lucide) lucide.createIcons();
+      }
+    }
+  }
+
 
   function printTimecard() {
     window.print();
