@@ -154,6 +154,7 @@
 
   function buildAdminExportElement() {
     const element = document.createElement('div');
+    element.id = 'admin-shift-export-content';
     element.className = 'p-6 bg-white text-slate-900';
     element.style.width = '1120px';
     element.style.backgroundColor = '#ffffff';
@@ -170,21 +171,28 @@
     const originalTable = document.querySelector('#admin-shift-table-container table') || document.querySelector('.overflow-x-auto table');
     if (originalTable) {
       const tableClone = originalTable.cloneNode(true);
-      tableClone.className = 'w-full text-xs border border-slate-300 border-collapse bg-white';
+      tableClone.className = 'w-full text-xs border border-slate-300 border-collapse bg-white text-slate-900';
       element.appendChild(tableClone);
     }
 
     const container = document.createElement('div');
     container.id = 'admin-export-render-container';
     container.style.position = 'fixed';
-    container.style.left = '-9999px';
     container.style.top = '0px';
-    container.style.zIndex = '9999';
-    container.style.opacity = '1';
-    container.style.pointerEvents = 'none';
-    container.style.width = '1120px';
-    container.style.backgroundColor = '#ffffff';
-    container.appendChild(element);
+    container.style.left = '0px';
+    container.style.width = '100vw';
+    container.style.height = '100vh';
+    container.style.backgroundColor = 'rgba(15, 23, 42, 0.7)';
+    container.style.zIndex = '999999';
+    container.style.display = 'flex';
+    container.style.alignItems = 'center';
+    container.style.justifyContent = 'center';
+    container.style.overflow = 'auto';
+
+    const card = document.createElement('div');
+    card.className = 'bg-white rounded-2xl shadow-2xl p-4 max-h-[95vh] overflow-auto';
+    card.appendChild(element);
+    container.appendChild(card);
 
     return { container, element };
   }
@@ -205,6 +213,9 @@
     document.body.appendChild(container);
 
     try {
+      // DOM描画を確実に待機
+      await new Promise(r => setTimeout(r, 200));
+
       const filename = `リリー薬局_月間シフト表_${adminYear}年${adminMonth}月.pdf`;
       const opt = {
         margin:       [8, 8, 8, 8],
@@ -214,9 +225,6 @@
           scale: 2,
           useCORS: true,
           logging: false,
-          scrollX: 0,
-          scrollY: 0,
-          windowWidth: 1200,
           backgroundColor: '#ffffff'
         },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
@@ -260,14 +268,14 @@
     document.body.appendChild(container);
 
     try {
+      // DOM描画を確実に待機
+      await new Promise(r => setTimeout(r, 200));
+
       if (window.html2canvas) {
         const canvas = await html2canvas(element, {
           scale: 2,
           useCORS: true,
           logging: false,
-          scrollX: 0,
-          scrollY: 0,
-          windowWidth: 1200,
           backgroundColor: '#ffffff'
         });
         const link = document.createElement('a');

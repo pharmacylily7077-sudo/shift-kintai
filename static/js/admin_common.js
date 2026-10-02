@@ -36,11 +36,11 @@ const SHIFT_TEXT = {
   HOPE_OFF: '希休',
 };
 
-document.addEventListener('DOMContentLoaded', () => {
-  loadAdminShifts();
-  loadLeaveRequests();
-  loadStaffConditions();
-  loadCompliance();
+document.addEventListener('DOMContentLoaded', async () => {
+  try { if (typeof loadAdminShifts === 'function') await loadAdminShifts(); } catch (e) { console.error('loadAdminShifts error:', e); }
+  try { if (typeof loadLeaveRequests === 'function') await loadLeaveRequests(); } catch (e) { console.error('loadLeaveRequests error:', e); }
+  try { if (typeof loadStaffConditions === 'function') await loadStaffConditions(); } catch (e) { console.error('loadStaffConditions error:', e); }
+  try { if (typeof loadCompliance === 'function') await loadCompliance(); } catch (e) { console.error('loadCompliance error:', e); }
 });
 
 async function logout() {
