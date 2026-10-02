@@ -13,9 +13,9 @@
   - スタッフ専用マイページ: `https://shift-kintai.onrender.com/me`
   - ログイン画面: `https://shift-kintai.onrender.com/login`
 - **GitHubリポジトリ**: `https://github.com/pharmacylily7077-sudo/shift-kintai` (mainブランチ自動デプロイ)
-- **最新コミット**: `fix: 9月確定シフト118件・10月シフト・小林さん出勤簿19日分の永続シード自動復元と手入力上書き破壊バグの完全撤廃`
+- **最新コミット**: `fix: PDF生成時の白紙化バグ解消およびLINE用高画質画像保存(PNG)機能の新設`
 - **テスト通過状況**: pytest 全34テスト 100% グリーン通過中 (`PYTHONPATH=. ./venv/bin/pytest`)
-- **技術構成**: FastAPI (Python 3.9+) + SQLAlchemy + Jinja2 + Tailwind CSS + html2pdf.js + PostgreSQL (本番) / SQLite WAL (ローカル)
+- **技術構成**: FastAPI (Python 3.9+) + SQLAlchemy + Jinja2 + Tailwind CSS + html2pdf.js + html2canvas + PostgreSQL (本番) / SQLite WAL (ローカル)
 
 ---
 
