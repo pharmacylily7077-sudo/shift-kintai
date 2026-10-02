@@ -2,12 +2,12 @@
     const tabsContainer = document.getElementById('timecard-staff-tabs');
     if (!tabsContainer || !users) return;
 
-    const kobayashi = users.find(u => u.username === 'kobayashi');
-    const honma = users.find(u => u.username === 'honma');
-    const others = users.filter(u => u.username !== 'kobayashi' && u.username !== 'honma');
+    const kobayashi = users.find(u => u.username === 'kobayashi' || (u.full_name && u.full_name.includes('小林')));
+    const honma = users.find(u => u.username === 'honma' || (u.full_name && u.full_name.includes('本間')));
+    const others = users.filter(u => u !== kobayashi && u !== honma);
 
     if (!currentTimecardUserId) {
-      currentTimecardUserId = kobayashi ? kobayashi.id : (users[0] ? users[0].id : null);
+      currentTimecardUserId = kobayashi ? kobayashi.id : (honma ? honma.id : (users[0] ? users[0].id : null));
     }
 
     let html = '';
@@ -221,7 +221,9 @@
     setBatchInOffset(0);
     setBatchOutOffset(0);
     const chk = document.getElementById('batch-overwrite-check');
-    if (chk) chk.checked = false;
+    if (chk) {
+      chk.checked = (currentTimecardData.summary && currentTimecardData.summary.worked_days > 0);
+    }
     document.getElementById('batch-time-adjust-modal').classList.remove('hidden');
     if (window.lucide) lucide.createIcons();
   }
@@ -383,7 +385,11 @@
       const data = await res.json();
 
       if (res.ok) {
-        showToast(data.message || '一括勤務時間調節を適用しました！');
+        if (data.filled_count === 0 && !overwrite) {
+          showToast('⚠️ 既存の打刻があるため変更されませんでした。上書きする場合は「一括上書き」にチェックを入れてください。', 'info');
+        } else {
+          showToast(data.message || '一括勤務時間調節を適用しました！');
+        }
         closeBatchTimeAdjustModal();
         loadTimecard(currentTimecardUserId);
       } else {
@@ -567,10 +573,10 @@
     const container = document.createElement('div');
     container.id = 'timecard-export-render-container';
     container.style.position = 'fixed';
-    container.style.left = '0px';
+    container.style.left = '-9999px';
     container.style.top = '0px';
-    container.style.zIndex = '-9999';
-    container.style.opacity = '0.01';
+    container.style.zIndex = '9999';
+    container.style.opacity = '1';
     container.style.pointerEvents = 'none';
     container.style.width = '800px';
     container.style.backgroundColor = '#ffffff';

@@ -104,6 +104,7 @@ def get_admin_monthly_shifts(
         "users": [
             {
                 "id": u.id,
+                "username": u.username,
                 "full_name": u.full_name,
                 "position": u.position.value,
                 "position_label": u.position_label,

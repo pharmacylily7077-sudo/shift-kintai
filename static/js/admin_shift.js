@@ -167,19 +167,21 @@
     element.appendChild(title);
 
     // 編成テーブルのクローン
-    const originalTable = document.querySelector('.overflow-x-auto');
+    const originalTable = document.querySelector('#admin-shift-table-container table') || document.querySelector('.overflow-x-auto table');
     if (originalTable) {
       const tableClone = originalTable.cloneNode(true);
-      tableClone.className = 'border border-slate-300 rounded-xl overflow-hidden bg-white';
+      tableClone.className = 'w-full text-xs border border-slate-300 border-collapse bg-white';
       element.appendChild(tableClone);
     }
 
     const container = document.createElement('div');
     container.id = 'admin-export-render-container';
-    container.style.position = 'absolute';
-    container.style.left = '0px';
+    container.style.position = 'fixed';
+    container.style.left = '-9999px';
     container.style.top = '0px';
-    container.style.zIndex = '-9999';
+    container.style.zIndex = '9999';
+    container.style.opacity = '1';
+    container.style.pointerEvents = 'none';
     container.style.width = '1120px';
     container.style.backgroundColor = '#ffffff';
     container.appendChild(element);
