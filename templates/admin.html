@@ -11,8 +11,7 @@
           <i data-lucide="shield" class="w-4 h-4"></i>
         </div>
         <div>
-          <div class="font-black text-slate-900 text-sm">管理者ダッシュボード</div>
-          <div class="text-[11px] text-slate-400">管理者ポータル</div>
+          <div class="font-black text-slate-900 text-sm">リリー薬局 管理</div>
         </div>
       </div>
       <div class="flex items-center space-x-2">
@@ -78,8 +77,7 @@
     <div id="admin-shift-board-section" class="bg-white rounded-3xl p-5 shadow-xs border border-slate-100 space-y-4">
       <div class="flex items-center justify-between">
         <div>
-          <h3 class="font-bold text-slate-900 text-base">月間シフト編成ボード</h3>
-          <p class="text-xs text-slate-400 mt-0.5">セルをタップしてシフト区分を直接変更できます</p>
+          <h3 class="font-bold text-slate-900 text-base">月間シフト表</h3>
         </div>
         <!-- 区分凡例 -->
         <div class="flex items-center space-x-2 text-[11px] text-slate-500">
@@ -108,11 +106,7 @@
             <i data-lucide="clock" class="w-4 h-4"></i>
           </div>
           <div>
-            <div class="flex items-center space-x-2">
-              <h3 class="font-black text-slate-900 text-sm">タイムカード（出勤簿）管理 ＆ リアル一括打刻支援</h3>
-              <span class="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 text-[10px] font-bold">完全クリーン・ログなし</span>
-            </div>
-            <p class="text-[11px] text-slate-400">押し忘れの未打刻日も、早め出勤・残業の実態に即した「秒単位のリアルな電子打刻ゆらぎ」で一気につけて守れます</p>
+            <h3 class="font-black text-slate-900 text-sm">出勤簿・タイムカード</h3>
           </div>
         </div>
 
@@ -210,8 +204,7 @@
             <i data-lucide="sliders" class="w-4 h-4"></i>
           </div>
           <div>
-            <h3 class="font-bold text-slate-900 text-sm">スタッフ勤務条件・時間設定（雇用形態・定休日・シフト区分）</h3>
-            <p class="text-[11px] text-slate-400">変更後「この月のシフトを一括自動生成」を実行すると即座にシフトへ反映されます</p>
+            <h3 class="font-bold text-slate-900 text-sm">スタッフ勤務条件設定</h3>
           </div>
         </div>
         <button onclick="loadStaffConditions()" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400">
@@ -232,8 +225,7 @@
             <i data-lucide="shield-check" class="w-4 h-4"></i>
           </div>
           <div>
-            <h3 class="font-bold text-slate-900 text-sm">年次有給休暇 年5日取得義務（労基法第39条第7項）進捗管理</h3>
-            <p class="text-[11px] text-slate-400">薬事監査・労基署対応：今年度の有休消化状況と警告アラート</p>
+            <h3 class="font-bold text-slate-900 text-sm">年次有給休暇管理</h3>
           </div>
         </div>
         <button onclick="loadCompliance()" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400">
@@ -255,8 +247,7 @@
           <div class="flex items-center space-x-2">
             <span class="text-lg">🏖️⏰</span>
             <div>
-              <h3 class="font-bold text-slate-900 text-sm">個別休暇・有休・残業申請の確認（管理者承認制）</h3>
-              <p class="text-[11px] text-slate-400">残業理由・内容を確認して承認。承認後にシフト・通知へ即時反映</p>
+              <h3 class="font-bold text-slate-900 text-sm">各種申請確認</h3>
             </div>
           </div>
           <button onclick="loadLeaveRequests()" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400">
@@ -273,8 +264,7 @@
         <div class="flex items-center space-x-2 border-b border-slate-50 pb-3">
           <span class="text-lg">💬</span>
           <div>
-            <h3 class="font-bold text-slate-900 text-sm">スタッフへの個別メッセージ送信</h3>
-            <p class="text-[11px] text-slate-400">全体LINEではなく、その人のマイルームだけに届きます</p>
+            <h3 class="font-bold text-slate-900 text-sm">個別メッセージ送信</h3>
           </div>
         </div>
 
@@ -706,7 +696,6 @@
         </div>
         <div>
           <h3 class="font-black text-slate-900 text-sm">🔐 パスワード残業申請</h3>
-          <p class="text-[11px] text-slate-400">店舗端末からスタッフ本人確認を経て残業内容を申請・管理者が承認</p>
         </div>
       </div>
       <button onclick="closeAdminOvertimeModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 font-bold transition">✕</button>
@@ -796,7 +785,6 @@
         <span class="text-lg">💬</span>
         <div>
           <h3 class="font-black text-slate-900 text-sm">シフト確定・LINE一斉送信／連絡文コピー</h3>
-          <p class="text-[11px] text-slate-400">1タップでクリップボードにコピーしてLINEやメールへ貼り付け可能</p>
         </div>
       </div>
       <button onclick="closeShareTextModal()" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
