@@ -712,7 +712,103 @@
 
 
   function printTimecard() {
-    window.print();
+    if (!currentTimecardData) {
+      showToast('タイムカードのデータを読み込み中です', 'info');
+      return;
+    }
+
+    const { element } = buildTimecardExportElement();
+    
+    const iframe = document.createElement('iframe');
+    iframe.id = 'timecard-print-iframe';
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.style.zIndex = '-9999';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(`
+      <!DOCTYPE html>
+      <html lang="ja">
+      <head>
+        <meta charset="UTF-8">
+        <title>リリー薬局 出勤簿_${currentTimecardData.full_name}_${adminYear}年${adminMonth}月</title>
+        <style>
+          @page { size: A4 portrait; margin: 8mm; }
+          * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          body {
+            margin: 0;
+            padding: 10px;
+            background: #ffffff !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            color: #0f172a;
+          }
+          .text-center { text-align: center; }
+          .mb-4 { margin-bottom: 1rem; }
+          .border-b-2 { border-bottom: 2px solid #0f172a; }
+          .pb-3 { padding-bottom: 0.75rem; }
+          .text-2xl { font-size: 1.5rem; line-height: 2rem; }
+          .font-black { font-weight: 900; }
+          .tracking-wider { letter-spacing: 0.05em; }
+          .flex { display: flex; }
+          .items-center { align-items: center; }
+          .justify-between { justify-content: space-between; }
+          .justify-around { justify-content: space-around; }
+          .text-xs { font-size: 0.75rem; line-height: 1rem; }
+          .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+          .mt-2 { margin-top: 0.5rem; }
+          .px-2 { padding-left: 0.5rem; padding-right: 0.5rem; }
+          .p-3 { padding: 0.75rem; }
+          .bg-slate-50 { background-color: #f8fafc; }
+          .rounded-xl { border-radius: 0.75rem; }
+          .border { border: 1px solid #e2e8f0; }
+          .text-emerald-800 { color: #065f46; }
+          .text-rose-700 { color: #be123c; }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10.5px;
+            margin-top: 8px;
+          }
+          th, td {
+            border: 1px solid #cbd5e1;
+            padding: 4px 6px;
+            text-align: center;
+          }
+          th {
+            background-color: #f1f5f9 !important;
+            font-weight: bold;
+            color: #334155;
+          }
+          td {
+            color: #1e293b;
+          }
+          tr:nth-child(even) {
+            background-color: #f8fafc;
+          }
+        </style>
+      </head>
+      <body>
+        ${element.innerHTML}
+      </body>
+      </html>
+    `);
+    doc.close();
+
+    setTimeout(() => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      }, 3000);
+    }, 250);
   }
 
   function exportTimecardCSV() {

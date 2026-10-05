@@ -162,8 +162,8 @@
     const title = document.createElement('div');
     title.className = 'text-center mb-4';
     title.innerHTML = `
-      <h1 class="text-2xl font-black text-slate-900 tracking-wide">リリー薬局 月間シフト編成表（${adminYear}年${adminMonth}月）</h1>
-      <p class="text-xs text-slate-500 mt-1">発行日: ${new Date().toLocaleDateString('ja-JP')} | A4横公式シフト表</p>
+      <h1 class="text-2xl font-black text-slate-900 tracking-wide">リリー薬局 シフト表（${adminYear}年${adminMonth}月）</h1>
+      <p class="text-xs text-slate-500 mt-1">発行日: ${new Date().toLocaleDateString('ja-JP')}</p>
     `;
     element.appendChild(title);
 
@@ -195,6 +195,62 @@
     container.appendChild(card);
 
     return { container, element };
+  }
+
+  // --- シフト表単独印刷ヘルパー ---
+  function printAdminShiftOnly(element) {
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.style.zIndex = '-9999';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(`
+      <!DOCTYPE html>
+      <html lang="ja">
+      <head>
+        <meta charset="UTF-8">
+        <title>リリー薬局 シフト表_${adminYear}年${adminMonth}月</title>
+        <style>
+          @page { size: A4 landscape; margin: 8mm; }
+          * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          body {
+            margin: 0;
+            padding: 8px;
+            background: #ffffff !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: #0f172a;
+          }
+          .text-center { text-align: center; }
+          .mb-4 { margin-bottom: 0.75rem; }
+          .text-2xl { font-size: 1.3rem; }
+          .font-black { font-weight: 900; }
+          .text-xs { font-size: 0.75rem; }
+          table { width: 100%; border-collapse: collapse; font-size: 10px; }
+          th, td { border: 1px solid #cbd5e1; padding: 3px 4px; text-align: center; }
+          th { background-color: #f1f5f9 !important; font-weight: bold; }
+        </style>
+      </head>
+      <body>
+        ${element.innerHTML}
+      </body>
+      </html>
+    `);
+    doc.close();
+
+    setTimeout(() => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      setTimeout(() => {
+        if (document.body.contains(iframe)) document.body.removeChild(iframe);
+      }, 3000);
+    }, 250);
   }
 
   // --- 2. シフト表 PDFワンクリック保存 ---
@@ -234,12 +290,12 @@
         await html2pdf().set(opt).from(element).save();
         showToast('シフト表PDFをダウンロードしました！', 'success');
       } else {
-        window.print();
+        printAdminShiftOnly(element);
       }
     } catch (err) {
       console.error('PDF生成エラー:', err);
       showToast('PDF生成に失敗したため、印刷画面を開きます', 'error');
-      window.print();
+      printAdminShiftOnly(element);
     } finally {
       if (document.body.contains(container)) {
         document.body.removeChild(container);

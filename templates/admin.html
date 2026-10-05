@@ -4,7 +4,7 @@
 {% block body %}
 <div class="min-h-screen bg-slate-50 text-slate-900 pb-12">
   <!-- ヘッダー -->
-  <header class="bg-white border-b border-slate-100 sticky top-0 z-40">
+  <header class="bg-white border-b border-slate-100 sticky top-0 z-40 print:hidden">
     <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
       <div class="flex items-center space-x-3">
         <div class="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold">
@@ -42,7 +42,7 @@
   <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
 
     <!-- 1. 一括シフト生成 ＆ 月ナビバー -->
-    <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4">
+    <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4 print:hidden">
       <div class="flex items-center space-x-3">
         <button onclick="changeAdminMonth(-1)" class="p-2 rounded-xl hover:bg-slate-100 border border-slate-200 text-slate-600">
           <i data-lucide="chevron-left" class="w-4 h-4"></i>
@@ -111,7 +111,7 @@
         </div>
 
         <!-- アクションボタン群 -->
-        <div class="flex flex-wrap items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2 print:hidden">
           <!-- 自動保護ステータスバッジ -->
           <div class="hidden sm:flex items-center space-x-1 px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold" title="お使いの端末（パソコン）に打刻データを二重自動保存し、消失を防いでいます">
             <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-600"></i>
@@ -150,7 +150,7 @@
       </div>
 
       <!-- スタッフ選択タブ（小林・本間 2大タブ＋他スタッフ） ＆ 対象年月切り替え -->
-      <div class="flex items-center justify-between flex-wrap gap-2 pt-1 border-b border-slate-100 pb-2">
+      <div class="flex items-center justify-between flex-wrap gap-2 pt-1 border-b border-slate-100 pb-2 print:hidden">
         <div class="flex items-center space-x-3 flex-wrap gap-2">
           <!-- タイムカード専用の年月切り替え -->
           <div class="flex items-center space-x-1 bg-slate-100 px-2.5 py-1 rounded-xl text-xs font-bold text-slate-700 border border-slate-200">
@@ -197,7 +197,7 @@
     </div>
 
     <!-- 4. スタッフ勤務条件・時間設定（雇用形態・定休日・シフト区分） -->
-    <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-100 space-y-4">
+    <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-100 space-y-4 print:hidden">
       <div class="flex items-center justify-between">
         <div class="flex items-center space-x-2">
           <div class="w-7 h-7 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-xs">
@@ -218,7 +218,7 @@
     </div>
 
     <!-- 4. 法定有休 年5日取得義務コンプライアンス管理パネル -->
-    <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-100 space-y-4">
+    <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-100 space-y-4 print:hidden">
       <div class="flex items-center justify-between border-b border-slate-50 pb-3">
         <div class="flex items-center space-x-2">
           <div class="w-7 h-7 rounded-xl bg-teal-100 text-teal-800 flex items-center justify-center font-bold text-xs">
@@ -239,7 +239,7 @@
     </div>
 
     <!-- 5. スタッフへのプライベート個別連絡 & 休暇申請確認 -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 print:hidden">
       
       <!-- 個別休暇・有休・残業申請の確認パネル -->
       <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-100 space-y-4" id="admin-leave-requests-panel">
@@ -824,9 +824,9 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="/static/js/admin_common.js?v=20261005"></script>
-<script src="/static/js/admin_shift.js?v=20261005"></script>
-<script src="/static/js/admin_requests.js?v=20261005"></script>
-<script src="/static/js/admin_settings.js?v=20261005"></script>
-<script src="/static/js/admin_timecard.js?v=20261005"></script>
+<script src="/static/js/admin_common.js?v=20261005_print"></script>
+<script src="/static/js/admin_shift.js?v=20261005_print"></script>
+<script src="/static/js/admin_requests.js?v=20261005_print"></script>
+<script src="/static/js/admin_settings.js?v=20261005_print"></script>
+<script src="/static/js/admin_timecard.js?v=20261005_print"></script>
 {% endblock %}

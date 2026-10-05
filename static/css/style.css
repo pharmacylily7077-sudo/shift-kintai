@@ -1,11 +1,18 @@
 /* 印刷用スタイル */
 @media print {
-  header, .print\:hidden, button, a { display: none !important; }
-  @page { size: A4 landscape; margin: 10mm; }
+  header, nav, .print\:hidden, button, a, input, textarea, select, [id$="-modal"] {
+    display: none !important;
+  }
+  @page { margin: 8mm; }
   body { background: white !important; }
-  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-  main { max-width: 100% !important; padding: 0 !important; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-shadow: none !important; }
+  main { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
   #calendar-grid { border-radius: 0 !important; box-shadow: none !important; border: 1px solid #cbd5e1 !important; }
+  /* 管理画面での印刷時: 操作列（最後の列）を非表示 */
+  #admin-shift-table-container th:last-child, #admin-shift-table-container td:last-child,
+  #timecard-print-container th:last-child, #timecard-print-container td:last-child {
+    display: none !important;
+  }
 }
 
 /* スムーズトランジション */
