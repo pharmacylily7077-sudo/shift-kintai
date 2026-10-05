@@ -653,9 +653,14 @@
 
   // --- 📸 LINE用 タイムカード画像保存 (PNG) ---
   async function downloadTimecardImage() {
-    if (!currentTimecardData) return;
-    if (currentTimecardData.summary.worked_days === 0) {
-      showToast('⚠️ 打刻データが0件（未打刻）です。先に「⏱️ 一括勤務時間・打刻調節」で出勤・退勤時間を設定してください。', 'error');
+    if (!currentTimecardData) {
+      showToast('タイムカードのデータを読み込み中です', 'info');
+      return;
+    }
+
+    const target = document.getElementById('timecard-card-section') || document.getElementById('timecard-print-container');
+    if (!target) {
+      showToast('タイムカード要素が見つかりません', 'error');
       return;
     }
 
@@ -669,15 +674,15 @@
 
     showToast('LINE送信用のタイムカード画像を作成しています...', 'info');
 
-    const { container, element } = buildTimecardExportElement();
-    document.body.appendChild(container);
+    // キャプチャ時のみ不要なボタン・操作列を一時非表示
+    const actionButtons = target.querySelector('.flex.flex-wrap.items-center.gap-2');
+    const opCells = target.querySelectorAll('th:last-child, td:last-child');
+    if (actionButtons) actionButtons.style.visibility = 'hidden';
+    opCells.forEach(c => c.style.visibility = 'hidden');
 
     try {
-      // DOM描画を確実に待機
-      await new Promise(r => setTimeout(r, 200));
-
       if (window.html2canvas) {
-        const canvas = await html2canvas(element, {
+        const canvas = await html2canvas(target, {
           scale: 2,
           useCORS: true,
           logging: false,
@@ -695,9 +700,8 @@
       console.error('画像生成エラー:', err);
       showToast('画像の作成に失敗しました', 'error');
     } finally {
-      if (document.body.contains(container)) {
-        document.body.removeChild(container);
-      }
+      if (actionButtons) actionButtons.style.visibility = '';
+      opCells.forEach(c => c.style.visibility = '');
       if (btn) {
         btn.disabled = false;
         btn.innerHTML = originalHtml;

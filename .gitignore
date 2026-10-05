@@ -11,3 +11,4 @@ test_kintai.db
 *.db-*
 *.db.bak*
 cloudflared*
+kinntaikannri/

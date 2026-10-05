@@ -75,7 +75,7 @@
     </div>
 
     <!-- 2. 月間シフト編集テーブル（ワンタップ変更） -->
-    <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-100 space-y-4">
+    <div id="admin-shift-board-section" class="bg-white rounded-3xl p-5 shadow-xs border border-slate-100 space-y-4">
       <div class="flex items-center justify-between">
         <div>
           <h3 class="font-bold text-slate-900 text-base">月間シフト編成ボード</h3>
@@ -101,7 +101,7 @@
     </div>
 
     <!-- 3. タイムカード（出勤簿）管理 ＆ リアル一括打刻支援（小林・本間専用） -->
-    <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-100 space-y-4">
+    <div id="timecard-card-section" class="bg-white rounded-3xl p-5 shadow-xs border border-slate-100 space-y-4">
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100 pb-3">
         <div class="flex items-center space-x-2">
           <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-purple-500 to-pink-500 text-white flex items-center justify-center font-bold text-xs shadow-xs">
@@ -836,9 +836,9 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="/static/js/admin_common.js"></script>
-<script src="/static/js/admin_shift.js"></script>
-<script src="/static/js/admin_requests.js"></script>
-<script src="/static/js/admin_settings.js"></script>
-<script src="/static/js/admin_timecard.js"></script>
+<script src="/static/js/admin_common.js?v=20261005"></script>
+<script src="/static/js/admin_shift.js?v=20261005"></script>
+<script src="/static/js/admin_requests.js?v=20261005"></script>
+<script src="/static/js/admin_settings.js?v=20261005"></script>
+<script src="/static/js/admin_timecard.js?v=20261005"></script>
 {% endblock %}

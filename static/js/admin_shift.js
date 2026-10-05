@@ -254,6 +254,12 @@
 
   // --- 2-2. 📸 LINE用 シフト表画像保存 (PNG) ---
   async function downloadAdminImage() {
+    const target = document.getElementById('admin-shift-board-section') || document.getElementById('admin-shift-table-container');
+    if (!target) {
+      showToast('シフト表要素が見つかりません', 'error');
+      return;
+    }
+
     const btn = document.getElementById('btn-admin-img');
     const originalHtml = btn ? btn.innerHTML : '';
     if (btn) {
@@ -262,17 +268,11 @@
       if (window.lucide) lucide.createIcons();
     }
 
-    showToast('LINE送信用の高画質画像を作成しています...', 'info');
-
-    const { container, element } = buildAdminExportElement();
-    document.body.appendChild(container);
+    showToast('LINE送信用の高画質シフト画像を作成しています...', 'info');
 
     try {
-      // DOM描画を確実に待機
-      await new Promise(r => setTimeout(r, 200));
-
       if (window.html2canvas) {
-        const canvas = await html2canvas(element, {
+        const canvas = await html2canvas(target, {
           scale: 2,
           useCORS: true,
           logging: false,
@@ -290,9 +290,6 @@
       console.error('画像生成エラー:', err);
       showToast('画像の作成に失敗しました', 'error');
     } finally {
-      if (document.body.contains(container)) {
-        document.body.removeChild(container);
-      }
       if (btn) {
         btn.disabled = false;
         btn.innerHTML = originalHtml;
